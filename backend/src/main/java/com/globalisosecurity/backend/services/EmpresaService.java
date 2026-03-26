@@ -27,22 +27,48 @@ public class EmpresaService {
     }
 
     public Empresa crearEmpresa(Empresa empresa) {
+        validarNombreEmpresa(empresa.getNombre());
+
+        Empresa existente = empresaRepository.findByNombre(empresa.getNombre().trim());
+        if (existente != null) {
+            throw new RuntimeException("Ya existe una empresa con ese nombre");
+        }
+
+        empresa.setNombre(empresa.getNombre().trim());
         return empresaRepository.save(empresa);
     }
 
     public Empresa actualizarEmpresa(Long id, Empresa empresaActualizada) {
-        Optional<Empresa> empresa = empresaRepository.findById(id);
+        Optional<Empresa> empresaOpt = empresaRepository.findById(id);
 
-        if (empresa.isPresent()) {
-            Empresa e = empresa.get();
-            e.setNombre(empresaActualizada.getNombre());
-            return empresaRepository.save(e);
+        if (empresaOpt.isEmpty()) {
+            throw new RuntimeException("Empresa no encontrada");
         }
 
-        return null;
+        validarNombreEmpresa(empresaActualizada.getNombre());
+
+        Empresa empresaConMismoNombre = empresaRepository.findByNombre(empresaActualizada.getNombre().trim());
+        if (empresaConMismoNombre != null && !empresaConMismoNombre.getId().equals(id)) {
+            throw new RuntimeException("Ya existe una empresa con ese nombre");
+        }
+
+        Empresa empresa = empresaOpt.get();
+        empresa.setNombre(empresaActualizada.getNombre().trim());
+
+        return empresaRepository.save(empresa);
     }
 
     public void eliminarEmpresa(Long id) {
+        if (!empresaRepository.existsById(id)) {
+            throw new RuntimeException("Empresa no encontrada");
+        }
+
         empresaRepository.deleteById(id);
+    }
+
+    private void validarNombreEmpresa(String nombre) {
+        if (nombre == null || nombre.trim().isEmpty()) {
+            throw new RuntimeException("El nombre de la empresa es obligatorio");
+        }
     }
 }

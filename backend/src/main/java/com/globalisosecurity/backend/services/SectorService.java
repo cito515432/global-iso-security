@@ -27,22 +27,48 @@ public class SectorService {
     }
 
     public Sector crearSector(Sector sector) {
+        validarNombreSector(sector.getNombre());
+
+        Sector existente = sectorRepository.findByNombre(sector.getNombre().trim());
+        if (existente != null) {
+            throw new RuntimeException("Ya existe un sector con ese nombre");
+        }
+
+        sector.setNombre(sector.getNombre().trim());
         return sectorRepository.save(sector);
     }
 
     public Sector actualizarSector(Long id, Sector sectorActualizado) {
-        Optional<Sector> sector = sectorRepository.findById(id);
+        Optional<Sector> sectorOpt = sectorRepository.findById(id);
 
-        if (sector.isPresent()) {
-            Sector s = sector.get();
-            s.setNombre(sectorActualizado.getNombre());
-            return sectorRepository.save(s);
+        if (sectorOpt.isEmpty()) {
+            throw new RuntimeException("Sector no encontrado");
         }
 
-        return null;
+        validarNombreSector(sectorActualizado.getNombre());
+
+        Sector sectorConMismoNombre = sectorRepository.findByNombre(sectorActualizado.getNombre().trim());
+        if (sectorConMismoNombre != null && !sectorConMismoNombre.getId().equals(id)) {
+            throw new RuntimeException("Ya existe un sector con ese nombre");
+        }
+
+        Sector sector = sectorOpt.get();
+        sector.setNombre(sectorActualizado.getNombre().trim());
+
+        return sectorRepository.save(sector);
     }
 
     public void eliminarSector(Long id) {
+        if (!sectorRepository.existsById(id)) {
+            throw new RuntimeException("Sector no encontrado");
+        }
+
         sectorRepository.deleteById(id);
+    }
+
+    private void validarNombreSector(String nombre) {
+        if (nombre == null || nombre.trim().isEmpty()) {
+            throw new RuntimeException("El nombre del sector es obligatorio");
+        }
     }
 }
