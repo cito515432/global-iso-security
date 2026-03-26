@@ -12,9 +12,10 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
-import java.util.Optional;
+
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 
 @Service
 public class AuthService {
@@ -29,29 +30,25 @@ public class AuthService {
     private PasswordEncoder passwordEncoder;
 
     public ResponseEntity<?> login(String email, String password) {
-        Optional<Usuario> usuario = usuarioRepository.findByEmail(email);
+        Optional<Usuario> usuarioOpt = usuarioRepository.findByEmail(email);
 
-        // Usuario no existe
-        if (usuario.isEmpty()) {
+        if (usuarioOpt.isEmpty()) {
             return ResponseEntity.status(401).body("Credenciales incorrectas");
         }
 
-        // Contraseña incorrecta
-        if (!passwordEncoder.matches(password, usuario.get().getPassword())) {
+        Usuario usuario = usuarioOpt.get();
+
+        if (!passwordEncoder.matches(password, usuario.getPassword())) {
             return ResponseEntity.status(401).body("Credenciales incorrectas");
         }
 
-        // Generar token
-        String token = jwtUtil.generarToken(
-            email,
-            usuario.get().getRol().getNombre()
-        );
+        String token = jwtUtil.generarToken(usuario.getEmail(), usuario.getRol().getNombre());
 
-        // Respuesta
         Map<String, Object> respuesta = new HashMap<>();
         respuesta.put("token", token);
-        respuesta.put("rol", usuario.get().getRol().getNombre());
-        respuesta.put("nombre", usuario.get().getNombre());
+        respuesta.put("email", usuario.getEmail());
+        respuesta.put("nombre", usuario.getNombre());
+        respuesta.put("rol", usuario.getRol().getNombre());
 
         return ResponseEntity.ok(respuesta);
     }

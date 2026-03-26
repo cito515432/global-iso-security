@@ -5,17 +5,19 @@
 
 package com.globalisosecurity.backend.utils;
 
-import io.jsonwebtoken.*;
+import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.SignatureAlgorithm;
 import org.springframework.stereotype.Component;
+
 import java.util.Date;
 
 @Component
 public class JwtUtil {
 
-    private String secret = "GlobalIsoSecurity2026ClaveSecreta";
-    private long expiration = 86400000; // 24 horas
+    private final String secret = "GlobalIsoSecurity2026ClaveSecreta";
+    private final long expiration = 86400000; // 24 horas
 
-    // Generar token
     public String generarToken(String email, String rol) {
         return Jwts.builder()
                 .setSubject(email)
@@ -26,33 +28,29 @@ public class JwtUtil {
                 .compact();
     }
 
-    // Validar token
     public boolean validarToken(String token) {
         try {
             Jwts.parser()
-                .setSigningKey(secret)
-                .parseClaimsJws(token);
+                    .setSigningKey(secret)
+                    .parseClaimsJws(token);
             return true;
-        } catch (JwtException e) {
+        } catch (Exception e) {
             return false;
         }
     }
 
-    // Obtener email del token
     public String obtenerEmail(String token) {
-        return Jwts.parser()
-                .setSigningKey(secret)
-                .parseClaimsJws(token)
-                .getBody()
-                .getSubject();
+        return obtenerClaims(token).getSubject();
     }
 
-    // Obtener rol del token
     public String obtenerRol(String token) {
+        return obtenerClaims(token).get("rol", String.class);
+    }
+
+    private Claims obtenerClaims(String token) {
         return Jwts.parser()
                 .setSigningKey(secret)
                 .parseClaimsJws(token)
-                .getBody()
-                .get("rol", String.class);
+                .getBody();
     }
 }
