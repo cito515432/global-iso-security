@@ -4,6 +4,8 @@
  */
 package com.globalisosecurity.backend.services;
 
+import com.globalisosecurity.backend.exceptions.BadRequestException;
+import com.globalisosecurity.backend.exceptions.ResourceNotFoundException;
 import com.globalisosecurity.backend.models.Sector;
 import com.globalisosecurity.backend.repositories.SectorRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -31,7 +33,7 @@ public class SectorService {
 
         Sector existente = sectorRepository.findByNombre(sector.getNombre().trim());
         if (existente != null) {
-            throw new RuntimeException("Ya existe un sector con ese nombre");
+            throw new BadRequestException("Ya existe un sector con ese nombre");
         }
 
         sector.setNombre(sector.getNombre().trim());
@@ -42,14 +44,14 @@ public class SectorService {
         Optional<Sector> sectorOpt = sectorRepository.findById(id);
 
         if (sectorOpt.isEmpty()) {
-            throw new RuntimeException("Sector no encontrado");
+            throw new ResourceNotFoundException("Sector no encontrado");
         }
 
         validarNombreSector(sectorActualizado.getNombre());
 
         Sector sectorConMismoNombre = sectorRepository.findByNombre(sectorActualizado.getNombre().trim());
         if (sectorConMismoNombre != null && !sectorConMismoNombre.getId().equals(id)) {
-            throw new RuntimeException("Ya existe un sector con ese nombre");
+            throw new BadRequestException("Ya existe un sector con ese nombre");
         }
 
         Sector sector = sectorOpt.get();
@@ -60,7 +62,7 @@ public class SectorService {
 
     public void eliminarSector(Long id) {
         if (!sectorRepository.existsById(id)) {
-            throw new RuntimeException("Sector no encontrado");
+            throw new ResourceNotFoundException("Sector no encontrado");
         }
 
         sectorRepository.deleteById(id);
@@ -68,7 +70,7 @@ public class SectorService {
 
     private void validarNombreSector(String nombre) {
         if (nombre == null || nombre.trim().isEmpty()) {
-            throw new RuntimeException("El nombre del sector es obligatorio");
+            throw new BadRequestException("El nombre del sector es obligatorio");
         }
     }
 }

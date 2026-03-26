@@ -4,6 +4,8 @@
  */
 package com.globalisosecurity.backend.services;
 
+import com.globalisosecurity.backend.exceptions.BadRequestException;
+import com.globalisosecurity.backend.exceptions.ResourceNotFoundException;
 import com.globalisosecurity.backend.models.Empresa;
 import com.globalisosecurity.backend.repositories.EmpresaRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -31,7 +33,7 @@ public class EmpresaService {
 
         Empresa existente = empresaRepository.findByNombre(empresa.getNombre().trim());
         if (existente != null) {
-            throw new RuntimeException("Ya existe una empresa con ese nombre");
+            throw new BadRequestException("Ya existe una empresa con ese nombre");
         }
 
         empresa.setNombre(empresa.getNombre().trim());
@@ -42,14 +44,14 @@ public class EmpresaService {
         Optional<Empresa> empresaOpt = empresaRepository.findById(id);
 
         if (empresaOpt.isEmpty()) {
-            throw new RuntimeException("Empresa no encontrada");
+            throw new ResourceNotFoundException("Empresa no encontrada");
         }
 
         validarNombreEmpresa(empresaActualizada.getNombre());
 
         Empresa empresaConMismoNombre = empresaRepository.findByNombre(empresaActualizada.getNombre().trim());
         if (empresaConMismoNombre != null && !empresaConMismoNombre.getId().equals(id)) {
-            throw new RuntimeException("Ya existe una empresa con ese nombre");
+            throw new BadRequestException("Ya existe una empresa con ese nombre");
         }
 
         Empresa empresa = empresaOpt.get();
@@ -60,7 +62,7 @@ public class EmpresaService {
 
     public void eliminarEmpresa(Long id) {
         if (!empresaRepository.existsById(id)) {
-            throw new RuntimeException("Empresa no encontrada");
+            throw new ResourceNotFoundException("Empresa no encontrada");
         }
 
         empresaRepository.deleteById(id);
@@ -68,7 +70,7 @@ public class EmpresaService {
 
     private void validarNombreEmpresa(String nombre) {
         if (nombre == null || nombre.trim().isEmpty()) {
-            throw new RuntimeException("El nombre de la empresa es obligatorio");
+            throw new BadRequestException("El nombre de la empresa es obligatorio");
         }
     }
 }

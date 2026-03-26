@@ -4,6 +4,8 @@
  */
 package com.globalisosecurity.backend.services;
 
+import com.globalisosecurity.backend.exceptions.BadRequestException;
+import com.globalisosecurity.backend.exceptions.ResourceNotFoundException;
 import com.globalisosecurity.backend.models.Empresa;
 import com.globalisosecurity.backend.models.Sector;
 import com.globalisosecurity.backend.models.Servicio;
@@ -67,10 +69,10 @@ public class ServicioService {
         servicio.setEstado(estado);
 
         Empresa empresa = empresaRepository.findById(servicio.getEmpresa().getId())
-                .orElseThrow(() -> new RuntimeException("Empresa no encontrada"));
+                .orElseThrow(() -> new ResourceNotFoundException("Empresa no encontrada"));
 
         Sector sector = sectorRepository.findById(servicio.getSector().getId())
-                .orElseThrow(() -> new RuntimeException("Sector no encontrado"));
+                .orElseThrow(() -> new ResourceNotFoundException("Sector no encontrado"));
 
         servicio.setEmpresa(empresa);
         servicio.setSector(sector);
@@ -80,27 +82,27 @@ public class ServicioService {
 
     public Servicio actualizarServicio(Long id, Servicio servicioActualizado) {
         Servicio servicioExistente = servicioRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Servicio no encontrado"));
+                .orElseThrow(() -> new ResourceNotFoundException("Servicio no encontrado"));
 
         if (estaBloqueado(servicioExistente.getEstado())) {
-            throw new RuntimeException("No se puede modificar un servicio en estado " + servicioExistente.getEstado());
+            throw new BadRequestException("No se puede modificar un servicio en estado " + servicioExistente.getEstado());
         }
 
         validarEmpresaYSector(servicioActualizado);
 
         String estado = servicioActualizado.getEstado();
         if (estado == null || estado.trim().isEmpty()) {
-            throw new RuntimeException("El estado del servicio es obligatorio");
+            throw new BadRequestException("El estado del servicio es obligatorio");
         }
 
         estado = normalizarEstado(estado);
         validarEstado(estado);
 
         Empresa empresa = empresaRepository.findById(servicioActualizado.getEmpresa().getId())
-                .orElseThrow(() -> new RuntimeException("Empresa no encontrada"));
+                .orElseThrow(() -> new ResourceNotFoundException("Empresa no encontrada"));
 
         Sector sector = sectorRepository.findById(servicioActualizado.getSector().getId())
-                .orElseThrow(() -> new RuntimeException("Sector no encontrado"));
+                .orElseThrow(() -> new ResourceNotFoundException("Sector no encontrado"));
 
         servicioExistente.setEmpresa(empresa);
         servicioExistente.setSector(sector);
@@ -111,10 +113,10 @@ public class ServicioService {
 
     public void eliminarServicio(Long id) {
         Servicio servicio = servicioRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Servicio no encontrado"));
+                .orElseThrow(() -> new ResourceNotFoundException("Servicio no encontrado"));
 
         if (estaBloqueado(servicio.getEstado())) {
-            throw new RuntimeException("No se puede eliminar un servicio en estado " + servicio.getEstado());
+            throw new BadRequestException("No se puede eliminar un servicio en estado " + servicio.getEstado());
         }
 
         servicioRepository.deleteById(id);
@@ -122,17 +124,19 @@ public class ServicioService {
 
     private void validarEmpresaYSector(Servicio servicio) {
         if (servicio.getEmpresa() == null || servicio.getEmpresa().getId() == null) {
-            throw new RuntimeException("La empresa es obligatoria");
+            throw new BadRequestException("La empresa es obligatoria");
         }
 
         if (servicio.getSector() == null || servicio.getSector().getId() == null) {
-            throw new RuntimeException("El sector es obligatorio");
+            throw new BadRequestException("El sector es obligatorio");
         }
     }
 
     private void validarEstado(String estado) {
         if (!ESTADOS_VALIDOS.contains(estado)) {
-            throw new RuntimeException("Estado no válido. Use: BORRADOR, EN_PROCESO, FINALIZADO, FIRMADO o CERRADO");
+            throw new BadRequestException(
+                    "Estado no válido. Use: BORRADOR, EN_PROCESO, FINALIZADO, FIRMADO o CERRADO"
+            );
         }
     }
 
