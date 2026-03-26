@@ -20,6 +20,9 @@ public class EmpresaService {
     @Autowired
     private EmpresaRepository empresaRepository;
 
+    @Autowired
+    private LogAuditoriaService logAuditoriaService;
+
     public List<Empresa> obtenerTodas() {
         return empresaRepository.findAll();
     }
@@ -37,7 +40,17 @@ public class EmpresaService {
         }
 
         empresa.setNombre(empresa.getNombre().trim());
-        return empresaRepository.save(empresa);
+        Empresa nueva = empresaRepository.save(empresa);
+
+        logAuditoriaService.registrarLog(
+                "sistema",
+                "CREAR",
+                "EMPRESAS",
+                "Se creó la empresa: " + nueva.getNombre(),
+                "127.0.0.1"
+        );
+
+        return nueva;
     }
 
     public Empresa actualizarEmpresa(Long id, Empresa empresaActualizada) {
@@ -57,7 +70,17 @@ public class EmpresaService {
         Empresa empresa = empresaOpt.get();
         empresa.setNombre(empresaActualizada.getNombre().trim());
 
-        return empresaRepository.save(empresa);
+        Empresa actualizada = empresaRepository.save(empresa);
+
+        logAuditoriaService.registrarLog(
+                "sistema",
+                "ACTUALIZAR",
+                "EMPRESAS",
+                "Se actualizó la empresa con ID: " + actualizada.getId(),
+                "127.0.0.1"
+        );
+
+        return actualizada;
     }
 
     public void eliminarEmpresa(Long id) {
@@ -66,6 +89,14 @@ public class EmpresaService {
         }
 
         empresaRepository.deleteById(id);
+
+        logAuditoriaService.registrarLog(
+                "sistema",
+                "ELIMINAR",
+                "EMPRESAS",
+                "Se eliminó la empresa con ID: " + id,
+                "127.0.0.1"
+        );
     }
 
     private void validarNombreEmpresa(String nombre) {

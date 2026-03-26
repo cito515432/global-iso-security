@@ -32,6 +32,9 @@ public class ChecklistService {
     @Autowired
     private ServicioRepository servicioRepository;
 
+    @Autowired
+    private LogAuditoriaService logAuditoriaService;
+
     public List<Checklist> obtenerTodos() {
         return checklistRepository.findAll();
     }
@@ -69,7 +72,17 @@ public class ChecklistService {
         checklist.setEstado(estado);
         checklist.setServicio(servicio);
 
-        return checklistRepository.save(checklist);
+        Checklist nuevo = checklistRepository.save(checklist);
+
+        logAuditoriaService.registrarLog(
+                "sistema",
+                "CREAR",
+                "CHECKLIST",
+                "Se creó el checklist: " + nuevo.getNombre(),
+                "127.0.0.1"
+        );
+
+        return nuevo;
     }
 
     public Checklist actualizarChecklist(Long id, Checklist checklistActualizado) {
@@ -98,7 +111,17 @@ public class ChecklistService {
         checklistExistente.setEstado(estado);
         checklistExistente.setServicio(servicio);
 
-        return checklistRepository.save(checklistExistente);
+        Checklist actualizado = checklistRepository.save(checklistExistente);
+
+        logAuditoriaService.registrarLog(
+                "sistema",
+                "ACTUALIZAR",
+                "CHECKLIST",
+                "Se actualizó el checklist con ID: " + actualizado.getId(),
+                "127.0.0.1"
+        );
+
+        return actualizado;
     }
 
     public void eliminarChecklist(Long id) {
@@ -107,6 +130,14 @@ public class ChecklistService {
         }
 
         checklistRepository.deleteById(id);
+
+        logAuditoriaService.registrarLog(
+                "sistema",
+                "ELIMINAR",
+                "CHECKLIST",
+                "Se eliminó el checklist con ID: " + id,
+                "127.0.0.1"
+        );
     }
 
     private void validarChecklist(Checklist checklist) {

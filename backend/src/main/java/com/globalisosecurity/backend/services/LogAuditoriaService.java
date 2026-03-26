@@ -66,6 +66,18 @@ public class LogAuditoriaService {
         return logAuditoriaRepository.save(log);
     }
 
+    public void registrarLog(String usuario, String accion, String modulo, String descripcion, String ip) {
+        LogAuditoria log = new LogAuditoria();
+        log.setUsuario(usuario);
+        log.setAccion(accion);
+        log.setModulo(modulo);
+        log.setDescripcion(descripcion);
+        log.setIp(ip);
+        log.setFecha(LocalDateTime.now());
+
+        logAuditoriaRepository.save(log);
+    }
+
     public void eliminarLog(Long id) {
         if (!logAuditoriaRepository.existsById(id)) {
             throw new ResourceNotFoundException("Log de auditoría no encontrado");

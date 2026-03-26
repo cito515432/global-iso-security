@@ -40,6 +40,9 @@ public class ServicioService {
     @Autowired
     private SectorRepository sectorRepository;
 
+    @Autowired
+    private LogAuditoriaService logAuditoriaService;
+
     public List<Servicio> obtenerTodos() {
         return servicioRepository.findAll();
     }
@@ -77,7 +80,17 @@ public class ServicioService {
         servicio.setEmpresa(empresa);
         servicio.setSector(sector);
 
-        return servicioRepository.save(servicio);
+        Servicio nuevo = servicioRepository.save(servicio);
+
+        logAuditoriaService.registrarLog(
+                "sistema",
+                "CREAR",
+                "SERVICIOS",
+                "Se creó el servicio con ID: " + nuevo.getId() + " en estado " + nuevo.getEstado(),
+                "127.0.0.1"
+        );
+
+        return nuevo;
     }
 
     public Servicio actualizarServicio(Long id, Servicio servicioActualizado) {
@@ -108,7 +121,17 @@ public class ServicioService {
         servicioExistente.setSector(sector);
         servicioExistente.setEstado(estado);
 
-        return servicioRepository.save(servicioExistente);
+        Servicio actualizado = servicioRepository.save(servicioExistente);
+
+        logAuditoriaService.registrarLog(
+                "sistema",
+                "ACTUALIZAR",
+                "SERVICIOS",
+                "Se actualizó el servicio con ID: " + actualizado.getId() + " al estado " + actualizado.getEstado(),
+                "127.0.0.1"
+        );
+
+        return actualizado;
     }
 
     public void eliminarServicio(Long id) {
@@ -120,6 +143,14 @@ public class ServicioService {
         }
 
         servicioRepository.deleteById(id);
+
+        logAuditoriaService.registrarLog(
+                "sistema",
+                "ELIMINAR",
+                "SERVICIOS",
+                "Se eliminó el servicio con ID: " + id,
+                "127.0.0.1"
+        );
     }
 
     private void validarEmpresaYSector(Servicio servicio) {
@@ -134,9 +165,7 @@ public class ServicioService {
 
     private void validarEstado(String estado) {
         if (!ESTADOS_VALIDOS.contains(estado)) {
-            throw new BadRequestException(
-                    "Estado no válido. Use: BORRADOR, EN_PROCESO, FINALIZADO, FIRMADO o CERRADO"
-            );
+            throw new BadRequestException("Estado no válido. Use: BORRADOR, EN_PROCESO, FINALIZADO, FIRMADO o CERRADO");
         }
     }
 
