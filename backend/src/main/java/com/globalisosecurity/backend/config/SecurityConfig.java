@@ -25,11 +25,19 @@ public class SecurityConfig {
             .sessionManagement(session -> session
                 .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
-                // Rutas públicas
                 .requestMatchers("/api/auth/**").permitAll()
-                // Todo lo demás requiere autenticación
+                .requestMatchers("/api/usuarios/**").permitAll()
+                .requestMatchers("/api/empresas/**").permitAll()
+                .requestMatchers("/api/sectores/**").permitAll()
+                .requestMatchers("/api/servicios/**").permitAll()
+                .requestMatchers("/api/checklists/**").permitAll()
+                .requestMatchers("/api/evaluaciones/**").permitAll()
+                .requestMatchers("/api/items-checklist/**").permitAll()
+                .requestMatchers("/api/firmas/**").permitAll()
+                .requestMatchers("/api/logs-auditoria/**").permitAll()
                 .anyRequest().authenticated()
             );
+
         return http.build();
     }
 
