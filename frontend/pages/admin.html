@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Global ISO Security - Administrador</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet">
+    <link rel="stylesheet" href="../css/admin.css">
+</head>
+<body>
+<div class="d-flex vh-100">
+
+    <!-- Menú lateral -->
+    <div class="sidebar d-flex flex-column p-3">
+        <div class="text-center mb-4">
+            <div class="logo-box mb-2">
+                <span class="logo-title">GLOBAL<br><small>ISO SECURITY</small></span>
+            </div>
+            <span class="badge-role">Administrador</span>
+            <p class="user-name mt-1">Nombre Admin</p>
+        </div>
+
+        <nav class="d-flex flex-column gap-2">
+            <button class="btn btn-menu active" onclick="mostrarSeccion('usuarios', this)">
+                <i class="bi bi-people-fill me-2"></i>Gestión de Usuarios
+            </button>
+            <button class="btn btn-menu" onclick="mostrarSeccion('empresas', this)">
+                <i class="bi bi-building me-2"></i>Empresas
+            </button>
+            <button class="btn btn-menu" onclick="mostrarSeccion('reportes', this)">
+                <i class="bi bi-file-earmark-bar-graph me-2"></i>Reportes
+            </button>
+            <button class="btn btn-menu" onclick="mostrarSeccion('configuracion', this)">
+                <i class="bi bi-gear-fill me-2"></i>Configuración
+            </button>
+        </nav>
+
+        <div class="mt-auto">
+            <button class="btn btn-logout w-100" onclick="window.location.href='login.html'">
+                <i class="bi bi-box-arrow-left me-2"></i>Cerrar Sesión
+            </button>
+        </div>
+    </div>
+
+    <!-- Contenido principal -->
+    <div class="main-content flex-grow-1 p-4">
+
+        <!-- Sección Gestión de Usuarios -->
+        <div id="seccion-usuarios">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2 class="section-title mb-0">Gestión de Usuarios</h2>
+                <button class="btn btn-crear">
+                    <i class="bi bi-plus-circle me-1"></i> Crear Usuario
+                </button>
+            </div>
+
+            <!-- Tarjetas resumen -->
+            <div class="row g-3 mb-4">
+                <div class="col-md-3">
+                    <div class="stat-card">
+                        <i class="bi bi-people-fill stat-icon"></i>
+                        <div>
+                            <p class="stat-label">Total Usuarios</p>
+                            <h4 class="stat-number">12</h4>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="stat-card">
+                        <i class="bi bi-building stat-icon"></i>
+                        <div>
+                            <p class="stat-label">Empresas</p>
+                            <h4 class="stat-number">5</h4>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="stat-card">
+                        <i class="bi bi-clipboard-check stat-icon"></i>
+                        <div>
+                            <p class="stat-label">Servicios Activos</p>
+                            <h4 class="stat-number">8</h4>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="stat-card">
+                        <i class="bi bi-shield-check stat-icon"></i>
+                        <div>
+                            <p class="stat-label">Auditorías</p>
+                            <h4 class="stat-number">3</h4>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tabla usuarios -->
+            <div class="table-wrapper">
+                <table class="table table-hover mb-0">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Nombre</th>
+                            <th>Email</th>
+                            <th>Rol</th>
+                            <th>Empresa</th>
+                            <th>Estado</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>1</td>
+                            <td>Juan Pardo</td>
+                            <td>juan@empresa.com</td>
+                            <td><span class="badge-rol implementador">Implementador</span></td>
+                            <td>Empresa ABC</td>
+                            <td><span class="badge-estado activo">Activo</span></td>
+                            <td>
+                                <button class="btn btn-sm btn-accion-editar"><i class="bi bi-pencil-fill"></i></button>
+                                <button class="btn btn-sm btn-accion-eliminar"><i class="bi bi-trash-fill"></i></button>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>2</td>
+                            <td>Laura Gómez</td>
+                            <td>laura@empresa.com</td>
+                            <td><span class="badge-rol auditor">Auditor</span></td>
+                            <td>Empresa XYZ</td>
+                            <td><span class="badge-estado activo">Activo</span></td>
+                            <td>
+                                <button class="btn btn-sm btn-accion-editar"><i class="bi bi-pencil-fill"></i></button>
+                                <button class="btn btn-sm btn-accion-eliminar"><i class="bi bi-trash-fill"></i></button>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>3</td>
+                            <td>Carlos Ruiz</td>
+                            <td>carlos@empresa.com</td>
+                            <td><span class="badge-rol capacitador">Capacitador</span></td>
+                            <td>Empresa DEF</td>
+                            <td><span class="badge-estado inactivo">Inactivo</span></td>
+                            <td>
+                                <button class="btn btn-sm btn-accion-editar"><i class="bi bi-pencil-fill"></i></button>
+                                <button class="btn btn-sm btn-accion-eliminar"><i class="bi bi-trash-fill"></i></button>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Sección Empresas -->
+        <div id="seccion-empresas" style="display:none;">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2 class="section-title mb-0">Empresas</h2>
+                <button class="btn btn-crear">
+                    <i class="bi bi-plus-circle me-1"></i> Registrar Empresa
+                </button>
+            </div>
+            <div class="table-wrapper">
+                <table class="table table-hover mb-0">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Nombre</th>
+                            <th>Sector</th>
+                            <th>Servicios</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>1</td>
+                            <td>Empresa ABC</td>
+                            <td>Tecnología</td>
+                            <td>3</td>
+                            <td>
+                                <button class="btn btn-sm btn-accion-editar"><i class="bi bi-pencil-fill"></i></button>
+                                <button class="btn btn-sm btn-accion-eliminar"><i class="bi bi-trash-fill"></i></button>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>2</td>
+                            <td>Empresa XYZ</td>
+                            <td>Financiero</td>
+                            <td>2</td>
+                            <td>
+                                <button class="btn btn-sm btn-accion-editar"><i class="bi bi-pencil-fill"></i></button>
+                                <button class="btn btn-sm btn-accion-eliminar"><i class="bi bi-trash-fill"></i></button>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Sección Reportes -->
+        <div id="seccion-reportes" style="display:none;">
+            <h2 class="section-title mb-4">Reportes</h2>
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <div class="reporte-card p-4 text-center">
+                        <i class="bi bi-file-earmark-pdf reporte-icon"></i>
+                        <p class="reporte-label">Reporte de Auditoría</p>
+                        <button class="btn btn-crear btn-sm">Descargar PDF</button>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="reporte-card p-4 text-center">
+                        <i class="bi bi-file-earmark-excel reporte-icon"></i>
+                        <p class="reporte-label">Reporte de Usuarios</p>
+                        <button class="btn btn-crear btn-sm">Descargar Excel</button>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="reporte-card p-4 text-center">
+                        <i class="bi bi-file-earmark-text reporte-icon"></i>
+                        <p class="reporte-label">Logs de Auditoría</p>
+                        <button class="btn btn-crear btn-sm">Ver Logs</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sección Configuración -->
+        <div id="seccion-configuracion" style="display:none;">
+            <h2 class="section-title mb-4">Configuración</h2>
+            <div class="reporte-card p-4">
+                <p class="text-white">Opciones de configuración del sistema disponibles próximamente.</p>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    function mostrarSeccion(seccion, btn) {
+        const secciones = ['usuarios', 'empresas', 'reportes', 'configuracion'];
+        secciones.forEach(s => {
+            document.getElementById('seccion-' + s).style.display = 'none';
+        });
+        document.getElementById('seccion-' + seccion).style.display = 'block';
+        document.querySelectorAll('.btn-menu').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+    }
+</script>
+</body>
+</html>
