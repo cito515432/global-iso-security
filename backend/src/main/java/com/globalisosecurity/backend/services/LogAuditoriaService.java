@@ -8,7 +8,8 @@ import com.globalisosecurity.backend.exceptions.BadRequestException;
 import com.globalisosecurity.backend.exceptions.ResourceNotFoundException;
 import com.globalisosecurity.backend.models.LogAuditoria;
 import com.globalisosecurity.backend.repositories.LogAuditoriaRepository;
-import org.springframework.beans.factory.annotation.Autowired;
+import com.globalisosecurity.backend.utils.RequestUtils;
+import com.globalisosecurity.backend.utils.SecurityUtils;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -18,8 +19,11 @@ import java.util.Optional;
 @Service
 public class LogAuditoriaService {
 
-    @Autowired
-    private LogAuditoriaRepository logAuditoriaRepository;
+    private final LogAuditoriaRepository logAuditoriaRepository;
+
+    public LogAuditoriaService(LogAuditoriaRepository logAuditoriaRepository) {
+        this.logAuditoriaRepository = logAuditoriaRepository;
+    }
 
     public List<LogAuditoria> obtenerTodos() {
         return logAuditoriaRepository.findAll();
@@ -30,67 +34,18 @@ public class LogAuditoriaService {
     }
 
     public List<LogAuditoria> obtenerPorModulo(String modulo) {
-        if (modulo == null || modulo.trim().isEmpty()) {
-            throw new BadRequestException("El módulo es obligatorio");
-        }
-        return logAuditoriaRepository.findByModulo(modulo.trim());
+        return logAuditoriaRepository.findByModulo(modulo);
     }
 
     public List<LogAuditoria> obtenerPorUsuario(String usuario) {
-        if (usuario == null || usuario.trim().isEmpty()) {
-            throw new BadRequestException("El usuario es obligatorio");
-        }
-        return logAuditoriaRepository.findByUsuario(usuario.trim());
+        return logAuditoriaRepository.findByUsuario(usuario);
     }
 
     public List<LogAuditoria> obtenerPorAccion(String accion) {
-        if (accion == null || accion.trim().isEmpty()) {
-            throw new BadRequestException("La acción es obligatoria");
-        }
-        return logAuditoriaRepository.findByAccion(accion.trim());
+        return logAuditoriaRepository.findByAccion(accion);
     }
 
     public LogAuditoria crearLog(LogAuditoria log) {
-        validarLog(log);
-
-        if (log.getFecha() == null) {
-            log.setFecha(LocalDateTime.now());
-        }
-
-        log.setUsuario(log.getUsuario().trim());
-        log.setAccion(log.getAccion().trim());
-        log.setModulo(log.getModulo().trim());
-        log.setDescripcion(log.getDescripcion().trim());
-        log.setIp(log.getIp().trim());
-
-        return logAuditoriaRepository.save(log);
-    }
-
-    public void registrarLog(String usuario, String accion, String modulo, String descripcion, String ip) {
-        LogAuditoria log = new LogAuditoria();
-        log.setUsuario(usuario);
-        log.setAccion(accion);
-        log.setModulo(modulo);
-        log.setDescripcion(descripcion);
-        log.setIp(ip);
-        log.setFecha(LocalDateTime.now());
-
-        logAuditoriaRepository.save(log);
-    }
-
-    public void eliminarLog(Long id) {
-        if (!logAuditoriaRepository.existsById(id)) {
-            throw new ResourceNotFoundException("Log de auditoría no encontrado");
-        }
-
-        logAuditoriaRepository.deleteById(id);
-    }
-
-    private void validarLog(LogAuditoria log) {
-        if (log.getUsuario() == null || log.getUsuario().trim().isEmpty()) {
-            throw new BadRequestException("El usuario es obligatorio");
-        }
-
         if (log.getAccion() == null || log.getAccion().trim().isEmpty()) {
             throw new BadRequestException("La acción es obligatoria");
         }
@@ -103,8 +58,37 @@ public class LogAuditoriaService {
             throw new BadRequestException("La descripción es obligatoria");
         }
 
-        if (log.getIp() == null || log.getIp().trim().isEmpty()) {
-            throw new BadRequestException("La IP es obligatoria");
+        if (log.getFecha() == null) {
+            log.setFecha(LocalDateTime.now());
         }
+
+        if (log.getUsuario() == null || log.getUsuario().trim().isEmpty()) {
+            log.setUsuario(SecurityUtils.getUsuarioActual());
+        }
+
+        if (log.getIp() == null || log.getIp().trim().isEmpty()) {
+            log.setIp(RequestUtils.getClientIp());
+        }
+
+        return logAuditoriaRepository.save(log);
+    }
+
+    public void eliminarLog(Long id) {
+        LogAuditoria log = logAuditoriaRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Log de auditoría no encontrado"));
+
+        logAuditoriaRepository.delete(log);
+    }
+
+    public void registrarLog(String accion, String modulo, String descripcion) {
+        LogAuditoria log = new LogAuditoria();
+        log.setUsuario(SecurityUtils.getUsuarioActual());
+        log.setAccion(accion);
+        log.setModulo(modulo);
+        log.setDescripcion(descripcion);
+        log.setFecha(LocalDateTime.now());
+        log.setIp(RequestUtils.getClientIp());
+
+        logAuditoriaRepository.save(log);
     }
 }

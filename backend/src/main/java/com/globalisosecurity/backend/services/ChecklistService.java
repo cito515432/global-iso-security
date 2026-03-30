@@ -75,11 +75,9 @@ public class ChecklistService {
         Checklist nuevo = checklistRepository.save(checklist);
 
         logAuditoriaService.registrarLog(
-                "sistema",
                 "CREAR",
                 "CHECKLIST",
-                "Se creó el checklist: " + nuevo.getNombre(),
-                "127.0.0.1"
+                "Se creó el checklist: " + nuevo.getNombre()
         );
 
         return nuevo;
@@ -114,29 +112,24 @@ public class ChecklistService {
         Checklist actualizado = checklistRepository.save(checklistExistente);
 
         logAuditoriaService.registrarLog(
-                "sistema",
                 "ACTUALIZAR",
                 "CHECKLIST",
-                "Se actualizó el checklist con ID: " + actualizado.getId(),
-                "127.0.0.1"
+                "Se actualizó el checklist con ID: " + actualizado.getId() + " y nombre: " + actualizado.getNombre()
         );
 
         return actualizado;
     }
 
     public void eliminarChecklist(Long id) {
-        if (!checklistRepository.existsById(id)) {
-            throw new ResourceNotFoundException("Checklist no encontrado");
-        }
+        Checklist checklist = checklistRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Checklist no encontrado"));
 
-        checklistRepository.deleteById(id);
+        checklistRepository.delete(checklist);
 
         logAuditoriaService.registrarLog(
-                "sistema",
                 "ELIMINAR",
                 "CHECKLIST",
-                "Se eliminó el checklist con ID: " + id,
-                "127.0.0.1"
+                "Se eliminó el checklist con ID: " + checklist.getId() + " y nombre: " + checklist.getNombre()
         );
     }
 

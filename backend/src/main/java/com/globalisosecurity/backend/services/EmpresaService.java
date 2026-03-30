@@ -43,11 +43,9 @@ public class EmpresaService {
         Empresa nueva = empresaRepository.save(empresa);
 
         logAuditoriaService.registrarLog(
-                "sistema",
                 "CREAR",
                 "EMPRESAS",
-                "Se creó la empresa: " + nueva.getNombre(),
-                "127.0.0.1"
+                "Se creó la empresa: " + nueva.getNombre()
         );
 
         return nueva;
@@ -73,29 +71,24 @@ public class EmpresaService {
         Empresa actualizada = empresaRepository.save(empresa);
 
         logAuditoriaService.registrarLog(
-                "sistema",
                 "ACTUALIZAR",
                 "EMPRESAS",
-                "Se actualizó la empresa con ID: " + actualizada.getId(),
-                "127.0.0.1"
+                "Se actualizó la empresa con ID: " + actualizada.getId() + " y nombre: " + actualizada.getNombre()
         );
 
         return actualizada;
     }
 
     public void eliminarEmpresa(Long id) {
-        if (!empresaRepository.existsById(id)) {
-            throw new ResourceNotFoundException("Empresa no encontrada");
-        }
+        Empresa empresa = empresaRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Empresa no encontrada"));
 
-        empresaRepository.deleteById(id);
+        empresaRepository.delete(empresa);
 
         logAuditoriaService.registrarLog(
-                "sistema",
                 "ELIMINAR",
                 "EMPRESAS",
-                "Se eliminó la empresa con ID: " + id,
-                "127.0.0.1"
+                "Se eliminó la empresa con ID: " + empresa.getId() + " y nombre: " + empresa.getNombre()
         );
     }
 

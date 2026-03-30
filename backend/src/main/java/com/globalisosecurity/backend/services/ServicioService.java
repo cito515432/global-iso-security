@@ -83,11 +83,9 @@ public class ServicioService {
         Servicio nuevo = servicioRepository.save(servicio);
 
         logAuditoriaService.registrarLog(
-                "sistema",
                 "CREAR",
                 "SERVICIOS",
-                "Se creó el servicio con ID: " + nuevo.getId() + " en estado " + nuevo.getEstado(),
-                "127.0.0.1"
+                "Se creó el servicio con ID: " + nuevo.getId() + " en estado " + nuevo.getEstado()
         );
 
         return nuevo;
@@ -124,11 +122,9 @@ public class ServicioService {
         Servicio actualizado = servicioRepository.save(servicioExistente);
 
         logAuditoriaService.registrarLog(
-                "sistema",
                 "ACTUALIZAR",
                 "SERVICIOS",
-                "Se actualizó el servicio con ID: " + actualizado.getId() + " al estado " + actualizado.getEstado(),
-                "127.0.0.1"
+                "Se actualizó el servicio con ID: " + actualizado.getId() + " al estado " + actualizado.getEstado()
         );
 
         return actualizado;
@@ -142,14 +138,12 @@ public class ServicioService {
             throw new BadRequestException("No se puede eliminar un servicio en estado " + servicio.getEstado());
         }
 
-        servicioRepository.deleteById(id);
+        servicioRepository.delete(servicio);
 
         logAuditoriaService.registrarLog(
-                "sistema",
                 "ELIMINAR",
                 "SERVICIOS",
-                "Se eliminó el servicio con ID: " + id,
-                "127.0.0.1"
+                "Se eliminó el servicio con ID: " + servicio.getId() + " en estado " + servicio.getEstado()
         );
     }
 
