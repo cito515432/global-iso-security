@@ -11,14 +11,13 @@
 <body>
 <div class="d-flex vh-100">
 
-    <!-- Menú lateral -->
     <div class="sidebar d-flex flex-column p-3">
         <div class="text-center mb-4">
             <div class="logo-box mb-2">
                 <span class="logo-title">GLOBAL<br><small>ISO SECURITY</small></span>
             </div>
             <span class="badge-role">Administrador</span>
-            <p class="user-name mt-1">Nombre Admin</p>
+            <p class="user-name mt-1" id="nombreAdmin">Nombre Admin</p>
         </div>
 
         <nav class="d-flex flex-column gap-2">
@@ -37,16 +36,14 @@
         </nav>
 
         <div class="mt-auto">
-            <button class="btn btn-logout w-100" onclick="window.location.href='login.html'">
+            <button class="btn btn-logout w-100" id="btnLogout">
                 <i class="bi bi-box-arrow-left me-2"></i>Cerrar Sesión
             </button>
         </div>
     </div>
 
-    <!-- Contenido principal -->
     <div class="main-content flex-grow-1 p-4">
 
-        <!-- Sección Gestión de Usuarios -->
         <div id="seccion-usuarios">
             <div class="d-flex justify-content-between align-items-center mb-4">
                 <h2 class="section-title mb-0">Gestión de Usuarios</h2>
@@ -55,14 +52,13 @@
                 </button>
             </div>
 
-            <!-- Tarjetas resumen -->
             <div class="row g-3 mb-4">
                 <div class="col-md-3">
                     <div class="stat-card">
                         <i class="bi bi-people-fill stat-icon"></i>
                         <div>
                             <p class="stat-label">Total Usuarios</p>
-                            <h4 class="stat-number">12</h4>
+                            <h4 class="stat-number" id="totalUsuarios">0</h4>
                         </div>
                     </div>
                 </div>
@@ -71,7 +67,7 @@
                         <i class="bi bi-building stat-icon"></i>
                         <div>
                             <p class="stat-label">Empresas</p>
-                            <h4 class="stat-number">5</h4>
+                            <h4 class="stat-number" id="totalEmpresas">0</h4>
                         </div>
                     </div>
                 </div>
@@ -80,7 +76,7 @@
                         <i class="bi bi-clipboard-check stat-icon"></i>
                         <div>
                             <p class="stat-label">Servicios Activos</p>
-                            <h4 class="stat-number">8</h4>
+                            <h4 class="stat-number" id="serviciosActivos">0</h4>
                         </div>
                     </div>
                 </div>
@@ -88,14 +84,13 @@
                     <div class="stat-card">
                         <i class="bi bi-shield-check stat-icon"></i>
                         <div>
-                            <p class="stat-label">Auditorías</p>
-                            <h4 class="stat-number">3</h4>
+                            <p class="stat-label">Auditorías / Evaluaciones</p>
+                            <h4 class="stat-number" id="totalEvaluaciones">0</h4>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <!-- Tabla usuarios -->
             <div class="table-wrapper">
                 <table class="table table-hover mb-0">
                     <thead>
@@ -109,49 +104,15 @@
                             <th>Acciones</th>
                         </tr>
                     </thead>
-                    <tbody>
+                    <tbody id="tablaUsuariosBody">
                         <tr>
-                            <td>1</td>
-                            <td>Juan Pardo</td>
-                            <td>juan@empresa.com</td>
-                            <td><span class="badge-rol implementador">Implementador</span></td>
-                            <td>Empresa ABC</td>
-                            <td><span class="badge-estado activo">Activo</span></td>
-                            <td>
-                                <button class="btn btn-sm btn-accion-editar"><i class="bi bi-pencil-fill"></i></button>
-                                <button class="btn btn-sm btn-accion-eliminar"><i class="bi bi-trash-fill"></i></button>
-                            </td>
-                        </tr>
-                        <tr>
-                            <td>2</td>
-                            <td>Laura Gómez</td>
-                            <td>laura@empresa.com</td>
-                            <td><span class="badge-rol auditor">Auditor</span></td>
-                            <td>Empresa XYZ</td>
-                            <td><span class="badge-estado activo">Activo</span></td>
-                            <td>
-                                <button class="btn btn-sm btn-accion-editar"><i class="bi bi-pencil-fill"></i></button>
-                                <button class="btn btn-sm btn-accion-eliminar"><i class="bi bi-trash-fill"></i></button>
-                            </td>
-                        </tr>
-                        <tr>
-                            <td>3</td>
-                            <td>Carlos Ruiz</td>
-                            <td>carlos@empresa.com</td>
-                            <td><span class="badge-rol capacitador">Capacitador</span></td>
-                            <td>Empresa DEF</td>
-                            <td><span class="badge-estado inactivo">Inactivo</span></td>
-                            <td>
-                                <button class="btn btn-sm btn-accion-editar"><i class="bi bi-pencil-fill"></i></button>
-                                <button class="btn btn-sm btn-accion-eliminar"><i class="bi bi-trash-fill"></i></button>
-                            </td>
+                            <td colspan="7" class="text-center">Próximamente se cargarán usuarios reales</td>
                         </tr>
                     </tbody>
                 </table>
             </div>
         </div>
 
-        <!-- Sección Empresas -->
         <div id="seccion-empresas" style="display:none;">
             <div class="d-flex justify-content-between align-items-center mb-4">
                 <h2 class="section-title mb-0">Empresas</h2>
@@ -172,31 +133,13 @@
                     </thead>
                     <tbody>
                         <tr>
-                            <td>1</td>
-                            <td>Empresa ABC</td>
-                            <td>Tecnología</td>
-                            <td>3</td>
-                            <td>
-                                <button class="btn btn-sm btn-accion-editar"><i class="bi bi-pencil-fill"></i></button>
-                                <button class="btn btn-sm btn-accion-eliminar"><i class="bi bi-trash-fill"></i></button>
-                            </td>
-                        </tr>
-                        <tr>
-                            <td>2</td>
-                            <td>Empresa XYZ</td>
-                            <td>Financiero</td>
-                            <td>2</td>
-                            <td>
-                                <button class="btn btn-sm btn-accion-editar"><i class="bi bi-pencil-fill"></i></button>
-                                <button class="btn btn-sm btn-accion-eliminar"><i class="bi bi-trash-fill"></i></button>
-                            </td>
+                            <td colspan="5" class="text-center">Próximamente se cargarán empresas reales</td>
                         </tr>
                     </tbody>
                 </table>
             </div>
         </div>
 
-        <!-- Sección Reportes -->
         <div id="seccion-reportes" style="display:none;">
             <h2 class="section-title mb-4">Reportes</h2>
             <div class="row g-3">
@@ -224,7 +167,6 @@
             </div>
         </div>
 
-        <!-- Sección Configuración -->
         <div id="seccion-configuracion" style="display:none;">
             <h2 class="section-title mb-4">Configuración</h2>
             <div class="reporte-card p-4">
@@ -235,6 +177,7 @@
     </div>
 </div>
 
+<script src="../js/admin.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script>
     function mostrarSeccion(seccion, btn) {
