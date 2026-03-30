@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Panel Implementador</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+    <link rel="stylesheet" href="../css/implementador.css">
+</head>
+<body>
+
+<div class="app-wrapper">
+
+    <!-- SIDEBAR -->
+    <aside class="sidebar">
+        <div>
+            <div class="logo-card">
+                <div class="logo-title">GLOBAL</div>
+                <div class="logo-subtitle">ISO SECURITY</div>
+            </div>
+
+            <div class="user-box">
+                <span class="role-badge">Implementador</span>
+                <p class="user-name">Nombre Implementador</p>
+            </div>
+
+            <nav class="menu-list">
+                <button class="menu-btn active" onclick="mostrarSeccion('dashboard', this)">
+                    <i class="bi bi-grid-fill"></i>
+                    <span>Dashboard</span>
+                </button>
+
+                <button class="menu-btn" onclick="mostrarSeccion('checklist', this)">
+                    <i class="bi bi-clipboard-check-fill"></i>
+                    <span>Checklist ISO 27001</span>
+                </button>
+
+                <button class="menu-btn" onclick="mostrarSeccion('capacitacion', this)">
+                    <i class="bi bi-mortarboard-fill"></i>
+                    <span>Capacitación</span>
+                </button>
+
+                <button class="menu-btn" onclick="mostrarSeccion('perfil', this)">
+                    <i class="bi bi-person-fill"></i>
+                    <span>Mi Perfil</span>
+                </button>
+            </nav>
+        </div>
+
+        <button class="logout-btn">
+            <i class="bi bi-box-arrow-left"></i>
+            <span>Cerrar Sesión</span>
+        </button>
+    </aside>
+
+    <!-- MAIN -->
+    <main class="main-content">
+
+        <!-- DASHBOARD -->
+        <section id="seccion-dashboard" class="content-section">
+            <div class="topbar">
+                <h1 class="page-title">Panel de Implementación</h1>
+                <button class="primary-btn">
+                    <i class="bi bi-send-check"></i>
+                    Finalizar Checklist
+                </button>
+            </div>
+
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-icon"><i class="bi bi-check-circle-fill"></i></div>
+                    <div>
+                        <p class="stat-label">Controles cumplidos</p>
+                        <h3 class="stat-number">24</h3>
+                    </div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-icon"><i class="bi bi-x-circle-fill"></i></div>
+                    <div>
+                        <p class="stat-label">No cumplen</p>
+                        <h3 class="stat-number">8</h3>
+                    </div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-icon"><i class="bi bi-hourglass-split"></i></div>
+                    <div>
+                        <p class="stat-label">En proceso</p>
+                        <h3 class="stat-number">12</h3>
+                    </div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-icon"><i class="bi bi-bar-chart-fill"></i></div>
+                    <div>
+                        <p class="stat-label">Progreso general</p>
+                        <h3 class="stat-number">54%</h3>
+                    </div>
+                </div>
+            </div>
+
+            <div class="content-grid">
+                <div class="panel-card">
+                    <div class="panel-header">
+                        <h5>Avance del checklist</h5>
+                        <span class="mini-badge">54%</span>
+                    </div>
+
+                    <div class="progress custom-progress">
+                        <div class="progress-bar" style="width: 54%;"></div>
+                    </div>
+
+                    <div class="progress-info">
+                        <span>Inicio</span>
+                        <span>Meta 100%</span>
+                    </div>
+                </div>
+
+                <div class="panel-card">
+                    <div class="panel-header">
+                        <h5>Estado del servicio</h5>
+                    </div>
+
+                    <span class="status-badge">EN PROCESO</span>
+
+                    <div class="detail-list">
+                        <p><strong>Empresa:</strong> Empresa ABC</p>
+                        <p><strong>Sector:</strong> Tecnología</p>
+                        <p><strong>Fecha de inicio:</strong> 10 de marzo de 2026</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- CHECKLIST -->
+        <section id="seccion-checklist" class="content-section" style="display:none;">
+            <div class="topbar">
+                <h1 class="page-title">Checklist ISO 27001</h1>
+                <button class="primary-btn">
+                    <i class="bi bi-floppy-fill"></i>
+                    Guardar Avance
+                </button>
+            </div>
+
+            <div class="filter-row">
+                <button class="filter-btn active" onclick="filtrarItems('todos', this)">Todos</button>
+                <button class="filter-btn" onclick="filtrarItems('cumple', this)">Cumple</button>
+                <button class="filter-btn" onclick="filtrarItems('no-cumple', this)">No cumple</button>
+                <button class="filter-btn" onclick="filtrarItems('en-proceso', this)">En proceso</button>
+            </div>
+
+            <div class="table-card">
+                <table class="table custom-table align-middle mb-0">
+                    <thead>
+                        <tr>
+                            <th>CONTROL</th>
+                            <th>ESTADO</th>
+                            <th>OBSERVACIÓN</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr data-estado="cumple">
+                            <td>A.5.1 — Política de seguridad de la información</td>
+                            <td>
+                                <span class="table-badge success">Cumple</span>
+                            </td>
+                            <td>La organización cuenta con política aprobada.</td>
+                        </tr>
+
+                        <tr data-estado="no-cumple">
+                            <td>A.5.2 — Revisión periódica de políticas</td>
+                            <td>
+                                <span class="table-badge danger">No cumple</span>
+                            </td>
+                            <td>No existe cronograma formal de revisión.</td>
+                        </tr>
+
+                        <tr data-estado="en-proceso">
+                            <td>A.6.1 — Roles y responsabilidades</td>
+                            <td>
+                                <span class="table-badge warning">En proceso</span>
+                            </td>
+                            <td>Se está documentando el manual de funciones.</td>
+                        </tr>
+
+                        <tr data-estado="cumple">
+                            <td>A.6.2 — Segregación de funciones</td>
+                            <td>
+                                <span class="table-badge success">Cumple</span>
+                            </td>
+                            <td>Se identificó separación entre administración y operación.</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- CAPACITACION -->
+        <section id="seccion-capacitacion" class="content-section" style="display:none;">
+            <div class="topbar">
+                <h1 class="page-title">Capacitación</h1>
+            </div>
+
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-icon"><i class="bi bi-book-fill"></i></div>
+                    <div>
+                        <p class="stat-label">Módulos asignados</p>
+                        <h3 class="stat-number">4</h3>
+                    </div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-icon"><i class="bi bi-check2-square"></i></div>
+                    <div>
+                        <p class="stat-label">Completados</p>
+                        <h3 class="stat-number">1</h3>
+                    </div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-icon"><i class="bi bi-clock-history"></i></div>
+                    <div>
+                        <p class="stat-label">Pendientes</p>
+                        <h3 class="stat-number">3</h3>
+                    </div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-icon"><i class="bi bi-graph-up-arrow"></i></div>
+                    <div>
+                        <p class="stat-label">Avance</p>
+                        <h3 class="stat-number">25%</h3>
+                    </div>
+                </div>
+            </div>
+
+            <div class="table-card">
+                <table class="table custom-table align-middle mb-0">
+                    <thead>
+                        <tr>
+                            <th>MÓDULO</th>
+                            <th>ESTADO</th>
+                            <th>PROGRESO</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Introducción a ISO 27001</td>
+                            <td><span class="table-badge success">Completado</span></td>
+                            <td>100%</td>
+                        </tr>
+                        <tr>
+                            <td>Controles del Anexo A</td>
+                            <td><span class="table-badge warning">En proceso</span></td>
+                            <td>60%</td>
+                        </tr>
+                        <tr>
+                            <td>Gestión de riesgos</td>
+                            <td><span class="table-badge neutral">Pendiente</span></td>
+                            <td>0%</td>
+                        </tr>
+                        <tr>
+                            <td>Auditoría interna</td>
+                            <td><span class="table-badge neutral">Pendiente</span></td>
+                            <td>0%</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- PERFIL -->
+        <section id="seccion-perfil" class="content-section" style="display:none;">
+            <div class="topbar">
+                <h1 class="page-title">Mi Perfil</h1>
+                <button class="primary-btn">
+                    <i class="bi bi-save-fill"></i>
+                    Guardar Cambios
+                </button>
+            </div>
+
+            <div class="profile-card">
+                <div class="row g-4">
+                    <div class="col-md-6">
+                        <label class="form-label custom-label">Nombre completo</label>
+                        <input type="text" class="form-control custom-input" value="Nombre Implementador">
+                    </div>
+
+                    <div class="col-md-6">
+                        <label class="form-label custom-label">Correo electrónico</label>
+                        <input type="email" class="form-control custom-input" value="implementador@empresa.com">
+                    </div>
+
+                    <div class="col-md-6">
+                        <label class="form-label custom-label">Empresa asignada</label>
+                        <input type="text" class="form-control custom-input" value="Empresa ABC" disabled>
+                    </div>
+
+                    <div class="col-md-6">
+                        <label class="form-label custom-label">Sector</label>
+                        <input type="text" class="form-control custom-input" value="Tecnología" disabled>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+</div>
+
+<script>
+function mostrarSeccion(seccion, btn) {
+    const secciones = ['dashboard', 'checklist', 'capacitacion', 'perfil'];
+    secciones.forEach(s => {
+        document.getElementById('seccion-' + s).style.display = 'none';
+    });
+
+    document.getElementById('seccion-' + seccion).style.display = 'block';
+
+    document.querySelectorAll('.menu-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+}
+
+function filtrarItems(filtro, btn) {
+    document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+
+    document.querySelectorAll('#seccion-checklist tbody tr').forEach(row => {
+        const estado = row.getAttribute('data-estado');
+        row.style.display = (filtro === 'todos' || filtro === estado) ? '' : 'none';
+    });
+}
+</script>
+
+</body>
+</html>
