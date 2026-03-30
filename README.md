@@ -943,3 +943,49 @@ El sistema presenta una interfaz sólida, organizada y coherente con los objetiv
 Se logró estructurar correctamente el panel administrativo, implementar el dashboard y definir la configuración del sistema.
 
 El siguiente paso clave es la integración completa con el backend y la lógica de negocio.
+
+---
+
+## 🔄 Actualización reciente del proyecto
+
+### ✅ Avances más recientes integrados
+
+En la última jornada de trabajo se consolidó un bloque importante de integración entre backend y frontend, además de mejorar la trazabilidad real del sistema.
+
+#### 🔐 Backend – Logs reales de auditoría
+
+Se mejoró el sistema de logs automáticos para que ya no registren datos simulados como:
+
+- `usuario = "sistema"`
+- `ip = "127.0.0.1"`
+
+Ahora los logs automáticos toman:
+
+- **usuario real autenticado desde JWT**
+- **IP real del request**
+- `acción`
+- `módulo`
+- `descripción`
+- `fecha`
+
+### 🧩 Cambios implementados en backend
+
+#### Nuevas utilidades creadas
+
+**`SecurityUtils.java`**
+- Obtiene el usuario autenticado desde `SecurityContextHolder`
+- Permite registrar el email o username real del usuario logueado
+
+**`RequestUtils.java`**
+- Obtiene la IP real del cliente desde el request actual
+- Soporta:
+  - `X-Forwarded-For`
+  - `X-Real-IP`
+  - `request.getRemoteAddr()`
+
+#### `LogAuditoriaService` actualizado
+
+Se refactorizó para usar un método reutilizable:
+
+```java
+public void registrarLog(String accion, String modulo, String descripcion)
