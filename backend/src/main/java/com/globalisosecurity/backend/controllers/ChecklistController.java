@@ -1,0 +1,65 @@
+/*
+ * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
+ * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Class.java to edit this template
+ */
+package com.globalisosecurity.backend.controllers;
+
+import com.globalisosecurity.backend.models.Checklist;
+import com.globalisosecurity.backend.services.ChecklistService;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+import java.util.Optional;
+
+@RestController
+@RequestMapping("/api/checklists")
+@CrossOrigin(origins = "*")
+public class ChecklistController {
+
+    @Autowired
+    private ChecklistService checklistService;
+
+    @GetMapping
+    public List<Checklist> obtenerTodos() {
+        return checklistService.obtenerTodos();
+    }
+
+    @GetMapping("/{id}")
+    public ResponseEntity<?> obtenerPorId(@PathVariable Long id) {
+        Optional<Checklist> checklist = checklistService.obtenerPorId(id);
+        if (checklist.isPresent()) {
+            return ResponseEntity.ok(checklist.get());
+        }
+        return ResponseEntity.status(404).body("Checklist no encontrado");
+    }
+
+    @GetMapping("/estado/{estado}")
+    public List<Checklist> obtenerPorEstado(@PathVariable String estado) {
+        return checklistService.obtenerPorEstado(estado);
+    }
+
+    @GetMapping("/servicio/{servicioId}")
+    public List<Checklist> obtenerPorServicio(@PathVariable Long servicioId) {
+        return checklistService.obtenerPorServicio(servicioId);
+    }
+
+    @PostMapping
+    public ResponseEntity<?> crearChecklist(@RequestBody Checklist checklist) {
+        Checklist nuevo = checklistService.crearChecklist(checklist);
+        return ResponseEntity.ok(nuevo);
+    }
+
+    @PutMapping("/{id}")
+    public ResponseEntity<?> actualizarChecklist(@PathVariable Long id, @RequestBody Checklist checklist) {
+        Checklist actualizado = checklistService.actualizarChecklist(id, checklist);
+        return ResponseEntity.ok(actualizado);
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<?> eliminarChecklist(@PathVariable Long id) {
+        checklistService.eliminarChecklist(id);
+        return ResponseEntity.ok("Checklist eliminado correctamente");
+    }
+}
