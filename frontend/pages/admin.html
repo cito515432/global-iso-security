@@ -11,21 +11,28 @@
 <body>
 <div class="d-flex vh-100">
 
+    <!-- Menú lateral -->
     <div class="sidebar d-flex flex-column p-3">
         <div class="text-center mb-4">
             <div class="logo-box mb-2">
                 <span class="logo-title">GLOBAL<br><small>ISO SECURITY</small></span>
             </div>
             <span class="badge-role">Administrador</span>
-            <p class="user-name mt-1" id="nombreAdmin">Nombre Admin</p>
+            <p class="user-name mt-1">Nombre Admin</p>
         </div>
 
         <nav class="d-flex flex-column gap-2">
-            <button class="btn btn-menu active" onclick="mostrarSeccion('usuarios', this)">
+            <button class="btn btn-menu active" onclick="mostrarSeccion('dashboard', this)">
+                <i class="bi bi-grid-fill me-2"></i>Dashboard
+            </button>
+            <button class="btn btn-menu" onclick="mostrarSeccion('usuarios', this)">
                 <i class="bi bi-people-fill me-2"></i>Gestión de Usuarios
             </button>
             <button class="btn btn-menu" onclick="mostrarSeccion('empresas', this)">
                 <i class="bi bi-building me-2"></i>Empresas
+            </button>
+            <button class="btn btn-menu" onclick="mostrarSeccion('servicios', this)">
+                <i class="bi bi-clipboard-check me-2"></i>Servicios
             </button>
             <button class="btn btn-menu" onclick="mostrarSeccion('reportes', this)">
                 <i class="bi bi-file-earmark-bar-graph me-2"></i>Reportes
@@ -36,15 +43,130 @@
         </nav>
 
         <div class="mt-auto">
-            <button class="btn btn-logout w-100" id="btnLogout">
+            <button class="btn btn-logout w-100" onclick="window.location.href='login.html'">
                 <i class="bi bi-box-arrow-left me-2"></i>Cerrar Sesión
             </button>
         </div>
     </div>
 
+    <!-- Contenido principal -->
     <div class="main-content flex-grow-1 p-4">
 
-        <div id="seccion-usuarios">
+        <!-- Sección Dashboard -->
+        <div id="seccion-dashboard">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2 class="section-title mb-0">Dashboard</h2>
+                <button class="btn btn-crear">
+                    <i class="bi bi-plus-circle me-1"></i> Nuevo Servicio
+                </button>
+            </div>
+
+            <div class="row g-3 mb-4">
+                <div class="col-md-3">
+                    <div class="stat-card">
+                        <i class="bi bi-people-fill stat-icon"></i>
+                        <div>
+                            <p class="stat-label">Total Usuarios</p>
+                            <h4 class="stat-number">12</h4>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="stat-card">
+                        <i class="bi bi-building stat-icon"></i>
+                        <div>
+                            <p class="stat-label">Empresas</p>
+                            <h4 class="stat-number">5</h4>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="stat-card">
+                        <i class="bi bi-clipboard-check stat-icon"></i>
+                        <div>
+                            <p class="stat-label">Servicios Activos</p>
+                            <h4 class="stat-number">8</h4>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="stat-card">
+                        <i class="bi bi-shield-check stat-icon"></i>
+                        <div>
+                            <p class="stat-label">Auditorías</p>
+                            <h4 class="stat-number">3</h4>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row g-3 mb-4">
+                <div class="col-md-3">
+                    <div class="stat-card">
+                        <i class="bi bi-file-earmark-text stat-icon"></i>
+                        <div>
+                            <p class="stat-label">Total Servicios</p>
+                            <h4 class="stat-number">11</h4>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="stat-card">
+                        <i class="bi bi-hourglass-split stat-icon"></i>
+                        <div>
+                            <p class="stat-label">En Proceso</p>
+                            <h4 class="stat-number">4</h4>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="stat-card">
+                        <i class="bi bi-pen-fill stat-icon"></i>
+                        <div>
+                            <p class="stat-label">Firmados</p>
+                            <h4 class="stat-number">3</h4>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="stat-card">
+                        <i class="bi bi-lock-fill stat-icon"></i>
+                        <div>
+                            <p class="stat-label">Cerrados</p>
+                            <h4 class="stat-number">2</h4>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <div class="table-wrapper p-4 h-100">
+                        <h5 class="text-white mb-3">Resumen General</h5>
+                        <p class="text-white mb-2"><strong>Usuarios activos:</strong> 9</p>
+                        <p class="text-white mb-2"><strong>Usuarios inactivos:</strong> 3</p>
+                        <p class="text-white mb-2"><strong>Empresas activas:</strong> 4</p>
+                        <p class="text-white mb-2"><strong>Servicios en borrador:</strong> 2</p>
+                        <p class="text-white mb-2"><strong>Servicios finalizados:</strong> 2</p>
+                        <p class="text-white mb-0"><strong>Reportes generados:</strong> 6</p>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="table-wrapper p-4 h-100">
+                        <h5 class="text-white mb-3">Estado Operativo</h5>
+                        <p class="text-white mb-2"><strong>Último servicio creado:</strong> Empresa ABC</p>
+                        <p class="text-white mb-2"><strong>Última auditoría:</strong> 27 Mar 2026</p>
+                        <p class="text-white mb-2"><strong>Último reporte:</strong> Auditoría PDF</p>
+                        <p class="text-white mb-2"><strong>Servicios pendientes de firma:</strong> 3</p>
+                        <p class="text-white mb-2"><strong>Procesos cerrados:</strong> 2</p>
+                        <p class="text-white mb-0"><strong>Sistema:</strong> Operativo</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sección Gestión de Usuarios -->
+        <div id="seccion-usuarios" style="display:none;">
             <div class="d-flex justify-content-between align-items-center mb-4">
                 <h2 class="section-title mb-0">Gestión de Usuarios</h2>
                 <button class="btn btn-crear">
@@ -58,34 +180,34 @@
                         <i class="bi bi-people-fill stat-icon"></i>
                         <div>
                             <p class="stat-label">Total Usuarios</p>
-                            <h4 class="stat-number" id="totalUsuarios">0</h4>
+                            <h4 class="stat-number">12</h4>
                         </div>
                     </div>
                 </div>
                 <div class="col-md-3">
                     <div class="stat-card">
-                        <i class="bi bi-building stat-icon"></i>
+                        <i class="bi bi-person-check-fill stat-icon"></i>
                         <div>
-                            <p class="stat-label">Empresas</p>
-                            <h4 class="stat-number" id="totalEmpresas">0</h4>
+                            <p class="stat-label">Usuarios Activos</p>
+                            <h4 class="stat-number">9</h4>
                         </div>
                     </div>
                 </div>
                 <div class="col-md-3">
                     <div class="stat-card">
-                        <i class="bi bi-clipboard-check stat-icon"></i>
+                        <i class="bi bi-person-x-fill stat-icon"></i>
                         <div>
-                            <p class="stat-label">Servicios Activos</p>
-                            <h4 class="stat-number" id="serviciosActivos">0</h4>
+                            <p class="stat-label">Usuarios Inactivos</p>
+                            <h4 class="stat-number">3</h4>
                         </div>
                     </div>
                 </div>
                 <div class="col-md-3">
                     <div class="stat-card">
-                        <i class="bi bi-shield-check stat-icon"></i>
+                        <i class="bi bi-journal-text stat-icon"></i>
                         <div>
-                            <p class="stat-label">Auditorías / Evaluaciones</p>
-                            <h4 class="stat-number" id="totalEvaluaciones">0</h4>
+                            <p class="stat-label">Eventos Recientes</p>
+                            <h4 class="stat-number">18</h4>
                         </div>
                     </div>
                 </div>
@@ -104,15 +226,49 @@
                             <th>Acciones</th>
                         </tr>
                     </thead>
-                    <tbody id="tablaUsuariosBody">
+                    <tbody>
                         <tr>
-                            <td colspan="7" class="text-center">Próximamente se cargarán usuarios reales</td>
+                            <td>1</td>
+                            <td>Juan Pardo</td>
+                            <td>juan@empresa.com</td>
+                            <td><span class="badge-rol implementador">Implementador</span></td>
+                            <td>Empresa ABC</td>
+                            <td><span class="badge-estado activo">Activo</span></td>
+                            <td>
+                                <button class="btn btn-sm btn-accion-editar"><i class="bi bi-pencil-fill"></i></button>
+                                <button class="btn btn-sm btn-accion-eliminar"><i class="bi bi-trash-fill"></i></button>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>2</td>
+                            <td>Laura Gómez</td>
+                            <td>laura@empresa.com</td>
+                            <td><span class="badge-rol auditor">Auditor</span></td>
+                            <td>Empresa XYZ</td>
+                            <td><span class="badge-estado activo">Activo</span></td>
+                            <td>
+                                <button class="btn btn-sm btn-accion-editar"><i class="bi bi-pencil-fill"></i></button>
+                                <button class="btn btn-sm btn-accion-eliminar"><i class="bi bi-trash-fill"></i></button>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>3</td>
+                            <td>Carlos Ruiz</td>
+                            <td>carlos@empresa.com</td>
+                            <td><span class="badge-rol capacitador">Capacitador</span></td>
+                            <td>Empresa DEF</td>
+                            <td><span class="badge-estado inactivo">Inactivo</span></td>
+                            <td>
+                                <button class="btn btn-sm btn-accion-editar"><i class="bi bi-pencil-fill"></i></button>
+                                <button class="btn btn-sm btn-accion-eliminar"><i class="bi bi-trash-fill"></i></button>
+                            </td>
                         </tr>
                     </tbody>
                 </table>
             </div>
         </div>
 
+        <!-- Sección Empresas -->
         <div id="seccion-empresas" style="display:none;">
             <div class="d-flex justify-content-between align-items-center mb-4">
                 <h2 class="section-title mb-0">Empresas</h2>
@@ -133,13 +289,156 @@
                     </thead>
                     <tbody>
                         <tr>
-                            <td colspan="5" class="text-center">Próximamente se cargarán empresas reales</td>
+                            <td>1</td>
+                            <td>Empresa ABC</td>
+                            <td>Tecnología</td>
+                            <td>3</td>
+                            <td>
+                                <button class="btn btn-sm btn-accion-editar"><i class="bi bi-pencil-fill"></i></button>
+                                <button class="btn btn-sm btn-accion-eliminar"><i class="bi bi-trash-fill"></i></button>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>2</td>
+                            <td>Empresa XYZ</td>
+                            <td>Financiero</td>
+                            <td>2</td>
+                            <td>
+                                <button class="btn btn-sm btn-accion-editar"><i class="bi bi-pencil-fill"></i></button>
+                                <button class="btn btn-sm btn-accion-eliminar"><i class="bi bi-trash-fill"></i></button>
+                            </td>
                         </tr>
                     </tbody>
                 </table>
             </div>
         </div>
 
+        <!-- Sección Servicios -->
+        <div id="seccion-servicios" style="display:none;">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2 class="section-title mb-0">Servicios</h2>
+                <button class="btn btn-crear">
+                    <i class="bi bi-plus-circle me-1"></i> Crear Servicio
+                </button>
+            </div>
+
+            <div class="row g-3 mb-4">
+                <div class="col-md-3">
+                    <div class="stat-card">
+                        <i class="bi bi-file-earmark-text stat-icon"></i>
+                        <div>
+                            <p class="stat-label">Total Servicios</p>
+                            <h4 class="stat-number">11</h4>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="stat-card">
+                        <i class="bi bi-hourglass-split stat-icon"></i>
+                        <div>
+                            <p class="stat-label">En Proceso</p>
+                            <h4 class="stat-number">4</h4>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="stat-card">
+                        <i class="bi bi-pen-fill stat-icon"></i>
+                        <div>
+                            <p class="stat-label">Firmados</p>
+                            <h4 class="stat-number">3</h4>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="stat-card">
+                        <i class="bi bi-lock-fill stat-icon"></i>
+                        <div>
+                            <p class="stat-label">Cerrados</p>
+                            <h4 class="stat-number">2</h4>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="table-wrapper">
+                <table class="table table-hover mb-0">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Empresa</th>
+                            <th>Sector</th>
+                            <th>Estado</th>
+                            <th>Fecha Inicio</th>
+                            <th>Implementador</th>
+                            <th>Capacitador</th>
+                            <th>Auditor</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>1</td>
+                            <td>Empresa ABC</td>
+                            <td>Tecnología</td>
+                            <td><span class="badge-servicio borrador">BORRADOR</span></td>
+                            <td>10 Mar 2026</td>
+                            <td>Juan Pardo</td>
+                            <td>Carlos Ruiz</td>
+                            <td>Laura Gómez</td>
+                            <td>
+                                <button class="btn btn-sm btn-accion-editar"><i class="bi bi-pencil-fill"></i></button>
+                                <button class="btn btn-sm btn-accion-eliminar"><i class="bi bi-trash-fill"></i></button>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>2</td>
+                            <td>Empresa XYZ</td>
+                            <td>Financiero</td>
+                            <td><span class="badge-servicio en-proceso">EN PROCESO</span></td>
+                            <td>12 Mar 2026</td>
+                            <td>Juan Pardo</td>
+                            <td>Carlos Ruiz</td>
+                            <td>Laura Gómez</td>
+                            <td>
+                                <button class="btn btn-sm btn-accion-editar"><i class="bi bi-pencil-fill"></i></button>
+                                <button class="btn btn-sm btn-accion-eliminar"><i class="bi bi-trash-fill"></i></button>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>3</td>
+                            <td>Empresa DEF</td>
+                            <td>Salud</td>
+                            <td><span class="badge-servicio firmado">FIRMADO</span></td>
+                            <td>08 Mar 2026</td>
+                            <td>Juan Pardo</td>
+                            <td>Carlos Ruiz</td>
+                            <td>Laura Gómez</td>
+                            <td>
+                                <button class="btn btn-sm btn-accion-editar"><i class="bi bi-pencil-fill"></i></button>
+                                <button class="btn btn-sm btn-accion-eliminar"><i class="bi bi-trash-fill"></i></button>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>4</td>
+                            <td>Empresa GHI</td>
+                            <td>Educación</td>
+                            <td><span class="badge-servicio cerrado">CERRADO</span></td>
+                            <td>01 Mar 2026</td>
+                            <td>Juan Pardo</td>
+                            <td>Carlos Ruiz</td>
+                            <td>Laura Gómez</td>
+                            <td>
+                                <button class="btn btn-sm btn-accion-editar"><i class="bi bi-pencil-fill"></i></button>
+                                <button class="btn btn-sm btn-accion-eliminar"><i class="bi bi-trash-fill"></i></button>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Sección Reportes -->
         <div id="seccion-reportes" style="display:none;">
             <h2 class="section-title mb-4">Reportes</h2>
             <div class="row g-3">
@@ -167,21 +466,175 @@
             </div>
         </div>
 
+        <!-- Sección Configuración -->
         <div id="seccion-configuracion" style="display:none;">
-            <h2 class="section-title mb-4">Configuración</h2>
-            <div class="reporte-card p-4">
-                <p class="text-white">Opciones de configuración del sistema disponibles próximamente.</p>
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2 class="section-title mb-0">Configuración</h2>
+                <button class="btn btn-crear">
+                    <i class="bi bi-save me-1"></i> Guardar Configuración
+                </button>
+            </div>
+
+            <div class="row g-4">
+
+                <!-- Información del sistema -->
+                <div class="col-md-6">
+                    <div class="reporte-card p-4 h-100">
+                        <h5 class="config-title mb-3">
+                            <i class="bi bi-info-circle-fill me-2"></i>Información del Sistema
+                        </h5>
+
+                        <div class="mb-3">
+                            <label class="config-label">Nombre del sistema</label>
+                            <input type="text" class="form-control config-input" value="Global ISO Security">
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="config-label">Versión</label>
+                            <input type="text" class="form-control config-input" value="1.0.0">
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="config-label">Correo de soporte</label>
+                            <input type="email" class="form-control config-input" value="soporte@globaliso.com">
+                        </div>
+
+                        <div class="mb-0">
+                            <label class="config-label">Estado del sistema</label>
+                            <select class="form-select config-input">
+                                <option selected>Operativo</option>
+                                <option>En mantenimiento</option>
+                                <option>Deshabilitado</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Seguridad -->
+                <div class="col-md-6">
+                    <div class="reporte-card p-4 h-100">
+                        <h5 class="config-title mb-3">
+                            <i class="bi bi-shield-lock-fill me-2"></i>Seguridad
+                        </h5>
+
+                        <div class="mb-3">
+                            <label class="config-label">Duración de sesión</label>
+                            <select class="form-select config-input">
+                                <option>15 minutos</option>
+                                <option selected>30 minutos</option>
+                                <option>1 hora</option>
+                                <option>2 horas</option>
+                            </select>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="config-label">Intentos máximos de inicio de sesión</label>
+                            <input type="number" class="form-control config-input" value="5">
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="config-label">Bloqueo temporal por intentos fallidos</label>
+                            <select class="form-select config-input">
+                                <option>5 minutos</option>
+                                <option selected>10 minutos</option>
+                                <option>15 minutos</option>
+                                <option>30 minutos</option>
+                            </select>
+                        </div>
+
+                        <div class="form-check form-switch config-switch">
+                            <input class="form-check-input" type="checkbox" id="sesionAuto" checked>
+                            <label class="form-check-label text-white" for="sesionAuto">
+                                Cerrar sesión automáticamente por inactividad
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Flujo del servicio -->
+                <div class="col-md-6">
+                    <div class="reporte-card p-4 h-100">
+                        <h5 class="config-title mb-3">
+                            <i class="bi bi-diagram-3-fill me-2"></i>Flujo del Servicio
+                        </h5>
+
+                        <div class="form-check form-switch config-switch mb-3">
+                            <input class="form-check-input" type="checkbox" id="editarBorrador" checked>
+                            <label class="form-check-label text-white" for="editarBorrador">
+                                Permitir edición en estado BORRADOR
+                            </label>
+                        </div>
+
+                        <div class="form-check form-switch config-switch mb-3">
+                            <input class="form-check-input" type="checkbox" id="editarProceso" checked>
+                            <label class="form-check-label text-white" for="editarProceso">
+                                Permitir edición en estado EN PROCESO
+                            </label>
+                        </div>
+
+                        <div class="form-check form-switch config-switch mb-3">
+                            <input class="form-check-input" type="checkbox" id="bloquearFirmado" checked>
+                            <label class="form-check-label text-white" for="bloquearFirmado">
+                                Bloquear edición cuando el servicio esté FIRMADO
+                            </label>
+                        </div>
+
+                        <div class="form-check form-switch config-switch mb-0">
+                            <input class="form-check-input" type="checkbox" id="bloquearCerrado" checked>
+                            <label class="form-check-label text-white" for="bloquearCerrado">
+                                Bloquear edición cuando el servicio esté CERRADO
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Reportes -->
+                <div class="col-md-6">
+                    <div class="reporte-card p-4 h-100">
+                        <h5 class="config-title mb-3">
+                            <i class="bi bi-file-earmark-bar-graph-fill me-2"></i>Reportes
+                        </h5>
+
+                        <div class="form-check form-switch config-switch mb-3">
+                            <input class="form-check-input" type="checkbox" id="pdfActivo" checked>
+                            <label class="form-check-label text-white" for="pdfActivo">
+                                Habilitar exportación en PDF
+                            </label>
+                        </div>
+
+                        <div class="form-check form-switch config-switch mb-3">
+                            <input class="form-check-input" type="checkbox" id="excelActivo" checked>
+                            <label class="form-check-label text-white" for="excelActivo">
+                                Habilitar exportación en Excel
+                            </label>
+                        </div>
+
+                        <div class="form-check form-switch config-switch mb-3">
+                            <input class="form-check-input" type="checkbox" id="logoReporte" checked>
+                            <label class="form-check-label text-white" for="logoReporte">
+                                Incluir logo institucional en reportes
+                            </label>
+                        </div>
+
+                        <div class="form-check form-switch config-switch mb-0">
+                            <input class="form-check-input" type="checkbox" id="soloCerrado" checked>
+                            <label class="form-check-label text-white" for="soloCerrado">
+                                Generar reportes solo para servicios cerrados
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
             </div>
         </div>
 
     </div>
 </div>
 
-<script src="../js/admin.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script>
     function mostrarSeccion(seccion, btn) {
-        const secciones = ['usuarios', 'empresas', 'reportes', 'configuracion'];
+        const secciones = ['dashboard', 'usuarios', 'empresas', 'servicios', 'reportes', 'configuracion'];
         secciones.forEach(s => {
             document.getElementById('seccion-' + s).style.display = 'none';
         });
