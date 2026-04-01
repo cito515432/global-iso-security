@@ -237,3 +237,88 @@ body {
     font-size: 0.9rem;
     margin-bottom: 15px;
 }
+
+/* ===== NUEVO (NO MODIFICA NADA DE ARRIBA) ===== */
+
+/* BADGES ESTADO SERVICIO */
+.badge-servicio {
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+.badge-servicio.borrador {
+    background-color: #6b7280;
+    color: #fff;
+}
+
+.badge-servicio.en-proceso {
+    background-color: #f59e0b;
+    color: #000;
+}
+
+.badge-servicio.firmado {
+    background-color: #8b5cf6;
+    color: #fff;
+}
+
+.badge-servicio.cerrado {
+    background-color: #10b981;
+    color: #fff;
+}
+
+/* CONFIGURACIÓN */
+.config-title {
+    color: #ffffff;
+    font-weight: 700;
+    font-size: 1rem;
+}
+
+.config-label {
+    color: #aaaaaa;
+    font-size: 0.82rem;
+    margin-bottom: 6px;
+    display: block;
+}
+
+.config-input {
+    background-color: #111111;
+    border: 1px solid #222;
+    color: #ffffff;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    padding: 10px 12px;
+}
+
+.config-input:focus {
+    background-color: #111111;
+    color: #ffffff;
+    border-color: #f28b82;
+    box-shadow: 0 0 0 0.2rem rgba(242, 139, 130, 0.15);
+}
+
+.config-input::placeholder {
+    color: #777777;
+}
+
+.config-input option {
+    background-color: #111111;
+    color: #ffffff;
+}
+
+.config-switch .form-check-input {
+    background-color: #111111;
+    border-color: #444;
+    cursor: pointer;
+}
+
+.config-switch .form-check-input:checked {
+    background-color: #f28b82;
+    border-color: #f28b82;
+}
+
+.config-switch .form-check-label {
+    font-size: 0.9rem;
+    cursor: pointer;
+}

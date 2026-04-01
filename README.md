@@ -749,5 +749,243 @@ Authorization: Bearer TU_TOKEN
 El backend del proyecto se encuentra en una fase **muy avanzada**, con la mayoría de los módulos principales ya implementados, protegidos y probados. Actualmente el enfoque principal pasa a ser la integración con el frontend, refinamiento de reglas de negocio y preparación de la entrega final.
 
 ---
+# 📄 Informe de Desarrollo – Frontend  
+## 🔐 Global ISO Security
 
-**Última actualización:** 26 de marzo de 2026
+**Fecha:** 28 de marzo de 2026  
+
+---
+
+## 📌 Objetivo de la sesión
+
+Continuar el desarrollo del frontend del sistema, incorporando un dashboard funcional, mejorando la estructura del panel administrador e implementando la sección de configuración con parámetros del sistema, seguridad y flujo de servicios.
+
+---
+
+## 🧩 Desarrollo realizado
+
+### 📊 1. Dashboard
+
+Se implementó una vista principal para el sistema que permite visualizar el estado general:
+
+- Indicadores de:
+  - Usuarios
+  - Empresas
+  - Servicios
+  - Auditorías
+- Estados de servicios:
+  - En proceso
+  - Firmados
+  - Cerrados
+- Panel de resumen del sistema
+
+✔️ Permite una visión general del estado operativo
+
+---
+
+### 👨‍💼 2. Panel Administrador
+
+Se consolidó el panel principal del administrador con los siguientes módulos:
+
+- Gestión de usuarios
+- Empresas
+- Servicios
+- Reportes
+- Configuración
+
+Mejoras realizadas:
+
+- Navegación más clara
+- Organización por secciones
+- Eliminación del módulo independiente de logs para simplificar la interfaz
+
+---
+
+### 👥 3. Gestión de Usuarios
+
+- Visualización de usuarios con:
+  - Nombre
+  - Email
+  - Rol
+  - Empresa
+  - Estado
+- Acciones:
+  - Editar
+  - Eliminar
+- Roles manejados:
+  - Administrador
+  - Implementador
+  - Auditor
+  - Capacitador
+
+---
+
+### 🏢 4. Empresas
+
+- Registro y gestión de empresas
+- Asociación con servicios
+- Clasificación por sector económico
+
+✔️ Soporte para modelo multi-tenant
+
+---
+
+### 📋 5. Servicios
+
+Se estructuró el módulo central del sistema:
+
+#### Estados del servicio:
+- BORRADOR
+- EN PROCESO
+- FIRMADO
+- CERRADO
+
+#### Roles asociados:
+- Implementador
+- Capacitador
+- Auditor
+
+✔️ Alineado con el flujo del proyecto ISO 27001
+
+---
+
+### 📊 6. Reportes
+
+- Generación de:
+  - PDF
+  - Excel
+- Visualización de logs desde este módulo
+
+✔️ Preparado para integración con backend
+
+---
+
+### ⚙️ 7. Configuración del Sistema
+
+Se implementó una nueva sección de configuración con:
+
+#### 🔹 Información del sistema
+- Nombre del sistema
+- Versión
+- Correo de soporte
+- Estado del sistema
+
+#### 🔹 Seguridad
+- Duración de sesión
+- Intentos máximos de login
+- Bloqueo por intentos fallidos
+- Cierre automático por inactividad
+
+#### 🔹 Flujo del servicio
+- Edición permitida en:
+  - BORRADOR
+  - EN PROCESO
+- Bloqueo en:
+  - FIRMADO
+  - CERRADO
+
+#### 🔹 Reportes
+- Exportación en PDF y Excel
+- Inclusión de logo institucional
+- Restricción a servicios cerrados
+
+✔️ Basado en buenas prácticas de seguridad ISO 27001
+
+---
+
+## 📊 Estado actual
+
+| Módulo | Estado |
+|------|--------|
+| Login | ✅ Completado |
+| Dashboard | ✅ Completado |
+| Administrador | ✅ Completado |
+| Implementador | ✅ Completado |
+| Configuración | ✅ Completado |
+| Frontend general | 🔄 En integración |
+| Backend | 🔄 En progreso |
+| Base de datos | 🔄 En progreso |
+| Seguridad JWT | 🔄 En integración |
+
+---
+
+## 🚀 Próximos pasos
+
+- Integrar frontend con backend (Spring Boot)
+- Implementar autenticación JWT
+- Conectar con base de datos MySQL
+- Implementar lógica real de checklist ISO 27001
+- Generación dinámica de reportes
+
+---
+
+## 👥 Equipo de desarrollo
+
+- Andrés Felipe Obando Barriga – Backend (Java + Spring Boot)  
+- María Camila Sarmiento – Frontend (HTML + CSS + Bootstrap)  
+- Juan Esteban Pardo Bedoya – Base de Datos (MySQL + SQL)  
+
+---
+
+## 🛠️ Stack tecnológico
+
+- **Frontend:** HTML5, CSS3, Bootstrap 5  
+- **Backend:** Java 20, Spring Boot  
+- **Base de datos:** MySQL (XAMPP)  
+- **Seguridad:** JWT, Spring Security  
+- **Control de versiones:** Git + GitHub  
+
+---
+
+## 📌 Conclusión
+
+El sistema presenta una interfaz sólida, organizada y coherente con los objetivos del proyecto.  
+Se logró estructurar correctamente el panel administrativo, implementar el dashboard y definir la configuración del sistema.
+
+El siguiente paso clave es la integración completa con el backend y la lógica de negocio.
+
+---
+
+## 🔄 Actualización reciente del proyecto
+
+### ✅ Avances más recientes integrados
+
+En la última jornada de trabajo se consolidó un bloque importante de integración entre backend y frontend, además de mejorar la trazabilidad real del sistema.
+
+#### 🔐 Backend – Logs reales de auditoría
+
+Se mejoró el sistema de logs automáticos para que ya no registren datos simulados como:
+
+- `usuario = "sistema"`
+- `ip = "127.0.0.1"`
+
+Ahora los logs automáticos toman:
+
+- **usuario real autenticado desde JWT**
+- **IP real del request**
+- `acción`
+- `módulo`
+- `descripción`
+- `fecha`
+
+### 🧩 Cambios implementados en backend
+
+#### Nuevas utilidades creadas
+
+**`SecurityUtils.java`**
+- Obtiene el usuario autenticado desde `SecurityContextHolder`
+- Permite registrar el email o username real del usuario logueado
+
+**`RequestUtils.java`**
+- Obtiene la IP real del cliente desde el request actual
+- Soporta:
+  - `X-Forwarded-For`
+  - `X-Real-IP`
+  - `request.getRemoteAddr()`
+
+#### `LogAuditoriaService` actualizado
+
+Se refactorizó para usar un método reutilizable:
+
+```java
+public void registrarLog(String accion, String modulo, String descripcion)
