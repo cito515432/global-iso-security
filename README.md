@@ -989,3 +989,41 @@ Se refactorizó para usar un método reutilizable:
 
 ```java
 public void registrarLog(String accion, String modulo, String descripcion)
+
+## Global ISO Security
+
+Herramienta web para auditoría, implementación y capacitación de ISO 27001. El proyecto se desarrolló como trabajo académico de Ingeniería Web con backend en Java + Spring Boot, frontend en HTML/CSS/JavaScript y base de datos MySQL. :contentReference[oaicite:35]{index=35}
+
+### Equipo
+- Andrés Felipe Obando Barriga — Backend
+- María Camila Sarmiento — Frontend
+- Juan Esteban Pardo Bedoya — Base de datos. :contentReference[oaicite:36]{index=36}
+
+## Stack tecnológico
+- Java 20
+- Spring Boot 3.2.0
+- Spring Security + JWT
+- Spring Data JPA / Hibernate
+- MySQL 8
+- XAMPP
+- HTML5, CSS3, Bootstrap 5, JavaScript vanilla
+- NetBeans / VS Code
+- Postman para pruebas. :contentReference[oaicite:37]{index=37}
+
+## Estructura del proyecto
+- `backend/` → API REST, modelos, servicios, repositories y configuración.
+- `frontend/` → páginas HTML, estilos CSS y scripts JS.
+- `database/` → scripts SQL y respaldos si se incluyen. :contentReference[oaicite:38]{index=38}
+
+## Requisitos locales
+- Java JDK 20
+- Maven
+- XAMPP con MySQL activo
+- Python instalado
+- NetBeans o IntelliJ para backend. :contentReference[oaicite:39]{index=39}
+
+## Configuración de base de datos
+Crear una base de datos llamada exactamente:
+
+```text
+globalisosecurity
