@@ -7,9 +7,9 @@ package com.globalisosecurity.backend.repositories;
 
 import com.globalisosecurity.backend.models.Rol;
 import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.stereotype.Repository;
 
-@Repository
+import java.util.Optional;
+
 public interface RolRepository extends JpaRepository<Rol, Long> {
-    Rol findByNombre(String nombre);
+    Optional<Rol> findByNombre(String nombre);
 }
