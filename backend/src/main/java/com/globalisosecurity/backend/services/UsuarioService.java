@@ -5,11 +5,19 @@
 
 package com.globalisosecurity.backend.services;
 
+import com.globalisosecurity.backend.dto.UsuarioCreateRequest;
+import com.globalisosecurity.backend.exceptions.BadRequestException;
+import com.globalisosecurity.backend.exceptions.ResourceNotFoundException;
+import com.globalisosecurity.backend.models.Empresa;
+import com.globalisosecurity.backend.models.Rol;
 import com.globalisosecurity.backend.models.Usuario;
+import com.globalisosecurity.backend.repositories.EmpresaRepository;
+import com.globalisosecurity.backend.repositories.RolRepository;
 import com.globalisosecurity.backend.repositories.UsuarioRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+
 import java.util.List;
 import java.util.Optional;
 
@@ -20,41 +28,106 @@ public class UsuarioService {
     private UsuarioRepository usuarioRepository;
 
     @Autowired
+    private RolRepository rolRepository;
+
+    @Autowired
+    private EmpresaRepository empresaRepository;
+
+    @Autowired
     private PasswordEncoder passwordEncoder;
 
-    // Obtener todos los usuarios
     public List<Usuario> obtenerTodos() {
         return usuarioRepository.findAll();
     }
 
-    // Obtener usuario por ID
     public Optional<Usuario> obtenerPorId(Long id) {
         return usuarioRepository.findById(id);
     }
 
-    // Crear usuario
-    public Usuario crearUsuario(Usuario usuario) {
-        // Encriptar contraseña antes de guardar
-        usuario.setPassword(passwordEncoder.encode(usuario.getPassword()));
+    public Usuario crearUsuario(UsuarioCreateRequest request) {
+        validarRequest(request, true);
+
+        if (usuarioRepository.findByEmail(request.getEmail().trim()).isPresent()) {
+            throw new BadRequestException("Ya existe un usuario con ese email");
+        }
+
+        Rol rol = rolRepository.findById(request.getRolId())
+                .orElseThrow(() -> new ResourceNotFoundException("Rol no encontrado"));
+
+        Empresa empresa = empresaRepository.findById(request.getEmpresaId())
+                .orElseThrow(() -> new ResourceNotFoundException("Empresa no encontrada"));
+
+        Usuario usuario = new Usuario();
+        usuario.setNombre(request.getNombre().trim());
+        usuario.setEmail(request.getEmail().trim());
+        usuario.setPassword(passwordEncoder.encode(request.getRawPassword().trim()));
+        usuario.setRol(rol);
+        usuario.setEmpresa(empresa);
+
         return usuarioRepository.save(usuario);
     }
 
-    // Actualizar usuario
-    public Usuario actualizarUsuario(Long id, Usuario usuarioActualizado) {
-        Optional<Usuario> usuario = usuarioRepository.findById(id);
-        if (usuario.isPresent()) {
-            Usuario u = usuario.get();
-            u.setNombre(usuarioActualizado.getNombre());
-            u.setEmail(usuarioActualizado.getEmail());
-            u.setRol(usuarioActualizado.getRol());
-            u.setEmpresa(usuarioActualizado.getEmpresa());
-            return usuarioRepository.save(u);
+    public Usuario actualizarUsuario(Long id, UsuarioCreateRequest request) {
+        validarRequest(request, false);
+
+        Usuario usuario = usuarioRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Usuario no encontrado"));
+
+        Optional<Usuario> existente = usuarioRepository.findByEmail(request.getEmail().trim());
+        if (existente.isPresent() && !existente.get().getId().equals(id)) {
+            throw new BadRequestException("Ya existe un usuario con ese email");
         }
-        return null;
+
+        Rol rol = rolRepository.findById(request.getRolId())
+                .orElseThrow(() -> new ResourceNotFoundException("Rol no encontrado"));
+
+        Empresa empresa = empresaRepository.findById(request.getEmpresaId())
+                .orElseThrow(() -> new ResourceNotFoundException("Empresa no encontrada"));
+
+        usuario.setNombre(request.getNombre().trim());
+        usuario.setEmail(request.getEmail().trim());
+        usuario.setRol(rol);
+        usuario.setEmpresa(empresa);
+
+        if (request.getRawPassword() != null && !request.getRawPassword().trim().isEmpty()) {
+            usuario.setPassword(passwordEncoder.encode(request.getRawPassword().trim()));
+        }
+
+        return usuarioRepository.save(usuario);
     }
 
-    // Eliminar usuario
     public void eliminarUsuario(Long id) {
-        usuarioRepository.deleteById(id);
+        Usuario usuario = usuarioRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Usuario no encontrado"));
+
+        usuarioRepository.delete(usuario);
+    }
+
+    private void validarRequest(UsuarioCreateRequest request, boolean passwordObligatoria) {
+        if (request == null) {
+            throw new BadRequestException("El body de la solicitud es obligatorio");
+        }
+
+        if (request.getNombre() == null || request.getNombre().trim().isEmpty()) {
+            throw new BadRequestException("El nombre es obligatorio");
+        }
+
+        if (request.getEmail() == null || request.getEmail().trim().isEmpty()) {
+            throw new BadRequestException("El email es obligatorio");
+        }
+
+        if (passwordObligatoria) {
+            if (request.getRawPassword() == null || request.getRawPassword().trim().isEmpty()) {
+                throw new BadRequestException("La contraseña es obligatoria");
+            }
+        }
+
+        if (request.getRolId() == null) {
+            throw new BadRequestException("El rolId es obligatorio");
+        }
+
+        if (request.getEmpresaId() == null) {
+            throw new BadRequestException("El empresaId es obligatorio");
+        }
     }
 }
