@@ -15,13 +15,10 @@ public class Evaluacion {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false, length = 1000)
-    private String resultadoGeneral;
+    @Column(length = 1000)
+    private String observacion;
 
-    @Column(length = 2000)
-    private String comentarios;
-
-    @Column(name = "fecha_evaluacion")
+    @Column(name = "fecha_evaluacion", nullable = false)
     private LocalDateTime fechaEvaluacion;
 
     @Column(nullable = false)
@@ -31,16 +28,20 @@ public class Evaluacion {
     @JoinColumn(name = "servicio_id", nullable = false)
     private Servicio servicio;
 
+    @ManyToOne
+    @JoinColumn(name = "item_checklist_id", nullable = false)
+    private ItemChecklist itemChecklist;
+
+    @ManyToOne
+    @JoinColumn(name = "usuario_id", nullable = false)
+    private Usuario usuario;
+
     public Long getId() {
         return id;
     }
 
-    public String getResultadoGeneral() {
-        return resultadoGeneral;
-    }
-
-    public String getComentarios() {
-        return comentarios;
+    public String getObservacion() {
+        return observacion;
     }
 
     public LocalDateTime getFechaEvaluacion() {
@@ -55,16 +56,20 @@ public class Evaluacion {
         return servicio;
     }
 
+    public ItemChecklist getItemChecklist() {
+        return itemChecklist;
+    }
+
+    public Usuario getUsuario() {
+        return usuario;
+    }
+
     public void setId(Long id) {
         this.id = id;
     }
 
-    public void setResultadoGeneral(String resultadoGeneral) {
-        this.resultadoGeneral = resultadoGeneral;
-    }
-
-    public void setComentarios(String comentarios) {
-        this.comentarios = comentarios;
+    public void setObservacion(String observacion) {
+        this.observacion = observacion;
     }
 
     public void setFechaEvaluacion(LocalDateTime fechaEvaluacion) {
@@ -77,5 +82,13 @@ public class Evaluacion {
 
     public void setServicio(Servicio servicio) {
         this.servicio = servicio;
+    }
+
+    public void setItemChecklist(ItemChecklist itemChecklist) {
+        this.itemChecklist = itemChecklist;
+    }
+
+    public void setUsuario(Usuario usuario) {
+        this.usuario = usuario;
     }
 }

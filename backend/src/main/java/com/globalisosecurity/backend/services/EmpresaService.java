@@ -7,7 +7,10 @@ package com.globalisosecurity.backend.services;
 import com.globalisosecurity.backend.exceptions.BadRequestException;
 import com.globalisosecurity.backend.exceptions.ResourceNotFoundException;
 import com.globalisosecurity.backend.models.Empresa;
+import com.globalisosecurity.backend.models.Usuario;
 import com.globalisosecurity.backend.repositories.EmpresaRepository;
+import com.globalisosecurity.backend.repositories.UsuarioRepository;
+import com.globalisosecurity.backend.utils.SecurityUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -21,10 +24,26 @@ public class EmpresaService {
     private EmpresaRepository empresaRepository;
 
     @Autowired
+    private UsuarioRepository usuarioRepository;
+
+    @Autowired
     private LogAuditoriaService logAuditoriaService;
 
     public List<Empresa> obtenerTodas() {
         return empresaRepository.findAll();
+    }
+
+    public List<Empresa> obtenerEmpresasAsignadas() {
+        String emailUsuarioActual = SecurityUtils.getUsuarioActual();
+
+        Usuario usuario = usuarioRepository.findByEmail(emailUsuarioActual)
+                .orElseThrow(() -> new ResourceNotFoundException("Usuario autenticado no encontrado"));
+
+        if (usuario.getEmpresa() == null) {
+            return List.of();
+        }
+
+        return List.of(usuario.getEmpresa());
     }
 
     public Optional<Empresa> obtenerPorId(Long id) {

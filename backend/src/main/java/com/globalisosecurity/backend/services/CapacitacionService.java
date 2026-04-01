@@ -49,6 +49,10 @@ public class CapacitacionService {
         return capacitacionRepository.findByServicioId(servicioId);
     }
 
+    public List<Capacitacion> obtenerPorEmpresa(Long empresaId) {
+        return capacitacionRepository.findByServicioEmpresaId(empresaId);
+    }
+
     public Capacitacion crearCapacitacion(Capacitacion capacitacion) {
         validarCapacitacion(capacitacion);
 
@@ -135,6 +139,10 @@ public class CapacitacionService {
     }
 
     private void validarCapacitacion(Capacitacion capacitacion) {
+        if (capacitacion == null) {
+            throw new BadRequestException("El body de la capacitación es obligatorio");
+        }
+
         if (capacitacion.getTitulo() == null || capacitacion.getTitulo().trim().isEmpty()) {
             throw new BadRequestException("El título de la capacitación es obligatorio");
         }

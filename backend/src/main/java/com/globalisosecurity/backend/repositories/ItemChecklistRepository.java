@@ -6,11 +6,9 @@ package com.globalisosecurity.backend.repositories;
 
 import com.globalisosecurity.backend.models.ItemChecklist;
 import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.stereotype.Repository;
 
 import java.util.List;
 
-@Repository
 public interface ItemChecklistRepository extends JpaRepository<ItemChecklist, Long> {
     List<ItemChecklist> findByEstado(String estado);
     List<ItemChecklist> findByChecklistId(Long checklistId);

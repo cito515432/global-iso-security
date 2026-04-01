@@ -7,9 +7,14 @@ package com.globalisosecurity.backend.services;
 import com.globalisosecurity.backend.exceptions.BadRequestException;
 import com.globalisosecurity.backend.exceptions.ResourceNotFoundException;
 import com.globalisosecurity.backend.models.Evaluacion;
+import com.globalisosecurity.backend.models.ItemChecklist;
 import com.globalisosecurity.backend.models.Servicio;
+import com.globalisosecurity.backend.models.Usuario;
 import com.globalisosecurity.backend.repositories.EvaluacionRepository;
+import com.globalisosecurity.backend.repositories.ItemChecklistRepository;
 import com.globalisosecurity.backend.repositories.ServicioRepository;
+import com.globalisosecurity.backend.repositories.UsuarioRepository;
+import com.globalisosecurity.backend.utils.SecurityUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -22,10 +27,9 @@ import java.util.Set;
 public class EvaluacionService {
 
     private static final Set<String> ESTADOS_VALIDOS = Set.of(
-            "PENDIENTE",
-            "EN_REVISION",
-            "APROBADA",
-            "RECHAZADA"
+            "CUMPLE",
+            "NO_CUMPLE",
+            "EN_PROCESO"
     );
 
     @Autowired
@@ -33,6 +37,12 @@ public class EvaluacionService {
 
     @Autowired
     private ServicioRepository servicioRepository;
+
+    @Autowired
+    private ItemChecklistRepository itemChecklistRepository;
+
+    @Autowired
+    private UsuarioRepository usuarioRepository;
 
     public List<Evaluacion> obtenerTodas() {
         return evaluacionRepository.findAll();
@@ -50,32 +60,45 @@ public class EvaluacionService {
         return evaluacionRepository.findByServicioId(servicioId);
     }
 
+    public List<Evaluacion> obtenerPorEmpresa(Long empresaId) {
+        return evaluacionRepository.findByServicioEmpresaId(empresaId);
+    }
+
     public Evaluacion crearEvaluacion(Evaluacion evaluacion) {
         validarEvaluacion(evaluacion);
 
-        if (evaluacion.getFechaEvaluacion() == null) {
-            evaluacion.setFechaEvaluacion(LocalDateTime.now());
-        }
+        String emailUsuarioActual = SecurityUtils.getUsuarioActual();
 
-        String estado = evaluacion.getEstado();
-        if (estado == null || estado.trim().isEmpty()) {
-            estado = "PENDIENTE";
-        }
-
-        estado = normalizarEstado(estado);
-        validarEstado(estado);
+        Usuario usuario = usuarioRepository.findByEmail(emailUsuarioActual)
+                .orElseThrow(() -> new ResourceNotFoundException("Usuario autenticado no encontrado"));
 
         Servicio servicio = servicioRepository.findById(evaluacion.getServicio().getId())
                 .orElseThrow(() -> new ResourceNotFoundException("Servicio no encontrado"));
 
-        evaluacion.setResultadoGeneral(evaluacion.getResultadoGeneral().trim());
-        evaluacion.setComentarios(
-                evaluacion.getComentarios() != null ? evaluacion.getComentarios().trim() : null
-        );
-        evaluacion.setEstado(estado);
-        evaluacion.setServicio(servicio);
+        ItemChecklist itemChecklist = itemChecklistRepository.findById(evaluacion.getItemChecklist().getId())
+                .orElseThrow(() -> new ResourceNotFoundException("Ítem checklist no encontrado"));
 
-        return evaluacionRepository.save(evaluacion);
+        String estado = normalizarEstado(evaluacion.getEstado());
+        validarEstado(estado);
+
+        Optional<Evaluacion> existente = evaluacionRepository
+                .findByServicioIdAndItemChecklistIdAndUsuarioId(
+                        servicio.getId(),
+                        itemChecklist.getId(),
+                        usuario.getId()
+                );
+
+        Evaluacion entidad = existente.orElse(new Evaluacion());
+        entidad.setServicio(servicio);
+        entidad.setItemChecklist(itemChecklist);
+        entidad.setUsuario(usuario);
+        entidad.setEstado(estado);
+        entidad.setObservacion(
+                evaluacion.getObservacion() != null ? evaluacion.getObservacion().trim() : null
+        );
+        entidad.setFechaEvaluacion(LocalDateTime.now());
+
+        return evaluacionRepository.save(entidad);
     }
 
     public Evaluacion actualizarEvaluacion(Long id, Evaluacion evaluacionActualizada) {
@@ -84,25 +107,24 @@ public class EvaluacionService {
 
         validarEvaluacion(evaluacionActualizada);
 
-        String estado = evaluacionActualizada.getEstado();
-        if (estado == null || estado.trim().isEmpty()) {
-            throw new BadRequestException("El estado de la evaluación es obligatorio");
-        }
-
-        estado = normalizarEstado(estado);
-        validarEstado(estado);
-
         Servicio servicio = servicioRepository.findById(evaluacionActualizada.getServicio().getId())
                 .orElseThrow(() -> new ResourceNotFoundException("Servicio no encontrado"));
 
-        evaluacionExistente.setResultadoGeneral(evaluacionActualizada.getResultadoGeneral().trim());
-        evaluacionExistente.setComentarios(
-                evaluacionActualizada.getComentarios() != null
-                        ? evaluacionActualizada.getComentarios().trim()
+        ItemChecklist itemChecklist = itemChecklistRepository.findById(evaluacionActualizada.getItemChecklist().getId())
+                .orElseThrow(() -> new ResourceNotFoundException("Ítem checklist no encontrado"));
+
+        String estado = normalizarEstado(evaluacionActualizada.getEstado());
+        validarEstado(estado);
+
+        evaluacionExistente.setServicio(servicio);
+        evaluacionExistente.setItemChecklist(itemChecklist);
+        evaluacionExistente.setEstado(estado);
+        evaluacionExistente.setObservacion(
+                evaluacionActualizada.getObservacion() != null
+                        ? evaluacionActualizada.getObservacion().trim()
                         : null
         );
-        evaluacionExistente.setEstado(estado);
-        evaluacionExistente.setServicio(servicio);
+        evaluacionExistente.setFechaEvaluacion(LocalDateTime.now());
 
         return evaluacionRepository.save(evaluacionExistente);
     }
@@ -116,19 +138,33 @@ public class EvaluacionService {
     }
 
     private void validarEvaluacion(Evaluacion evaluacion) {
-        if (evaluacion.getResultadoGeneral() == null || evaluacion.getResultadoGeneral().trim().isEmpty()) {
-            throw new BadRequestException("El resultado general es obligatorio");
+        if (evaluacion == null) {
+            throw new BadRequestException("El body de la evaluación es obligatorio");
         }
 
         if (evaluacion.getServicio() == null || evaluacion.getServicio().getId() == null) {
             throw new BadRequestException("El servicio es obligatorio");
+        }
+
+        if (evaluacion.getItemChecklist() == null || evaluacion.getItemChecklist().getId() == null) {
+            throw new BadRequestException("El itemChecklist es obligatorio");
+        }
+
+        if (evaluacion.getEstado() == null || evaluacion.getEstado().trim().isEmpty()) {
+            throw new BadRequestException("El estado es obligatorio");
+        }
+
+        String estado = normalizarEstado(evaluacion.getEstado());
+        if ((estado.equals("NO_CUMPLE") || estado.equals("EN_PROCESO"))
+                && (evaluacion.getObservacion() == null || evaluacion.getObservacion().trim().isEmpty())) {
+            throw new BadRequestException("La observación es obligatoria cuando el estado es NO_CUMPLE o EN_PROCESO");
         }
     }
 
     private void validarEstado(String estado) {
         if (!ESTADOS_VALIDOS.contains(estado)) {
             throw new BadRequestException(
-                    "Estado no válido. Use: PENDIENTE, EN_REVISION, APROBADA o RECHAZADA"
+                    "Estado no válido. Use: CUMPLE, NO_CUMPLE o EN_PROCESO"
             );
         }
     }

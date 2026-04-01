@@ -4,6 +4,7 @@
  */
 package com.globalisosecurity.backend.controllers;
 
+import com.globalisosecurity.backend.dto.ChecklistCompletoResponse;
 import com.globalisosecurity.backend.models.Checklist;
 import com.globalisosecurity.backend.services.ChecklistService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -15,7 +16,6 @@ import java.util.Optional;
 
 @RestController
 @RequestMapping("/api/checklists")
-@CrossOrigin(origins = "*")
 public class ChecklistController {
 
     @Autowired
@@ -43,6 +43,12 @@ public class ChecklistController {
     @GetMapping("/servicio/{servicioId}")
     public List<Checklist> obtenerPorServicio(@PathVariable Long servicioId) {
         return checklistService.obtenerPorServicio(servicioId);
+    }
+
+    @GetMapping("/servicio/{servicioId}/completo")
+    public ResponseEntity<ChecklistCompletoResponse> obtenerChecklistCompletoPorServicio(
+            @PathVariable Long servicioId) {
+        return ResponseEntity.ok(checklistService.obtenerChecklistCompletoPorServicio(servicioId));
     }
 
     @PostMapping

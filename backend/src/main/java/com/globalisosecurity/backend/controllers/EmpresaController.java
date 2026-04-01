@@ -15,7 +15,6 @@ import java.util.Optional;
 
 @RestController
 @RequestMapping("/api/empresas")
-@CrossOrigin(origins = "*")
 public class EmpresaController {
 
     @Autowired
@@ -24,6 +23,11 @@ public class EmpresaController {
     @GetMapping
     public List<Empresa> obtenerTodas() {
         return empresaService.obtenerTodas();
+    }
+
+    @GetMapping("/asignadas")
+    public ResponseEntity<List<Empresa>> obtenerAsignadas() {
+        return ResponseEntity.ok(empresaService.obtenerEmpresasAsignadas());
     }
 
     @GetMapping("/{id}")

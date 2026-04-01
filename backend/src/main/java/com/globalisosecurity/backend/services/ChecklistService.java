@@ -4,11 +4,14 @@
  */
 package com.globalisosecurity.backend.services;
 
+import com.globalisosecurity.backend.dto.ChecklistCompletoResponse;
 import com.globalisosecurity.backend.exceptions.BadRequestException;
 import com.globalisosecurity.backend.exceptions.ResourceNotFoundException;
 import com.globalisosecurity.backend.models.Checklist;
+import com.globalisosecurity.backend.models.ItemChecklist;
 import com.globalisosecurity.backend.models.Servicio;
 import com.globalisosecurity.backend.repositories.ChecklistRepository;
+import com.globalisosecurity.backend.repositories.ItemChecklistRepository;
 import com.globalisosecurity.backend.repositories.ServicioRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -33,6 +36,9 @@ public class ChecklistService {
     private ServicioRepository servicioRepository;
 
     @Autowired
+    private ItemChecklistRepository itemChecklistRepository;
+
+    @Autowired
     private LogAuditoriaService logAuditoriaService;
 
     public List<Checklist> obtenerTodos() {
@@ -49,6 +55,23 @@ public class ChecklistService {
 
     public List<Checklist> obtenerPorServicio(Long servicioId) {
         return checklistRepository.findByServicioId(servicioId);
+    }
+
+    public ChecklistCompletoResponse obtenerChecklistCompletoPorServicio(Long servicioId) {
+        List<Checklist> checklists = checklistRepository.findByServicioId(servicioId);
+
+        if (checklists.isEmpty()) {
+            throw new ResourceNotFoundException("No hay checklist para ese servicio");
+        }
+
+        Checklist checklist = checklists.get(0);
+        List<ItemChecklist> items = itemChecklistRepository.findByChecklistId(checklist.getId());
+
+        ChecklistCompletoResponse response = new ChecklistCompletoResponse();
+        response.setChecklist(checklist);
+        response.setItems(items);
+
+        return response;
     }
 
     public Checklist crearChecklist(Checklist checklist) {
@@ -134,6 +157,10 @@ public class ChecklistService {
     }
 
     private void validarChecklist(Checklist checklist) {
+        if (checklist == null) {
+            throw new BadRequestException("El body del checklist es obligatorio");
+        }
+
         if (checklist.getNombre() == null || checklist.getNombre().trim().isEmpty()) {
             throw new BadRequestException("El nombre del checklist es obligatorio");
         }

@@ -11,7 +11,6 @@ import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/dashboard")
-@CrossOrigin(origins = "*")
 public class DashboardController {
 
     @Autowired
@@ -20,5 +19,10 @@ public class DashboardController {
     @GetMapping("/resumen")
     public DashboardResumenDTO obtenerResumen() {
         return dashboardService.obtenerResumen();
+    }
+
+    @GetMapping("/resumen/empresa/{empresaId}")
+    public DashboardResumenDTO obtenerResumenPorEmpresa(@PathVariable Long empresaId) {
+        return dashboardService.obtenerResumenPorEmpresa(empresaId);
     }
 }
