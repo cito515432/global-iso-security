@@ -14,7 +14,6 @@
             font-family: 'Segoe UI', sans-serif;
         }
 
-        /* ── SIDEBAR ── */
         .sidebar {
             width: 230px;
             min-width: 230px;
@@ -120,7 +119,6 @@
             color: #000;
         }
 
-        /* ── MAIN CONTENT ── */
         .main-content {
             margin-left: 230px;
             padding: 28px 32px;
@@ -144,7 +142,6 @@
             margin-bottom: 24px;
         }
 
-        /* ── STAT CARDS ── */
         .stat-card {
             background-color: #000000;
             border: 1px solid #222;
@@ -159,7 +156,6 @@
         .stat-label { color: #888; font-size: 0.78rem; margin: 0; }
         .stat-number { color: #ffffff; font-weight: 700; font-size: 1.6rem; margin: 0; }
 
-        /* ── INFO CARD ── */
         .info-card {
             background-color: #000000;
             border: 1px solid #222;
@@ -174,14 +170,12 @@
             margin-bottom: 16px;
         }
 
-        /* ── PROGRESS ── */
         .progress-bg {
             background-color: #1a1a2e;
             border-radius: 10px;
             height: 12px;
         }
 
-        /* ── ESTADO BADGES ── */
         .estado-pill {
             display: inline-block;
             padding: 4px 14px;
@@ -196,7 +190,6 @@
         .estado-pill.pendiente  { background-color: #374151; color: #fff; }
         .estado-pill.firmado    { background-color: #8b5cf6; color: #fff; }
 
-        /* ── BOTON CREAR ── */
         .btn-crear {
             background-color: #3b82f6;
             color: #ffffff;
@@ -211,7 +204,6 @@
 
         .btn-crear:hover { background-color: #2563eb; }
 
-        /* ── FILTROS ── */
         .btn-filtro {
             background-color: #000;
             color: #888;
@@ -229,7 +221,6 @@
             border-color: #3b82f6;
         }
 
-        /* ── CHECKLIST ── */
         .checklist-box {
             background-color: #000000;
             border: 1px solid #222;
@@ -270,7 +261,6 @@
             margin: 0;
         }
 
-        /* ── BOTONES ESTADO ── */
         .btn-estado {
             width: 100%;
             font-size: 0.78rem;
@@ -308,7 +298,6 @@
             font-weight: 600;
         }
 
-        /* ── INPUT DARK ── */
         .input-dark {
             background-color: #111827;
             border: 1px solid #333;
@@ -330,46 +319,6 @@
 
         label.lbl { color: #888; font-size: 0.78rem; display: block; margin-bottom: 4px; }
 
-        /* ── PROCESO CARDS ── */
-        .proceso-card {
-            background-color: #000000;
-            border: 1px solid #222;
-            border-radius: 10px;
-            padding: 20px;
-            transition: border-color 0.2s;
-            height: 100%;
-        }
-
-        .proceso-card:hover { border-color: #3b82f6; }
-
-        .proceso-num {
-            width: 32px; height: 32px;
-            background-color: #3b82f6;
-            color: #fff;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: 700;
-            font-size: 0.85rem;
-            flex-shrink: 0;
-        }
-
-        .proceso-title {
-            color: #ffffff;
-            font-weight: 600;
-            font-size: 0.9rem;
-            margin: 0;
-        }
-
-        .proceso-desc {
-            color: #777;
-            font-size: 0.8rem;
-            margin-top: 10px;
-            margin-bottom: 0;
-        }
-
-        /* ── PERFIL ── */
         .perfil-avatar {
             width: 72px; height: 72px;
             background-color: #3b82f6;
@@ -409,23 +358,24 @@
             border-color: #3b82f6;
         }
 
-        /* ── DIVIDER ── */
-        .divider {
-            border-color: #222;
-            margin: 20px 0;
-        }
+        .divider { border-color: #222; margin: 20px 0; }
+
+        /* Pendiente backend (estilo similar al admin) */
+        .pendiente-box ul { padding-left: 18px; }
+        .pendiente-box li { margin-bottom: 6px; }
     </style>
 </head>
+
 <body>
 
-<!-- SIDEBAR -->
 <div class="sidebar">
     <div class="logo-box">
         <span class="logo-title">GLOBAL<small>ISO SECURITY</small></span>
     </div>
+
     <div class="sidebar-info">
         <span class="badge-role">Implementador</span>
-        <p class="user-name">Nombre Implementador</p>
+        <p class="user-name" id="nombreImplementadorSidebar">Implementador</p>
     </div>
 
     <nav>
@@ -436,25 +386,24 @@
             <i class="bi bi-clipboard-check-fill me-2"></i>Checklist ISO 27001
         </button>
         <button class="btn-menu" onclick="mostrarSeccion('proceso', this)">
-            <i class="bi bi-diagram-3-fill me-2"></i>Estado de Implementacion
+            <i class="bi bi-diagram-3-fill me-2"></i>Estado de Implementación
         </button>
         <button class="btn-menu" onclick="mostrarSeccion('perfil', this)">
             <i class="bi bi-person-circle me-2"></i>Mi Perfil
         </button>
     </nav>
 
-    <button class="btn-logout" onclick="window.location.href='login.html'">
-        <i class="bi bi-box-arrow-left me-2"></i>Cerrar Sesion
+    <button class="btn-logout" id="btnLogout">
+        <i class="bi bi-box-arrow-left me-2"></i>Cerrar Sesión
     </button>
 </div>
 
-<!-- MAIN -->
 <div class="main-content">
 
     <!-- DASHBOARD -->
     <div id="seccion-dashboard" class="seccion activa">
         <h2 class="section-title">Dashboard</h2>
-        <p class="section-sub">Resumen de tu proceso de implementacion ISO 27001.</p>
+        <p class="section-sub">Resumen de tu proceso de implementación ISO 27001.</p>
 
         <div class="row g-3 mb-4">
             <div class="col-md-3">
@@ -496,7 +445,9 @@
         </div>
 
         <div class="info-card mb-4">
-            <p class="info-card-title"><i class="bi bi-activity me-2" style="color:#3b82f6"></i>Progreso del Checklist ISO 27001</p>
+            <p class="info-card-title">
+                <i class="bi bi-activity me-2" style="color:#3b82f6"></i>Progreso del Checklist ISO 27001
+            </p>
             <div class="d-flex justify-content-between mb-1">
                 <small class="text-muted">Avance actual</small>
                 <small style="color:#3b82f6; font-weight:600;">54%</small>
@@ -512,7 +463,9 @@
         </div>
 
         <div class="info-card">
-            <p class="info-card-title"><i class="bi bi-info-circle-fill me-2" style="color:#3b82f6"></i>Estado del Servicio Actual</p>
+            <p class="info-card-title">
+                <i class="bi bi-info-circle-fill me-2" style="color:#3b82f6"></i>Estado del Servicio Actual
+            </p>
             <div class="row g-3">
                 <div class="col-md-3">
                     <p class="stat-label">Estado</p>
@@ -520,17 +473,31 @@
                 </div>
                 <div class="col-md-3">
                     <p class="stat-label">Empresa</p>
-                    <p class="text-white fw-semibold mb-0">Empresa ABC</p>
+                    <p class="text-white fw-semibold mb-0" id="empresaActualDashboard">Empresa ABC</p>
                 </div>
                 <div class="col-md-3">
                     <p class="stat-label">Sector</p>
-                    <p class="text-white fw-semibold mb-0">Tecnologia</p>
+                    <p class="text-white fw-semibold mb-0" id="sectorActualDashboard">Tecnología</p>
                 </div>
                 <div class="col-md-3">
                     <p class="stat-label">Fecha Inicio</p>
                     <p class="text-white fw-semibold mb-0">10 Mar 2026</p>
                 </div>
             </div>
+        </div>
+
+        <div class="info-card pendiente-box mt-4">
+            <p class="info-card-title">
+                <i class="bi bi-exclamation-triangle-fill me-2" style="color:#f59e0b"></i>
+                Pendiente de integración con backend
+            </p>
+            <p class="text-white-50 mb-2">
+                Estas métricas deberían venir de datos reales (evaluaciones por empresa/servicio).
+            </p>
+            <ul class="text-white-50 mb-0">
+                <li>GET resumen por empresa (cumple / no cumple / en proceso / pendiente)</li>
+                <li>GET estado del servicio (en proceso / firmado / cerrado)</li>
+            </ul>
         </div>
     </div>
 
@@ -539,7 +506,7 @@
         <div class="d-flex justify-content-between align-items-start mb-4">
             <div>
                 <h2 class="section-title">Checklist ISO 27001</h2>
-                <p class="section-sub mb-0">Evalua cada control y registra el estado de cumplimiento.</p>
+                <p class="section-sub mb-0">Evalúa cada control y registra el estado de cumplimiento.</p>
             </div>
             <button class="btn-crear">
                 <i class="bi bi-send-fill me-1"></i>Firmar y Enviar
@@ -555,16 +522,15 @@
         </div>
 
         <div class="checklist-box">
-
             <div class="anexo-header">
-                <i class="bi bi-shield-lock-fill me-2"></i>Anexo A.5 — Politicas de Seguridad de la Informacion
+                <i class="bi bi-shield-lock-fill me-2"></i>Anexo A.5 — Políticas de Seguridad de la Información
             </div>
 
             <div class="checklist-item" data-estado="cumple">
                 <div class="row g-3 align-items-start">
                     <div class="col-md-5">
-                        <p class="control-title">A.5.1 — Politicas para la seguridad de la informacion</p>
-                        <p class="control-desc">Existe una politica de seguridad aprobada por la direccion?</p>
+                        <p class="control-title">A.5.1 — Políticas para la seguridad de la información</p>
+                        <p class="control-desc">¿Existe una política de seguridad aprobada por la dirección?</p>
                     </div>
                     <div class="col-md-2">
                         <button class="btn-estado cumple active" onclick="setEstado(this,'cumple')">Cumple</button>
@@ -572,8 +538,8 @@
                         <button class="btn-estado en-proceso" onclick="setEstado(this,'en-proceso')">En Proceso</button>
                     </div>
                     <div class="col-md-5 recomendacion-box" style="display:none;">
-                        <label class="lbl">Justificacion o recomendacion</label>
-                        <textarea class="input-dark" rows="3" placeholder="Describe por que no cumple o que acciones se estan tomando..."></textarea>
+                        <label class="lbl">Justificación o recomendación</label>
+                        <textarea class="input-dark" rows="3" placeholder="Describe por qué no cumple o qué acciones se están tomando..."></textarea>
                     </div>
                 </div>
             </div>
@@ -581,8 +547,8 @@
             <div class="checklist-item" data-estado="no-cumple">
                 <div class="row g-3 align-items-start">
                     <div class="col-md-5">
-                        <p class="control-title">A.5.2 — Revision de las politicas</p>
-                        <p class="control-desc">Se revisan las politicas de seguridad a intervalos planificados?</p>
+                        <p class="control-title">A.5.2 — Revisión de las políticas</p>
+                        <p class="control-desc">¿Se revisan las políticas de seguridad a intervalos planificados?</p>
                     </div>
                     <div class="col-md-2">
                         <button class="btn-estado cumple" onclick="setEstado(this,'cumple')">Cumple</button>
@@ -590,21 +556,21 @@
                         <button class="btn-estado en-proceso" onclick="setEstado(this,'en-proceso')">En Proceso</button>
                     </div>
                     <div class="col-md-5 recomendacion-box">
-                        <label class="lbl">Justificacion o recomendacion</label>
-                        <textarea class="input-dark" rows="3">No existe un calendario definido para la revision periodica de politicas.</textarea>
+                        <label class="lbl">Justificación o recomendación</label>
+                        <textarea class="input-dark" rows="3">No existe un calendario definido para la revisión periódica de políticas.</textarea>
                     </div>
                 </div>
             </div>
 
             <div class="anexo-header">
-                <i class="bi bi-people-fill me-2"></i>Anexo A.6 — Organizacion de la Seguridad de la Informacion
+                <i class="bi bi-people-fill me-2"></i>Anexo A.6 — Organización de la Seguridad de la Información
             </div>
 
             <div class="checklist-item" data-estado="en-proceso">
                 <div class="row g-3 align-items-start">
                     <div class="col-md-5">
                         <p class="control-title">A.6.1 — Roles y responsabilidades de seguridad</p>
-                        <p class="control-desc">Estan definidos los roles y responsabilidades de seguridad de la informacion?</p>
+                        <p class="control-desc">¿Están definidos los roles y responsabilidades de seguridad de la información?</p>
                     </div>
                     <div class="col-md-2">
                         <button class="btn-estado cumple" onclick="setEstado(this,'cumple')">Cumple</button>
@@ -612,8 +578,8 @@
                         <button class="btn-estado en-proceso active" onclick="setEstado(this,'en-proceso')">En Proceso</button>
                     </div>
                     <div class="col-md-5 recomendacion-box">
-                        <label class="lbl">Justificacion o recomendacion</label>
-                        <textarea class="input-dark" rows="3">Se esta documentando el manual de roles y responsabilidades actualmente.</textarea>
+                        <label class="lbl">Justificación o recomendación</label>
+                        <textarea class="input-dark" rows="3">Se está documentando el manual de roles y responsabilidades actualmente.</textarea>
                     </div>
                 </div>
             </div>
@@ -621,8 +587,8 @@
             <div class="checklist-item" data-estado="pendiente">
                 <div class="row g-3 align-items-start">
                     <div class="col-md-5">
-                        <p class="control-title">A.6.2 — Segregacion de funciones</p>
-                        <p class="control-desc">Se aplica segregacion de funciones para reducir riesgos de acceso no autorizado?</p>
+                        <p class="control-title">A.6.2 — Segregación de funciones</p>
+                        <p class="control-desc">¿Se aplica segregación de funciones para reducir riesgos de acceso no autorizado?</p>
                     </div>
                     <div class="col-md-2">
                         <button class="btn-estado cumple" onclick="setEstado(this,'cumple')">Cumple</button>
@@ -630,21 +596,21 @@
                         <button class="btn-estado en-proceso" onclick="setEstado(this,'en-proceso')">En Proceso</button>
                     </div>
                     <div class="col-md-5 recomendacion-box" style="display:none;">
-                        <label class="lbl">Justificacion o recomendacion</label>
-                        <textarea class="input-dark" rows="3" placeholder="Describe por que no cumple o que acciones se estan tomando..."></textarea>
+                        <label class="lbl">Justificación o recomendación</label>
+                        <textarea class="input-dark" rows="3" placeholder="Describe por qué no cumple o qué acciones se están tomando..."></textarea>
                     </div>
                 </div>
             </div>
 
             <div class="anexo-header">
-                <i class="bi bi-hdd-stack-fill me-2"></i>Anexo A.8 — Gestion de Activos de Informacion
+                <i class="bi bi-hdd-stack-fill me-2"></i>Anexo A.8 — Gestión de Activos de Información
             </div>
 
             <div class="checklist-item" data-estado="pendiente">
                 <div class="row g-3 align-items-start">
                     <div class="col-md-5">
                         <p class="control-title">A.8.1 — Inventario de activos</p>
-                        <p class="control-desc">Existe un inventario actualizado de los activos de informacion de la organizacion?</p>
+                        <p class="control-desc">¿Existe un inventario actualizado de los activos de información de la organización?</p>
                     </div>
                     <div class="col-md-2">
                         <button class="btn-estado cumple" onclick="setEstado(this,'cumple')">Cumple</button>
@@ -652,125 +618,54 @@
                         <button class="btn-estado en-proceso" onclick="setEstado(this,'en-proceso')">En Proceso</button>
                     </div>
                     <div class="col-md-5 recomendacion-box" style="display:none;">
-                        <label class="lbl">Justificacion o recomendacion</label>
-                        <textarea class="input-dark" rows="3" placeholder="Describe por que no cumple o que acciones se estan tomando..."></textarea>
+                        <label class="lbl">Justificación o recomendación</label>
+                        <textarea class="input-dark" rows="3" placeholder="Describe por qué no cumple o qué acciones se están tomando..."></textarea>
                     </div>
                 </div>
             </div>
+        </div>
 
+        <div class="info-card pendiente-box mt-4">
+            <p class="info-card-title">
+                <i class="bi bi-exclamation-triangle-fill me-2" style="color:#f59e0b"></i>
+                Pendiente de integración con backend
+            </p>
+            <p class="text-white-50 mb-2">
+                El checklist debe cargarse dinámicamente según sector/anexos desde la base de datos.
+            </p>
+            <ul class="text-white-50 mb-0">
+                <li>GET checklist/anexos por sector</li>
+                <li>GET items del checklist</li>
+                <li>POST/PUT estados/observaciones por item</li>
+            </ul>
         </div>
     </div>
 
     <!-- PROCESO -->
     <div id="seccion-proceso" class="seccion">
-        <h2 class="section-title">Estado de Implementacion</h2>
+        <h2 class="section-title">Estado de Implementación</h2>
         <p class="section-sub">Consulta el seguimiento general del servicio y el avance del checklist asignado.</p>
 
-        <div class="row g-3">
-
-            <div class="col-md-6">
-                <div class="proceso-card">
-                    <div class="d-flex align-items-center gap-3 mb-3">
-                        <div class="proceso-num">1</div>
-                        <div class="d-flex justify-content-between align-items-center flex-grow-1">
-                            <p class="proceso-title">Estado del Servicio</p>
-                            <span class="estado-pill en-proceso">En Proceso</span>
-                        </div>
-                    </div>
-                    <div class="progress progress-bg mb-2">
-                        <div class="progress-bar" style="width:60%;background-color:#f59e0b;border-radius:10px;"></div>
-                    </div>
-                    <p class="proceso-desc">El servicio asignado se encuentra actualmente en ejecucion y aun no ha sido finalizado.</p>
-                </div>
-            </div>
-
-            <div class="col-md-6">
-                <div class="proceso-card">
-                    <div class="d-flex align-items-center gap-3 mb-3">
-                        <div class="proceso-num">2</div>
-                        <div class="d-flex justify-content-between align-items-center flex-grow-1">
-                            <p class="proceso-title">Avance del Checklist</p>
-                            <span class="estado-pill en-proceso">54%</span>
-                        </div>
-                    </div>
-                    <div class="progress progress-bg mb-2">
-                        <div class="progress-bar" style="width:54%;background-color:#3b82f6;border-radius:10px;"></div>
-                    </div>
-                    <p class="proceso-desc">Se han diligenciado varios controles del checklist, pero aun faltan controles por revisar y registrar.</p>
-                </div>
-            </div>
-
-            <div class="col-md-6">
-                <div class="proceso-card">
-                    <div class="d-flex align-items-center gap-3 mb-3">
-                        <div class="proceso-num">3</div>
-                        <div class="d-flex justify-content-between align-items-center flex-grow-1">
-                            <p class="proceso-title">Controles Evaluados</p>
-                            <span class="estado-pill completado">44 Revisados</span>
-                        </div>
-                    </div>
-                    <div class="progress progress-bg mb-2">
-                        <div class="progress-bar" style="width:73%;background-color:#10b981;border-radius:10px;"></div>
-                    </div>
-                    <p class="proceso-desc">Incluye controles cumplidos, no cumplidos y en proceso dentro del servicio actual.</p>
-                </div>
-            </div>
-
-            <div class="col-md-6">
-                <div class="proceso-card">
-                    <div class="d-flex align-items-center gap-3 mb-3">
-                        <div class="proceso-num">4</div>
-                        <div class="d-flex justify-content-between align-items-center flex-grow-1">
-                            <p class="proceso-title">Controles Pendientes</p>
-                            <span class="estado-pill pendiente">Pendiente</span>
-                        </div>
-                    </div>
-                    <div class="progress progress-bg mb-2">
-                        <div class="progress-bar" style="width:27%;background-color:#374151;border-radius:10px;"></div>
-                    </div>
-                    <p class="proceso-desc">Aun quedan controles por diligenciar antes de completar la implementacion del checklist.</p>
-                </div>
-            </div>
-
-            <div class="col-md-6">
-                <div class="proceso-card">
-                    <div class="d-flex align-items-center gap-3 mb-3">
-                        <div class="proceso-num">5</div>
-                        <div class="d-flex justify-content-between align-items-center flex-grow-1">
-                            <p class="proceso-title">Firma del Implementador</p>
-                            <span class="estado-pill pendiente">Pendiente</span>
-                        </div>
-                    </div>
-                    <div class="progress progress-bg mb-2">
-                        <div class="progress-bar" style="width:0%;background-color:#374151;border-radius:10px;"></div>
-                    </div>
-                    <p class="proceso-desc">La firma del implementador solo debe realizarse cuando el checklist haya sido completado totalmente.</p>
-                </div>
-            </div>
-
-            <div class="col-md-6">
-                <div class="proceso-card">
-                    <div class="d-flex align-items-center gap-3 mb-3">
-                        <div class="proceso-num">6</div>
-                        <div class="d-flex justify-content-between align-items-center flex-grow-1">
-                            <p class="proceso-title">Cierre del Servicio</p>
-                            <span class="estado-pill pendiente">Pendiente</span>
-                        </div>
-                    </div>
-                    <div class="progress progress-bg mb-2">
-                        <div class="progress-bar" style="width:0%;background-color:#374151;border-radius:10px;"></div>
-                    </div>
-                    <p class="proceso-desc">El cierre del servicio quedara disponible despues de la validacion y firma correspondiente.</p>
-                </div>
-            </div>
-
+        <div class="info-card pendiente-box">
+            <p class="info-card-title">
+                <i class="bi bi-exclamation-triangle-fill me-2" style="color:#f59e0b"></i>
+                Pendiente de integración con backend
+            </p>
+            <p class="text-white-50 mb-2">
+                Esta sección requiere el flujo completo del servicio (servicios/evaluaciones/firmas).
+            </p>
+            <ul class="text-white-50 mb-0">
+                <li>GET servicio actual por empresa</li>
+                <li>GET avance real por evaluaciones</li>
+                <li>Firmas (implementador/auditor/capacitador)</li>
+            </ul>
         </div>
     </div>
 
     <!-- PERFIL -->
     <div id="seccion-perfil" class="seccion">
         <h2 class="section-title">Mi Perfil</h2>
-        <p class="section-sub">Informacion personal del implementador.</p>
+        <p class="section-sub">Información personal del implementador.</p>
 
         <div class="info-card">
             <div class="d-flex align-items-center gap-4 mb-4">
@@ -778,7 +673,7 @@
                     <i class="bi bi-person-fill"></i>
                 </div>
                 <div>
-                    <h5 class="text-white mb-1">Nombre Implementador</h5>
+                    <h5 class="text-white mb-1" id="perfilNombreTitulo">Implementador</h5>
                     <span class="badge-role">Implementador</span>
                 </div>
             </div>
@@ -786,52 +681,66 @@
             <div class="row g-3">
                 <div class="col-md-6">
                     <label class="form-label-dark">Nombre completo</label>
-                    <input type="text" class="form-control-dark" value="Nombre Implementador" disabled>
+                    <input type="text" class="form-control-dark" id="perfilNombreInput" value="" disabled>
                 </div>
                 <div class="col-md-6">
-                    <label class="form-label-dark">Correo electronico</label>
-                    <input type="text" class="form-control-dark" value="Nombre Implementador" disabled>
+                    <label class="form-label-dark">Correo electrónico</label>
+                    <input type="text" class="form-control-dark" id="perfilEmailInput" value="" disabled>
                 </div>
                 <div class="col-md-6">
                     <label class="form-label-dark">Empresa asignada</label>
-                    <input type="text" class="form-control-dark" value="Empresa ABC" disabled>
+                    <input type="text" class="form-control-dark" id="perfilEmpresaInput" value="Empresa ABC" disabled>
                 </div>
                 <div class="col-md-6">
                     <label class="form-label-dark">Sector</label>
-                    <input type="text" class="form-control-dark" value="Tecnologia" disabled>
+                    <input type="text" class="form-control-dark" id="perfilSectorInput" value="Tecnología" disabled>
                 </div>
             </div>
-
         </div>
     </div>
 
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+<!-- Funciones INLINE (como antes, para que el menú funcione seguro) -->
 <script>
     function mostrarSeccion(seccion, btn) {
         document.querySelectorAll('.seccion').forEach(s => s.classList.remove('activa'));
-        document.getElementById('seccion-' + seccion).classList.add('activa');
+        const target = document.getElementById('seccion-' + seccion);
+        if (target) target.classList.add('activa');
+
         document.querySelectorAll('.btn-menu').forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
+        if (btn) btn.classList.add('active');
+
+        window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 
     function setEstado(btn, estado) {
         const item = btn.closest('.checklist-item');
+        if (!item) return;
+
         item.dataset.estado = estado;
         item.querySelectorAll('.btn-estado').forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
+
         const recBox = item.querySelector('.recomendacion-box');
-        recBox.style.display = (estado === 'no-cumple' || estado === 'en-proceso') ? 'block' : 'none';
+        if (recBox) {
+            recBox.style.display = (estado === 'no-cumple' || estado === 'en-proceso') ? 'block' : 'none';
+        }
     }
 
     function filtrarItems(filtro, btn) {
         document.querySelectorAll('.btn-filtro').forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
+        if (btn) btn.classList.add('active');
+
         document.querySelectorAll('.checklist-item').forEach(item => {
             item.style.display = (filtro === 'todos' || item.dataset.estado === filtro) ? 'block' : 'none';
         });
     }
 </script>
+
+<!-- JS externo SOLO para nombre + logout -->
+<script src="implementador.js"></script>
 </body>
 </html>

@@ -17,7 +17,7 @@
                 <span class="logo-title">GLOBAL<br><small>ISO SECURITY</small></span>
             </div>
             <span class="badge-role">Administrador</span>
-            <p class="user-name mt-1" id="nombreAdmin">Admin</p>
+            <p class="user-name mt-1" id="nombreAdmin">Administrador</p>
         </div>
 
         <nav class="d-flex flex-column gap-2">
@@ -25,38 +25,36 @@
                 <i class="bi bi-grid-fill me-2"></i>Dashboard
             </button>
             <button class="btn btn-menu" onclick="mostrarSeccion('usuarios', this)">
-                <i class="bi bi-people-fill me-2"></i>Gestion de Usuarios
+                <i class="bi bi-people-fill me-2"></i>Gestión de Usuarios
             </button>
             <button class="btn btn-menu" onclick="mostrarSeccion('empresas', this)">
                 <i class="bi bi-building me-2"></i>Empresas
-            </button>
-            <button class="btn btn-menu" onclick="mostrarSeccion('servicios', this)">
-                <i class="bi bi-clipboard-check me-2"></i>Servicios
             </button>
             <button class="btn btn-menu" onclick="mostrarSeccion('reportes', this)">
                 <i class="bi bi-file-earmark-bar-graph me-2"></i>Reportes
             </button>
             <button class="btn btn-menu" onclick="mostrarSeccion('configuracion', this)">
-                <i class="bi bi-gear-fill me-2"></i>Configuracion
+                <i class="bi bi-gear-fill me-2"></i>Configuración
             </button>
         </nav>
 
         <div class="mt-auto">
             <button class="btn btn-logout w-100" id="btnLogout">
-                <i class="bi bi-box-arrow-left me-2"></i>Cerrar Sesion
+                <i class="bi bi-box-arrow-left me-2"></i>Cerrar Sesión
             </button>
         </div>
     </div>
 
     <div class="main-content flex-grow-1 p-4">
 
-        <!-- DASHBOARD -->
+        <!-- DASHBOARD (sin bloque de servicios) -->
         <div id="seccion-dashboard">
             <div class="d-flex justify-content-between align-items-center mb-4">
                 <h2 class="section-title mb-0">Dashboard</h2>
             </div>
+
             <div class="row g-3 mb-4">
-                <div class="col-md-3">
+                <div class="col-md-4">
                     <div class="stat-card">
                         <i class="bi bi-people-fill stat-icon"></i>
                         <div>
@@ -65,7 +63,7 @@
                         </div>
                     </div>
                 </div>
-                <div class="col-md-3">
+                <div class="col-md-4">
                     <div class="stat-card">
                         <i class="bi bi-building stat-icon"></i>
                         <div>
@@ -74,22 +72,31 @@
                         </div>
                     </div>
                 </div>
-                <div class="col-md-3">
-                    <div class="stat-card">
-                        <i class="bi bi-clipboard-check stat-icon"></i>
-                        <div>
-                            <p class="stat-label">Servicios Activos</p>
-                            <h4 class="stat-number" id="serviciosActivos">0</h4>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-3">
+                <div class="col-md-4">
                     <div class="stat-card">
                         <i class="bi bi-shield-check stat-icon"></i>
                         <div>
-                            <p class="stat-label">Evaluaciones</p>
+                            <p class="stat-label">Auditorías / Evaluaciones</p>
                             <h4 class="stat-number" id="totalEvaluaciones">0</h4>
                         </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <div class="table-wrapper p-4 h-100">
+                        <h5 class="text-white mb-3">Resumen General</h5>
+                        <p class="text-white mb-2"><strong>Total usuarios:</strong> <span id="usuariosTotalResumen">0</span></p>
+                        <p class="text-white mb-0"><strong>Total empresas:</strong> <span id="empresasResumen">0</span></p>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="table-wrapper p-4 h-100">
+                        <h5 class="text-white mb-3">Estado Operativo</h5>
+                        <p class="text-white mb-2"><strong>Última auditoría:</strong> <span id="ultimaAuditoria">No disponible</span></p>
+                        <p class="text-white mb-2"><strong>Último reporte:</strong> <span id="ultimoReporte">No disponible</span></p>
+                        <p class="text-white mb-0"><strong>Sistema:</strong> <span id="estadoSistema">Operativo</span></p>
                     </div>
                 </div>
             </div>
@@ -98,11 +105,33 @@
         <!-- USUARIOS -->
         <div id="seccion-usuarios" style="display:none;">
             <div class="d-flex justify-content-between align-items-center mb-4">
-                <h2 class="section-title mb-0">Gestion de Usuarios</h2>
-                <button class="btn btn-crear">
+                <h2 class="section-title mb-0">Gestión de Usuarios</h2>
+                <button class="btn btn-crear" id="btnAbrirModalCrearUsuario">
                     <i class="bi bi-plus-circle me-1"></i> Crear Usuario
                 </button>
             </div>
+
+            <div class="row g-3 mb-4">
+                <div class="col-md-6">
+                    <div class="stat-card">
+                        <i class="bi bi-people-fill stat-icon"></i>
+                        <div>
+                            <p class="stat-label">Total Usuarios</p>
+                            <h4 class="stat-number" id="usuariosTotalSeccion">0</h4>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="stat-card">
+                        <i class="bi bi-journal-text stat-icon"></i>
+                        <div>
+                            <p class="stat-label">Eventos Recientes</p>
+                            <h4 class="stat-number" id="eventosRecientes">Pendiente</h4>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <div class="table-wrapper">
                 <table class="table table-hover mb-0">
                     <thead>
@@ -112,13 +141,12 @@
                             <th>Email</th>
                             <th>Rol</th>
                             <th>Empresa</th>
-                            <th>Estado</th>
                             <th>Acciones</th>
                         </tr>
                     </thead>
                     <tbody id="tablaUsuariosBody">
                         <tr>
-                            <td colspan="7" class="text-center">Cargando usuarios...</td>
+                            <td colspan="6" class="text-center">Cargando usuarios...</td>
                         </tr>
                     </tbody>
                 </table>
@@ -129,10 +157,59 @@
         <div id="seccion-empresas" style="display:none;">
             <div class="d-flex justify-content-between align-items-center mb-4">
                 <h2 class="section-title mb-0">Empresas</h2>
-                <button class="btn btn-crear">
+                <button class="btn btn-crear" id="btnAbrirModalCrearEmpresa">
                     <i class="bi bi-plus-circle me-1"></i> Registrar Empresa
                 </button>
             </div>
+
+            <div class="row g-3 mb-4">
+                <div class="col-md-3">
+                    <div class="stat-card">
+                        <i class="bi bi-building stat-icon"></i>
+                        <div>
+                            <p class="stat-label">Empresas Registradas</p>
+                            <h4 class="stat-number" id="empresasRegistradas">0</h4>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="stat-card">
+                        <i class="bi bi-clipboard-check stat-icon"></i>
+                        <div>
+                            <p class="stat-label">Servicios Totales</p>
+                            <h4 class="stat-number" id="serviciosTotalesEmpresas">0</h4>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="stat-card">
+                        <i class="bi bi-person-workspace stat-icon"></i>
+                        <div>
+                            <p class="stat-label">Implementadores</p>
+                            <h4 class="stat-number" id="totalImplementadores">0</h4>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="stat-card">
+                        <i class="bi bi-mortarboard-fill stat-icon"></i>
+                        <div>
+                            <p class="stat-label">Capacitadores</p>
+                            <h4 class="stat-number" id="totalCapacitadores">0</h4>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="stat-card">
+                        <i class="bi bi-shield-check stat-icon"></i>
+                        <div>
+                            <p class="stat-label">Auditores</p>
+                            <h4 class="stat-number" id="totalAuditores">0</h4>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <div class="table-wrapper">
                 <table class="table table-hover mb-0">
                     <thead>
@@ -140,179 +217,364 @@
                             <th>#</th>
                             <th>Nombre</th>
                             <th>Sector</th>
+                            <th>Servicios</th>
+                            <th>Implementador</th>
+                            <th>Capacitador</th>
+                            <th>Auditor</th>
+                            <th>Estado General</th>
                             <th>Acciones</th>
                         </tr>
                     </thead>
                     <tbody id="tablaEmpresasBody">
                         <tr>
-                            <td colspan="3" class="text-center">Cargando empresas...</td>
+                            <td colspan="9" class="text-center">Cargando empresas...</td>
                         </tr>
                     </tbody>
                 </table>
             </div>
         </div>
 
-        <!-- SERVICIOS -->
-        <div id="seccion-servicios" style="display:none;">
-            <div class="d-flex justify-content-between align-items-center mb-4">
-                <h2 class="section-title mb-0">Servicios</h2>
-                <button class="btn btn-crear">
-                    <i class="bi bi-plus-circle me-1"></i> Crear Servicio
-                </button>
-            </div>
-            <div class="table-wrapper">
-                <table class="table table-hover mb-0">
-                    <thead>
-                        <tr>
-                            <th>#</th>
-                            <th>Empresa</th>
-                            <th>Estado</th>
-                            <th>Fecha Creacion</th>
-                            <th>Acciones</th>
-                        </tr>
-                    </thead>
-                    <tbody id="tablaServiciosBody">
-                        <tr>
-                            <td colspan="5" class="text-center">Cargando servicios...</td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-        </div>
-
-        <!-- REPORTES -->
+        <!-- REPORTES (solo 3) -->
         <div id="seccion-reportes" style="display:none;">
-            <h2 class="section-title mb-4">Reportes</h2>
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2 class="section-title mb-0">Reportes</h2>
+                <small class="text-white-50">Exportación demo (frontend)</small>
+            </div>
+
             <div class="row g-3">
                 <div class="col-md-4">
                     <div class="reporte-card p-4 text-center">
-                        <i class="bi bi-file-earmark-pdf reporte-icon"></i>
-                        <p class="reporte-label">Reporte de Auditoria</p>
-                        <button class="btn btn-crear btn-sm">Descargar PDF</button>
+                        <i class="bi bi-file-earmark-check reporte-icon"></i>
+                        <p class="reporte-label">Reporte de Auditoría</p>
+                        <button class="btn btn-crear btn-sm" id="btnReporteAuditoria">Descargar</button>
                     </div>
                 </div>
+
                 <div class="col-md-4">
                     <div class="reporte-card p-4 text-center">
-                        <i class="bi bi-file-earmark-excel reporte-icon"></i>
-                        <p class="reporte-label">Reporte de Usuarios</p>
-                        <button class="btn btn-crear btn-sm">Descargar Excel</button>
+                        <i class="bi bi-clipboard-data reporte-icon"></i>
+                        <p class="reporte-label">Reporte de Implementador</p>
+                        <button class="btn btn-crear btn-sm" id="btnReporteImplementador">Descargar</button>
                     </div>
                 </div>
+
                 <div class="col-md-4">
                     <div class="reporte-card p-4 text-center">
-                        <i class="bi bi-file-earmark-text reporte-icon"></i>
-                        <p class="reporte-label">Logs de Auditoria</p>
-                        <button class="btn btn-crear btn-sm">Ver Logs</button>
+                        <i class="bi bi-mortarboard reporte-icon"></i>
+                        <p class="reporte-label">Reporte de Capacitador</p>
+                        <button class="btn btn-crear btn-sm" id="btnReporteCapacitador">Descargar</button>
                     </div>
                 </div>
             </div>
+
+            <div class="mt-3 text-white-50 small" id="reporteEstado"></div>
         </div>
 
-        <!-- CONFIGURACION -->
+        <!-- CONFIGURACIÓN (funcional con localStorage) -->
         <div id="seccion-configuracion" style="display:none;">
-            <h2 class="section-title mb-4">Configuracion</h2>
-            <div class="reporte-card p-4">
-                <p class="text-white">Opciones de configuracion del sistema disponibles proximamente.</p>
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2 class="section-title mb-0">Configuración</h2>
+                <button class="btn btn-crear" id="btnGuardarConfiguracion">
+                    <i class="bi bi-save me-1"></i> Guardar Configuración
+                </button>
             </div>
+
+            <div class="row g-4">
+                <div class="col-md-6">
+                    <div class="reporte-card p-4 h-100">
+                        <h5 class="config-title mb-3">
+                            <i class="bi bi-info-circle-fill me-2"></i>Información del Sistema
+                        </h5>
+
+                        <div class="mb-3">
+                            <label class="config-label">Nombre del sistema</label>
+                            <input type="text" class="form-control config-input" id="cfgNombreSistema" value="Global ISO Security">
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="config-label">Versión</label>
+                            <input type="text" class="form-control config-input" id="cfgVersion" value="1.0.0">
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="config-label">Correo de soporte</label>
+                            <input type="email" class="form-control config-input" id="cfgSoporteEmail" value="soporte@globaliso.com">
+                        </div>
+
+                        <div class="mb-0">
+                            <label class="config-label">Estado del sistema</label>
+                            <select class="form-select config-input" id="cfgEstadoSistema">
+                                <option value="Operativo" selected>Operativo</option>
+                                <option value="En mantenimiento">En mantenimiento</option>
+                                <option value="Deshabilitado">Deshabilitado</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-6">
+                    <div class="reporte-card p-4 h-100">
+                        <h5 class="config-title mb-3">
+                            <i class="bi bi-shield-lock-fill me-2"></i>Seguridad
+                        </h5>
+
+                        <div class="mb-3">
+                            <label class="config-label">Duración de sesión</label>
+                            <select class="form-select config-input" id="cfgSesionDuracion">
+                                <option value="15">15 minutos</option>
+                                <option value="30" selected>30 minutos</option>
+                                <option value="60">1 hora</option>
+                                <option value="120">2 horas</option>
+                            </select>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="config-label">Intentos máximos de inicio de sesión</label>
+                            <input type="number" class="form-control config-input" id="cfgIntentosMax" value="5" min="1" max="20">
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="config-label">Bloqueo temporal por intentos fallidos</label>
+                            <select class="form-select config-input" id="cfgBloqueoMin">
+                                <option value="5">5 minutos</option>
+                                <option value="10" selected>10 minutos</option>
+                                <option value="15">15 minutos</option>
+                                <option value="30">30 minutos</option>
+                            </select>
+                        </div>
+
+                        <div class="form-check form-switch config-switch">
+                            <input class="form-check-input" type="checkbox" id="sesionAuto" checked>
+                            <label class="form-check-label text-white" for="sesionAuto">
+                                Cerrar sesión automáticamente por inactividad
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-6">
+                    <div class="reporte-card p-4 h-100">
+                        <h5 class="config-title mb-3">
+                            <i class="bi bi-diagram-3-fill me-2"></i>Flujo del Servicio
+                        </h5>
+
+                        <div class="form-check form-switch config-switch mb-3">
+                            <input class="form-check-input" type="checkbox" id="editarBorrador" checked>
+                            <label class="form-check-label text-white" for="editarBorrador">
+                                Permitir edición en estado BORRADOR
+                            </label>
+                        </div>
+
+                        <div class="form-check form-switch config-switch mb-3">
+                            <input class="form-check-input" type="checkbox" id="editarProceso" checked>
+                            <label class="form-check-label text-white" for="editarProceso">
+                                Permitir edición en estado EN PROCESO
+                            </label>
+                        </div>
+
+                        <div class="form-check form-switch config-switch mb-3">
+                            <input class="form-check-input" type="checkbox" id="bloquearFirmado" checked>
+                            <label class="form-check-label text-white" for="bloquearFirmado">
+                                Bloquear edición cuando el servicio esté FIRMADO
+                            </label>
+                        </div>
+
+                        <div class="form-check form-switch config-switch mb-0">
+                            <input class="form-check-input" type="checkbox" id="bloquearCerrado" checked>
+                            <label class="form-check-label text-white" for="bloquearCerrado">
+                                Bloquear edición cuando el servicio esté CERRADO
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-6">
+                    <div class="reporte-card p-4 h-100">
+                        <h5 class="config-title mb-3">
+                            <i class="bi bi-file-earmark-bar-graph-fill me-2"></i>Reportes
+                        </h5>
+
+                        <div class="form-check form-switch config-switch mb-3">
+                            <input class="form-check-input" type="checkbox" id="pdfActivo" checked>
+                            <label class="form-check-label text-white" for="pdfActivo">
+                                Habilitar exportación en PDF
+                            </label>
+                        </div>
+
+                        <div class="form-check form-switch config-switch mb-3">
+                            <input class="form-check-input" type="checkbox" id="excelActivo" checked>
+                            <label class="form-check-label text-white" for="excelActivo">
+                                Habilitar exportación en Excel
+                            </label>
+                        </div>
+
+                        <div class="form-check form-switch config-switch mb-3">
+                            <input class="form-check-input" type="checkbox" id="logoReporte" checked>
+                            <label class="form-check-label text-white" for="logoReporte">
+                                Incluir logo institucional en reportes
+                            </label>
+                        </div>
+
+                        <div class="form-check form-switch config-switch mb-0">
+                            <input class="form-check-input" type="checkbox" id="soloCerrado" checked>
+                            <label class="form-check-label text-white" for="soloCerrado">
+                                Generar reportes solo para servicios cerrados
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="mt-3 text-white-50 small" id="configEstado"></div>
         </div>
 
     </div>
 </div>
 
+<!-- MODAL EDITAR USUARIO -->
+<div class="modal fade" id="modalEditarUsuario" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content bg-dark text-white">
+            <div class="modal-header border-secondary">
+                <h5 class="modal-title">Editar Usuario</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="editUsuarioId">
+
+                <div class="mb-3">
+                    <label class="form-label">Nombre</label>
+                    <input type="text" class="form-control" id="editNombre">
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">Correo</label>
+                    <input type="email" class="form-control" id="editEmail">
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">Nueva contraseña</label>
+                    <input type="password" class="form-control" id="editPassword" placeholder="Déjala vacía si no quieres cambiarla">
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">Rol</label>
+                    <select class="form-select" id="editRol"></select>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">Empresa</label>
+                    <select class="form-select" id="editEmpresa"></select>
+                </div>
+
+                <div id="editUsuarioError" class="text-danger small" style="display:none;"></div>
+            </div>
+            <div class="modal-footer border-secondary">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-crear" id="btnGuardarUsuario">Guardar cambios</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL CREAR USUARIO -->
+<div class="modal fade" id="modalCrearUsuario" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content bg-dark text-white">
+            <div class="modal-header border-secondary">
+                <h5 class="modal-title">Crear Usuario</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label class="form-label">Nombre</label>
+                    <input type="text" class="form-control" id="crearNombre">
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">Correo</label>
+                    <input type="email" class="form-control" id="crearEmail">
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">Contraseña</label>
+                    <input type="password" class="form-control" id="crearPassword">
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">Rol</label>
+                    <select class="form-select" id="crearRol">
+                        <option value="">Selecciona un rol</option>
+                        <option value="1">ADMINISTRADOR</option>
+                        <option value="2">IMPLEMENTADOR</option>
+                        <option value="3">AUDITOR</option>
+                        <option value="4">CAPACITADOR</option>
+                        <option value="5">USUARIO</option>
+                    </select>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">Empresa</label>
+                    <select class="form-select" id="crearEmpresa">
+                        <option value="">Selecciona una empresa</option>
+                    </select>
+                </div>
+
+                <div id="crearUsuarioError" class="text-danger small" style="display:none;"></div>
+            </div>
+            <div class="modal-footer border-secondary">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-crear" id="btnGuardarNuevoUsuario">Crear Usuario</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL CREAR EMPRESA -->
+<div class="modal fade" id="modalCrearEmpresa" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content bg-dark text-white">
+            <div class="modal-header border-secondary">
+                <h5 class="modal-title">Registrar Empresa</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label class="form-label">Nombre</label>
+                    <input type="text" class="form-control" id="crearEmpresaNombre">
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">Sector</label>
+                    <input type="text" class="form-control" id="crearEmpresaSector">
+                </div>
+
+                <div id="crearEmpresaError" class="text-danger small" style="display:none;"></div>
+            </div>
+            <div class="modal-footer border-secondary">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-crear" id="btnGuardarNuevaEmpresa">Registrar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-<script src="../js/admin.js"></script>
 <script>
     function mostrarSeccion(seccion, btn) {
-        const secciones = ['dashboard', 'usuarios', 'empresas', 'servicios', 'reportes', 'configuracion'];
+        const secciones = ["dashboard", "usuarios", "empresas", "reportes", "configuracion"];
         secciones.forEach(s => {
-            document.getElementById('seccion-' + s).style.display = 'none';
+            const nodo = document.getElementById("seccion-" + s);
+            if (nodo) nodo.style.display = "none";
         });
-        document.getElementById('seccion-' + seccion).style.display = 'block';
-        document.querySelectorAll('.btn-menu').forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
 
-        if (seccion === 'usuarios') cargarUsuarios();
-        if (seccion === 'empresas') cargarEmpresas();
-        if (seccion === 'servicios') cargarServicios();
-    }
+        const actual = document.getElementById("seccion-" + seccion);
+        if (actual) actual.style.display = "block";
 
-    async function cargarEmpresas() {
-        const token = localStorage.getItem('token');
-        const body = document.getElementById('tablaEmpresasBody');
-        try {
-            const [resEmpresas, resSectores] = await Promise.all([
-                fetch('http://localhost:8081/api/empresas', {
-                    headers: { 'Authorization': `Bearer ${token}` }
-                }),
-                fetch('http://localhost:8081/api/sectores', {
-                    headers: { 'Authorization': `Bearer ${token}` }
-                })
-            ]);
-
-            const empresas = await resEmpresas.json();
-            const sectores = await resSectores.json();
-
-            body.innerHTML = empresas.map((e, i) => `
-                <tr>
-                    <td>${i + 1}</td>
-                    <td>${e.nombre}</td>
-                    <td>
-                        <select class="form-select config-input" onchange="cambiarSector(${e.id}, this.value)">
-                            <option value="">-- Sin sector --</option>
-                            ${sectores.map(s => `
-                                <option value="${s.id}" ${e.sectorId === s.id ? 'selected' : ''}>
-                                    ${s.nombre}
-                                </option>
-                            `).join('')}
-                        </select>
-                    </td>
-                    <td>
-                        <button class="btn btn-sm btn-accion-editar"><i class="bi bi-pencil-fill"></i></button>
-                        <button class="btn btn-sm btn-accion-eliminar"><i class="bi bi-trash-fill"></i></button>
-                    </td>
-                </tr>
-            `).join('');
-        } catch (e) {
-            body.innerHTML = '<tr><td colspan="4" class="text-center">Error al cargar empresas</td></tr>';
-        }
-    }
-
-    async function cambiarSector(empresaId, sectorId) {
-        const token = localStorage.getItem('token');
-        try {
-            await fetch(`http://localhost:8081/api/empresas/${empresaId}/sector/${sectorId}`, {
-                method: 'PUT',
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
-        } catch (e) {
-            console.error('Error al cambiar sector:', e);
-        }
-    }
-
-    async function cargarServicios() {
-        const token = localStorage.getItem('token');
-        const body = document.getElementById('tablaServiciosBody');
-        try {
-            const res = await fetch('http://localhost:8081/api/servicios', {
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
-            const servicios = await res.json();
-            body.innerHTML = servicios.map((s, i) => `
-                <tr>
-                    <td>${i + 1}</td>
-                    <td>${s.empresa?.nombre || 'Sin empresa'}</td>
-                    <td><span class="badge-servicio">${s.estado}</span></td>
-                    <td>${s.fechaCreacion ? s.fechaCreacion.substring(0, 10) : '-'}</td>
-                    <td>
-                        <button class="btn btn-sm btn-accion-editar"><i class="bi bi-pencil-fill"></i></button>
-                        <button class="btn btn-sm btn-accion-eliminar"><i class="bi bi-trash-fill"></i></button>
-                    </td>
-                </tr>
-            `).join('');
-        } catch (e) {
-            body.innerHTML = '<tr><td colspan="5" class="text-center">Error al cargar servicios</td></tr>';
-        }
+        document.querySelectorAll(".btn-menu").forEach(b => b.classList.remove("active"));
+        if (btn) btn.classList.add("active");
     }
 </script>
+<script src="../js/admin.js"></script>
 </body>
 </html>
