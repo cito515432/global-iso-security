@@ -14,4 +14,5 @@ import java.util.List;
 public interface FirmaRepository extends JpaRepository<Firma, Long> {
     List<Firma> findByEstado(String estado);
     List<Firma> findByServicioId(Long servicioId);
+    List<Firma> findByServicioEmpresaId(Long empresaId);
 }

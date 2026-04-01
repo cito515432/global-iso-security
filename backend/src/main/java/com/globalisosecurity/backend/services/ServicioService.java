@@ -55,6 +55,10 @@ public class ServicioService {
         return servicioRepository.findByEstado(normalizarEstado(estado));
     }
 
+    public List<Servicio> obtenerPorEmpresa(Long empresaId) {
+        return servicioRepository.findByEmpresaId(empresaId);
+    }
+
     public Servicio crearServicio(Servicio servicio) {
         validarEmpresaYSector(servicio);
 
@@ -148,6 +152,10 @@ public class ServicioService {
     }
 
     private void validarEmpresaYSector(Servicio servicio) {
+        if (servicio == null) {
+            throw new BadRequestException("El body del servicio es obligatorio");
+        }
+
         if (servicio.getEmpresa() == null || servicio.getEmpresa().getId() == null) {
             throw new BadRequestException("La empresa es obligatoria");
         }
@@ -159,7 +167,9 @@ public class ServicioService {
 
     private void validarEstado(String estado) {
         if (!ESTADOS_VALIDOS.contains(estado)) {
-            throw new BadRequestException("Estado no válido. Use: BORRADOR, EN_PROCESO, FINALIZADO, FIRMADO o CERRADO");
+            throw new BadRequestException(
+                    "Estado no válido. Use: BORRADOR, EN_PROCESO, FINALIZADO, FIRMADO o CERRADO"
+            );
         }
     }
 

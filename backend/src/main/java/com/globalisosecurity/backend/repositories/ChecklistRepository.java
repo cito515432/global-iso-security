@@ -14,4 +14,5 @@ import java.util.List;
 public interface ChecklistRepository extends JpaRepository<Checklist, Long> {
     List<Checklist> findByEstado(String estado);
     List<Checklist> findByServicioId(Long servicioId);
+    List<Checklist> findByServicioEmpresaId(Long empresaId);
 }

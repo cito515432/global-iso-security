@@ -50,4 +50,20 @@ public class DashboardService {
 
         return resumen;
     }
+
+    public DashboardResumenDTO obtenerResumenPorEmpresa(Long empresaId) {
+        DashboardResumenDTO resumen = new DashboardResumenDTO();
+
+        resumen.setTotalUsuarios(usuarioRepository.findByEmpresaId(empresaId).size());
+        resumen.setTotalEmpresas(1);
+        resumen.setTotalServicios(servicioRepository.findByEmpresaId(empresaId).size());
+        resumen.setServiciosEnProceso(servicioRepository.findByEmpresaIdAndEstado(empresaId, "EN_PROCESO").size());
+        resumen.setServiciosFirmados(servicioRepository.findByEmpresaIdAndEstado(empresaId, "FIRMADO").size());
+        resumen.setServiciosCerrados(servicioRepository.findByEmpresaIdAndEstado(empresaId, "CERRADO").size());
+        resumen.setTotalEvaluaciones(evaluacionRepository.findByServicioEmpresaId(empresaId).size());
+        resumen.setTotalFirmas(firmaRepository.findByServicioEmpresaId(empresaId).size());
+        resumen.setTotalChecklists(checklistRepository.findByServicioEmpresaId(empresaId).size());
+
+        return resumen;
+    }
 }

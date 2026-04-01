@@ -15,7 +15,6 @@ import java.util.Optional;
 
 @RestController
 @RequestMapping("/api/evaluaciones")
-@CrossOrigin(origins = "*")
 public class EvaluacionController {
 
     @Autowired
@@ -43,6 +42,11 @@ public class EvaluacionController {
     @GetMapping("/servicio/{servicioId}")
     public List<Evaluacion> obtenerPorServicio(@PathVariable Long servicioId) {
         return evaluacionService.obtenerPorServicio(servicioId);
+    }
+
+    @GetMapping("/empresa/{empresaId}")
+    public List<Evaluacion> obtenerPorEmpresa(@PathVariable Long empresaId) {
+        return evaluacionService.obtenerPorEmpresa(empresaId);
     }
 
     @PostMapping

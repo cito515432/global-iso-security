@@ -14,4 +14,5 @@ import java.util.List;
 public interface CapacitacionRepository extends JpaRepository<Capacitacion, Long> {
     List<Capacitacion> findByEstado(String estado);
     List<Capacitacion> findByServicioId(Long servicioId);
+    List<Capacitacion> findByServicioEmpresaId(Long empresaId);
 }

@@ -15,7 +15,6 @@ import java.util.Optional;
 
 @RestController
 @RequestMapping("/api/servicios")
-@CrossOrigin(origins = "*")
 public class ServicioController {
 
     @Autowired
@@ -40,6 +39,11 @@ public class ServicioController {
         return servicioService.obtenerPorEstado(estado);
     }
 
+    @GetMapping("/empresa/{empresaId}")
+    public List<Servicio> obtenerPorEmpresa(@PathVariable Long empresaId) {
+        return servicioService.obtenerPorEmpresa(empresaId);
+    }
+
     @PostMapping
     public ResponseEntity<?> crearServicio(@RequestBody Servicio servicio) {
         Servicio nuevo = servicioService.crearServicio(servicio);
@@ -49,10 +53,7 @@ public class ServicioController {
     @PutMapping("/{id}")
     public ResponseEntity<?> actualizarServicio(@PathVariable Long id, @RequestBody Servicio servicio) {
         Servicio actualizado = servicioService.actualizarServicio(id, servicio);
-        if (actualizado != null) {
-            return ResponseEntity.ok(actualizado);
-        }
-        return ResponseEntity.status(404).body("Servicio no encontrado");
+        return ResponseEntity.ok(actualizado);
     }
 
     @DeleteMapping("/{id}")

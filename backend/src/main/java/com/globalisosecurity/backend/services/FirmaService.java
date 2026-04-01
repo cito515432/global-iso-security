@@ -49,6 +49,10 @@ public class FirmaService {
         return firmaRepository.findByServicioId(servicioId);
     }
 
+    public List<Firma> obtenerPorEmpresa(Long empresaId) {
+        return firmaRepository.findByServicioEmpresaId(empresaId);
+    }
+
     public Firma crearFirma(Firma firma) {
         validarFirma(firma);
 
@@ -109,6 +113,10 @@ public class FirmaService {
     }
 
     private void validarFirma(Firma firma) {
+        if (firma == null) {
+            throw new BadRequestException("El body de la firma es obligatorio");
+        }
+
         if (firma.getNombreFirmante() == null || firma.getNombreFirmante().trim().isEmpty()) {
             throw new BadRequestException("El nombre del firmante es obligatorio");
         }

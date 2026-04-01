@@ -15,7 +15,6 @@ import java.util.Optional;
 
 @RestController
 @RequestMapping("/api/items-checklist")
-@CrossOrigin(origins = "*")
 public class ItemChecklistController {
 
     @Autowired
