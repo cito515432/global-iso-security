@@ -47,7 +47,9 @@ public class UsuarioService {
     public Usuario crearUsuario(UsuarioCreateRequest request) {
         validarRequest(request, true);
 
-        if (usuarioRepository.findByEmail(request.getEmail().trim()).isPresent()) {
+        String emailNormalizado = request.getEmail().trim().toLowerCase();
+
+        if (usuarioRepository.findByEmail(emailNormalizado).isPresent()) {
             throw new BadRequestException("Ya existe un usuario con ese email");
         }
 
@@ -59,7 +61,7 @@ public class UsuarioService {
 
         Usuario usuario = new Usuario();
         usuario.setNombre(request.getNombre().trim());
-        usuario.setEmail(request.getEmail().trim());
+        usuario.setEmail(emailNormalizado);
         usuario.setPassword(passwordEncoder.encode(request.getRawPassword().trim()));
         usuario.setRol(rol);
         usuario.setEmpresa(empresa);
@@ -70,10 +72,12 @@ public class UsuarioService {
     public Usuario actualizarUsuario(Long id, UsuarioCreateRequest request) {
         validarRequest(request, false);
 
+        String emailNormalizado = request.getEmail().trim().toLowerCase();
+
         Usuario usuario = usuarioRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Usuario no encontrado"));
 
-        Optional<Usuario> existente = usuarioRepository.findByEmail(request.getEmail().trim());
+        Optional<Usuario> existente = usuarioRepository.findByEmail(emailNormalizado);
         if (existente.isPresent() && !existente.get().getId().equals(id)) {
             throw new BadRequestException("Ya existe un usuario con ese email");
         }
@@ -85,7 +89,7 @@ public class UsuarioService {
                 .orElseThrow(() -> new ResourceNotFoundException("Empresa no encontrada"));
 
         usuario.setNombre(request.getNombre().trim());
-        usuario.setEmail(request.getEmail().trim());
+        usuario.setEmail(emailNormalizado);
         usuario.setRol(rol);
         usuario.setEmpresa(empresa);
 
