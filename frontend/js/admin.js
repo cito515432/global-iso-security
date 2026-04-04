@@ -7,10 +7,11 @@ let cacheRoles = [];
 let modalEditarUsuario = null;
 let modalCrearUsuario = null;
 let modalCrearEmpresa = null;
+let modalEditarEmpresa = null;
 
 const CONFIG_KEY = "globaliso_admin_config_v1";
 
-document.addEventListener("DOMContentLoaded", () => {
+document.addEventListener("DOMContentLoaded", async () => {
     validarSesion();
     cargarDatosUsuario();
     configurarLogout();
@@ -20,14 +21,15 @@ document.addEventListener("DOMContentLoaded", () => {
     configurarModalUsuario();
     configurarModalCrearUsuario();
     configurarModalCrearEmpresa();
+    configurarModalEditarEmpresa();
 
     configurarReportes();
     configurarConfiguracion();
 
     cargarResumenDashboard();
-    cargarUsuarios();
-    cargarEmpresas();
-    cargarRoles();
+    await cargarUsuarios();
+    await cargarRoles();
+    await cargarEmpresas();
 });
 
 function validarSesion() {
@@ -275,15 +277,54 @@ function renderizarUsuarios(usuarios) {
         .join("");
 }
 
+/** Lista para el select: cache + empresa del usuario si no viene en GET /empresas. */
+function empresasOpcionesParaEditarUsuario(usuario) {
+    const lista = cacheEmpresas.map((e) => ({ id: e.id, nombre: e.nombre || `Empresa #${e.id}` }));
+    const rawId = usuario?.empresa_id ?? usuario?.empresaId ?? usuario?.empresa?.id;
+    if (rawId === undefined || rawId === null || rawId === "") return lista;
+
+    const idN = Number(rawId);
+    if (!Number.isFinite(idN)) return lista;
+
+    if (!lista.some((e) => Number(e.id) === idN)) {
+        const nombre =
+            (usuario.empresa && usuario.empresa.nombre) ||
+            `Empresa #${idN}`;
+        lista.push({ id: idN, nombre });
+    }
+    return lista;
+}
+
 async function abrirEditarUsuario(id) {
-    const usuario = cacheUsuarios.find((u) => Number(u.id) === Number(id));
+    let usuario = cacheUsuarios.find((u) => Number(u.id) === Number(id));
     if (!usuario) {
         alert("No se encontró el usuario");
         return;
     }
 
     await cargarRoles();
-    if (cacheEmpresas.length === 0) await cargarEmpresas();
+    await cargarEmpresas();
+
+    const token = localStorage.getItem("token");
+    try {
+        const resDetalle = await fetch(`${API_BASE_URL}/usuarios/${id}`, {
+            method: "GET",
+            headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` }
+        });
+        if (resDetalle.ok) {
+            const texto = await resDetalle.text();
+            try {
+                const detalle = texto ? JSON.parse(texto) : {};
+                if (detalle && typeof detalle === "object" && detalle.id != null) {
+                    usuario = { ...usuario, ...detalle };
+                }
+            } catch {
+                /* respuesta no JSON */
+            }
+        }
+    } catch (e) {
+        console.warn("No se pudo cargar detalle del usuario, se usa la lista en caché.", e);
+    }
 
     setValue("editUsuarioId", usuario.id || "");
     setValue("editNombre", usuario.nombre || "");
@@ -291,7 +332,7 @@ async function abrirEditarUsuario(id) {
     setValue("editPassword", "");
 
     const selectRol = document.getElementById("editRol");
-    const rolActualId = usuario.rol_id || usuario.rol?.id || "";
+    const rolActualId = usuario.rol_id ?? usuario.rol?.id ?? "";
 
     if (selectRol) {
         selectRol.innerHTML =
@@ -307,16 +348,26 @@ async function abrirEditarUsuario(id) {
                 .join("");
     }
 
-    const selectEmpresa = document.getElementById("editEmpresa");
-    const empresaActualId = usuario.empresa_id || usuario.empresa?.id || "";
+    const selectEmpresa = document.getElementById("editUsuarioEmpresa");
+    const ayudaEmpresa = document.getElementById("editUsuarioEmpresaAyuda");
+    const opcionesEmpresa = empresasOpcionesParaEditarUsuario(usuario);
+
+    let empresaActualId =
+        usuario.empresa_id ?? usuario.empresaId ?? usuario.empresa?.id ?? "";
+    if (empresaActualId !== "" && empresaActualId != null) {
+        empresaActualId = String(empresaActualId);
+    }
 
     if (selectEmpresa) {
+        // ✅ Primera opción es "Sin empresa" con value vacío — válido y explícito
         selectEmpresa.innerHTML =
-            `<option value="">Selecciona una empresa</option>` +
-            cacheEmpresas
+            `<option value="">Sin empresa</option>` +
+            opcionesEmpresa
                 .map(
                     (empresa) => `
-                <option value="${empresa.id}" ${String(empresa.id) === String(empresaActualId) ? "selected" : ""}>
+                <option value="${empresa.id}" ${
+                    String(empresa.id) === String(empresaActualId) ? "selected" : ""
+                }>
                     ${escapeHtml(empresa.nombre)}
                 </option>
             `
@@ -324,7 +375,14 @@ async function abrirEditarUsuario(id) {
                 .join("");
     }
 
+    // ✅ Texto de ayuda actualizado: empresa es opcional
+    if (ayudaEmpresa) {
+        ayudaEmpresa.textContent =
+            "Opcional. Puedes dejar este campo vacío si el usuario no pertenece a ninguna empresa.";
+    }
+
     ocultarErrorEditarUsuario();
+    // ✅ Ya no se bloquea el modal si no hay empresas cargadas
     if (modalEditarUsuario) modalEditarUsuario.show();
 }
 
@@ -336,18 +394,24 @@ async function guardarEdicionUsuario() {
     const email = getValue("editEmail").trim();
     const password = getValue("editPassword").trim();
     const rolId = getValue("editRol");
-    const empresaId = getValue("editEmpresa");
+    const empresaId = getValue("editUsuarioEmpresa"); // ✅ puede quedar vacío
 
     if (!nombre || !email) {
         mostrarErrorEditarUsuario("Nombre y correo son obligatorios.");
         return;
     }
 
+    if (!rolId) {
+        mostrarErrorEditarUsuario("Selecciona un rol.");
+        return;
+    }
+
+    // ✅ Empresa ya NO es obligatoria — se envía null si no se selecciona
     const payload = {
         nombre,
         email,
-        rol_id: rolId ? Number(rolId) : null,
-        empresa_id: empresaId ? Number(empresaId) : null
+        rolId: Number(rolId),
+        empresaId: empresaId ? Number(empresaId) : null
     };
 
     if (password) payload.rawPassword = password;
@@ -375,6 +439,7 @@ async function guardarEdicionUsuario() {
 
         alert("Usuario actualizado correctamente");
         await cargarUsuarios();
+        refrescarTablaEmpresasConUsuarios();
         await cargarResumenDashboard();
     } catch (error) {
         console.error("Error guardando usuario:", error);
@@ -409,6 +474,7 @@ async function eliminarUsuario(id, nombre) {
 
         alert("Usuario eliminado correctamente");
         await cargarUsuarios();
+        refrescarTablaEmpresasConUsuarios();
         await cargarResumenDashboard();
     } catch (error) {
         console.error("Error eliminando usuario:", error);
@@ -433,13 +499,13 @@ async function prepararFormularioCrearUsuario() {
 
     const selectEmpresa = document.getElementById("crearEmpresa");
     if (selectEmpresa) {
+        // ✅ Primera opción "Sin empresa" también en creación
         selectEmpresa.innerHTML =
-            `<option value="">Selecciona una empresa</option>` +
+            `<option value="">Sin empresa</option>` +
             cacheEmpresas.map((empresa) => `<option value="${empresa.id}">${escapeHtml(empresa.nombre)}</option>`).join("");
     }
 }
 
-/* Crear usuario: depende del backend actual */
 async function guardarNuevoUsuario() {
     const token = localStorage.getItem("token");
 
@@ -447,18 +513,19 @@ async function guardarNuevoUsuario() {
     const email = getValue("crearEmail").trim();
     const password = getValue("crearPassword").trim();
     const rolId = getValue("crearRol");
-    const empresaId = getValue("crearEmpresa");
+    const empresaId = getValue("crearEmpresa"); // ✅ puede quedar vacío
 
-    if (!nombre || !email || !password || !rolId || !empresaId) {
-        mostrarErrorCrearUsuario("Todos los campos son obligatorios.");
+    if (!nombre || !email || !password || !rolId) {
+        mostrarErrorCrearUsuario("Nombre, correo, contraseña y rol son obligatorios.");
         return;
     }
 
+    // ✅ Empresa opcional también en creación
     const payload = {
         nombre,
         email,
-        rol_id: Number(rolId),
-        empresa_id: Number(empresaId),
+        rolId: Number(rolId),
+        empresaId: empresaId ? Number(empresaId) : null,
         rawPassword: password
     };
 
@@ -485,6 +552,7 @@ async function guardarNuevoUsuario() {
 
         alert("Usuario creado correctamente");
         await cargarUsuarios();
+        refrescarTablaEmpresasConUsuarios();
         await cargarResumenDashboard();
     } catch (error) {
         console.error("Error creando usuario:", error);
@@ -496,10 +564,83 @@ async function guardarNuevoUsuario() {
    EMPRESAS
 ========================= */
 
+function empresaIdDeUsuario(u) {
+    if (!u) return NaN;
+    const raw = u.empresa_id ?? u.empresaId ?? u.empresa?.id;
+    if (raw === undefined || raw === null || raw === "") return NaN;
+    const n = Number(raw);
+    return Number.isFinite(n) ? n : NaN;
+}
+
+function rolNombreStaffDeUsuario(u) {
+    if (!u) return "";
+    let nombre = "";
+    if (u.rol != null && typeof u.rol === "object" && u.rol.nombre != null) {
+        nombre = String(u.rol.nombre);
+    } else if (typeof u.rol === "string") {
+        nombre = u.rol;
+    } else {
+        const rid = u.rol_id ?? u.rolId ?? (typeof u.rol === "number" ? u.rol : null);
+        if (rid != null && cacheRoles.length) {
+            const r = cacheRoles.find((x) => Number(x.id) === Number(rid));
+            if (r && r.nombre) nombre = String(r.nombre);
+        }
+    }
+    return nombre.toUpperCase();
+}
+
+function staffPorEmpresaDesdeUsuarios(empresaId) {
+    const eid = Number(empresaId);
+    const porRol = { IMPLEMENTADOR: [], CAPACITADOR: [], AUDITOR: [] };
+
+    if (!Number.isFinite(eid) || !cacheUsuarios.length) {
+        return { implementador: "", capacitador: "", auditor: "" };
+    }
+
+    for (const u of cacheUsuarios) {
+        const uidEmpresa = empresaIdDeUsuario(u);
+        if (uidEmpresa !== eid) continue;
+
+        const rolNombre = rolNombreStaffDeUsuario(u);
+        const etiqueta = (u.nombre || u.email || "").trim();
+        if (!etiqueta) continue;
+
+        if (rolNombre.includes("IMPLEMENTADOR")) porRol.IMPLEMENTADOR.push(etiqueta);
+        else if (rolNombre.includes("CAPACITADOR")) porRol.CAPACITADOR.push(etiqueta);
+        else if (rolNombre.includes("AUDITOR")) porRol.AUDITOR.push(etiqueta);
+    }
+
+    const join = (arr) => (arr.length ? [...new Set(arr)].join(", ") : "");
+
+    return {
+        implementador: join(porRol.IMPLEMENTADOR),
+        capacitador: join(porRol.CAPACITADOR),
+        auditor: join(porRol.AUDITOR)
+    };
+}
+
+function conteoServiciosPorStaff(empresaId) {
+    const eid = Number(empresaId);
+    if (!Number.isFinite(eid) || !cacheUsuarios.length) return 0;
+
+    let n = 0;
+    for (const u of cacheUsuarios) {
+        if (empresaIdDeUsuario(u) !== eid) continue;
+        const rol = rolNombreStaffDeUsuario(u);
+        if (rol.includes("IMPLEMENTADOR") || rol.includes("AUDITOR") || rol.includes("CAPACITADOR")) {
+            n += 1;
+        }
+    }
+    return n;
+}
+
+function refrescarTablaEmpresasConUsuarios() {
+    if (cacheEmpresas.length > 0) renderizarEmpresas(cacheEmpresas);
+}
+
 async function cargarEmpresas() {
     const token = localStorage.getItem("token");
     const tablaEmpresasBody = document.getElementById("tablaEmpresasBody");
-    if (!tablaEmpresasBody) return;
 
     const endpoints = [
         `${API_BASE_URL}/empresas`,
@@ -526,14 +667,19 @@ async function cargarEmpresas() {
             if (!response.ok || !Array.isArray(empresas)) continue;
 
             cacheEmpresas = empresas;
-            renderizarEmpresas(empresas);
+            if (tablaEmpresasBody) {
+                renderizarEmpresas(empresas);
+            }
             return;
         } catch (error) {
             console.error(`Error cargando empresas desde ${endpoint}:`, error);
         }
     }
 
-    tablaEmpresasBody.innerHTML = `<tr><td colspan="9" class="text-center">No se pudieron cargar las empresas desde la API.</td></tr>`;
+    cacheEmpresas = [];
+    if (tablaEmpresasBody) {
+        tablaEmpresasBody.innerHTML = `<tr><td colspan="9" class="text-center">No se pudieron cargar las empresas desde la API.</td></tr>`;
+    }
 }
 
 function renderizarEmpresas(empresas) {
@@ -559,10 +705,30 @@ function renderizarEmpresas(empresas) {
             const id = Number(empresa.id);
             const nombre = empresa.nombre || "Sin nombre";
             const sector = empresa.sector?.nombre || empresa.sector_nombre || empresa.sector || "Sin sector";
-            const totalServicios = empresa.totalServicios ?? empresa.servicios ?? 0;
-            const implementador = empresa.implementador?.nombre || empresa.implementador || "No asignado";
-            const capacitador = empresa.capacitador?.nombre || empresa.capacitador || "No asignado";
-            const auditor = empresa.auditor?.nombre || empresa.auditor || "No asignado";
+            const apiServicios = toNumber(empresa.totalServicios ?? empresa.servicios ?? 0);
+            const staffServicios = conteoServiciosPorStaff(id);
+            const totalServicios = Math.max(apiServicios, staffServicios);
+
+            const desdeApi = {
+                implementador: empresa.implementador?.nombre || empresa.implementador || "",
+                capacitador: empresa.capacitador?.nombre || empresa.capacitador || "",
+                auditor: empresa.auditor?.nombre || empresa.auditor || ""
+            };
+            const desdeUsuarios = staffPorEmpresaDesdeUsuarios(id);
+
+            const implementador =
+                (desdeApi.implementador && String(desdeApi.implementador)) ||
+                desdeUsuarios.implementador ||
+                "No asignado";
+            const capacitador =
+                (desdeApi.capacitador && String(desdeApi.capacitador)) ||
+                desdeUsuarios.capacitador ||
+                "No asignado";
+            const auditor =
+                (desdeApi.auditor && String(desdeApi.auditor)) ||
+                desdeUsuarios.auditor ||
+                "No asignado";
+
             const estadoGeneral = empresa.estadoGeneral || empresa.estado || "No definido";
 
             if (implementador !== "No asignado") implementadores.add(implementador);
@@ -595,7 +761,12 @@ function renderizarEmpresas(empresas) {
     setText("empresasRegistradas", empresas.length);
     setText(
         "serviciosTotalesEmpresas",
-        empresas.reduce((acc, e) => acc + toNumber(e.totalServicios ?? e.servicios ?? 0), 0)
+        empresas.reduce((acc, e) => {
+            const eid = Number(e.id);
+            const apiS = toNumber(e.totalServicios ?? e.servicios ?? 0);
+            const staffS = conteoServiciosPorStaff(eid);
+            return acc + Math.max(apiS, staffS);
+        }, 0)
     );
     setText("totalImplementadores", implementadores.size);
     setText("totalCapacitadores", capacitadores.size);
@@ -645,8 +816,73 @@ async function guardarNuevaEmpresa() {
     }
 }
 
+function configurarModalEditarEmpresa() {
+    const modalElement = document.getElementById("modalEditarEmpresa");
+    if (modalElement) modalEditarEmpresa = new bootstrap.Modal(modalElement);
+
+    const btnGuardar = document.getElementById("btnGuardarEdicionEmpresa");
+    if (btnGuardar) btnGuardar.addEventListener("click", guardarEdicionEmpresa);
+}
+
 async function editarEmpresa(id) {
-    alert(`Edición de empresa ID ${id} pendiente de implementar.`);
+    const empresa = cacheEmpresas.find((e) => Number(e.id) === Number(id));
+    if (!empresa) {
+        alert("No se encontró la empresa");
+        return;
+    }
+
+    setValue("editEmpresaId", empresa.id ?? "");
+    setValue("editEmpresaNombre", (empresa.nombre || "").trim());
+
+    ocultarErrorEditarEmpresa();
+    if (modalEditarEmpresa) modalEditarEmpresa.show();
+}
+
+async function guardarEdicionEmpresa() {
+    const token = localStorage.getItem("token");
+    const id = getValue("editEmpresaId");
+    const nombre = getValue("editEmpresaNombre").trim();
+
+    if (!id) {
+        mostrarErrorEditarEmpresa("Identificador de empresa no válido.");
+        return;
+    }
+
+    if (!nombre) {
+        mostrarErrorEditarEmpresa("El nombre de la empresa es obligatorio.");
+        return;
+    }
+
+    try {
+        const response = await fetch(`${API_BASE_URL}/empresas/${id}`, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+            body: JSON.stringify({ nombre })
+        });
+
+        const texto = await response.text();
+        let data = {};
+        try {
+            data = texto ? JSON.parse(texto) : {};
+        } catch {}
+
+        if (!response.ok) {
+            console.error("PUT empresas", response.status, texto);
+            mostrarErrorEditarEmpresa(
+                data.message || data.error || (typeof data === "string" ? data : "") || texto || "No se pudo actualizar la empresa."
+            );
+            return;
+        }
+
+        if (modalEditarEmpresa) modalEditarEmpresa.hide();
+
+        alert("Empresa actualizada correctamente");
+        await cargarEmpresas();
+        await cargarResumenDashboard();
+    } catch (error) {
+        console.error("Error guardando empresa:", error);
+        mostrarErrorEditarEmpresa("Error de conexión al actualizar la empresa.");
+    }
 }
 
 async function eliminarEmpresa(id, nombre) {
@@ -923,6 +1159,22 @@ function ocultarErrorCrearEmpresa() {
     }
 }
 
+function mostrarErrorEditarEmpresa(mensaje) {
+    const error = document.getElementById("editEmpresaError");
+    if (error) {
+        error.textContent = mensaje;
+        error.style.display = "block";
+    }
+}
+
+function ocultarErrorEditarEmpresa() {
+    const error = document.getElementById("editEmpresaError");
+    if (error) {
+        error.textContent = "";
+        error.style.display = "none";
+    }
+}
+
 /* =========================
    HELPERS
 ========================= */
@@ -995,3 +1247,13 @@ function downloadBlob(content, filename, mimeType) {
     a.remove();
     URL.revokeObjectURL(url);
 }
+
+window.refrescarDatosSeccionEmpresas = async function () {
+    await cargarUsuarios();
+    await cargarRoles();
+    if (cacheEmpresas.length > 0) {
+        renderizarEmpresas(cacheEmpresas);
+    } else {
+        await cargarEmpresas();
+    }
+};

@@ -47,7 +47,7 @@
 
     <div class="main-content flex-grow-1 p-4">
 
-        <!-- DASHBOARD (sin bloque de servicios) -->
+        <!-- DASHBOARD -->
         <div id="seccion-dashboard">
             <div class="d-flex justify-content-between align-items-center mb-4">
                 <h2 class="section-title mb-0">Dashboard</h2>
@@ -161,6 +161,11 @@
                     <i class="bi bi-plus-circle me-1"></i> Registrar Empresa
                 </button>
             </div>
+            <p class="text-white-50 small mb-3">
+                Las columnas Implementador, Capacitador y Auditor muestran <strong>usuarios</strong> con ese rol vinculados a la empresa.
+                La columna <strong>Servicios</strong> cuenta cuántos usuarios hay en esos tres roles por empresa (ej.: 1 implementador + 1 auditor = 2).
+                Si solo tienes administradores u otros roles, verás "No asignado" en las columnas de personal.
+            </p>
 
             <div class="row g-3 mb-4">
                 <div class="col-md-3">
@@ -234,7 +239,7 @@
             </div>
         </div>
 
-        <!-- REPORTES (solo 3) -->
+        <!-- REPORTES -->
         <div id="seccion-reportes" style="display:none;">
             <div class="d-flex justify-content-between align-items-center mb-4">
                 <h2 class="section-title mb-0">Reportes</h2>
@@ -249,7 +254,6 @@
                         <button class="btn btn-crear btn-sm" id="btnReporteAuditoria">Descargar</button>
                     </div>
                 </div>
-
                 <div class="col-md-4">
                     <div class="reporte-card p-4 text-center">
                         <i class="bi bi-clipboard-data reporte-icon"></i>
@@ -257,7 +261,6 @@
                         <button class="btn btn-crear btn-sm" id="btnReporteImplementador">Descargar</button>
                     </div>
                 </div>
-
                 <div class="col-md-4">
                     <div class="reporte-card p-4 text-center">
                         <i class="bi bi-mortarboard reporte-icon"></i>
@@ -270,7 +273,7 @@
             <div class="mt-3 text-white-50 small" id="reporteEstado"></div>
         </div>
 
-        <!-- CONFIGURACIÓN (funcional con localStorage) -->
+        <!-- CONFIGURACIÓN -->
         <div id="seccion-configuracion" style="display:none;">
             <div class="d-flex justify-content-between align-items-center mb-4">
                 <h2 class="section-title mb-0">Configuración</h2>
@@ -285,22 +288,18 @@
                         <h5 class="config-title mb-3">
                             <i class="bi bi-info-circle-fill me-2"></i>Información del Sistema
                         </h5>
-
                         <div class="mb-3">
                             <label class="config-label">Nombre del sistema</label>
                             <input type="text" class="form-control config-input" id="cfgNombreSistema" value="Global ISO Security">
                         </div>
-
                         <div class="mb-3">
                             <label class="config-label">Versión</label>
                             <input type="text" class="form-control config-input" id="cfgVersion" value="1.0.0">
                         </div>
-
                         <div class="mb-3">
                             <label class="config-label">Correo de soporte</label>
                             <input type="email" class="form-control config-input" id="cfgSoporteEmail" value="soporte@globaliso.com">
                         </div>
-
                         <div class="mb-0">
                             <label class="config-label">Estado del sistema</label>
                             <select class="form-select config-input" id="cfgEstadoSistema">
@@ -317,7 +316,6 @@
                         <h5 class="config-title mb-3">
                             <i class="bi bi-shield-lock-fill me-2"></i>Seguridad
                         </h5>
-
                         <div class="mb-3">
                             <label class="config-label">Duración de sesión</label>
                             <select class="form-select config-input" id="cfgSesionDuracion">
@@ -327,12 +325,10 @@
                                 <option value="120">2 horas</option>
                             </select>
                         </div>
-
                         <div class="mb-3">
                             <label class="config-label">Intentos máximos de inicio de sesión</label>
                             <input type="number" class="form-control config-input" id="cfgIntentosMax" value="5" min="1" max="20">
                         </div>
-
                         <div class="mb-3">
                             <label class="config-label">Bloqueo temporal por intentos fallidos</label>
                             <select class="form-select config-input" id="cfgBloqueoMin">
@@ -342,7 +338,6 @@
                                 <option value="30">30 minutos</option>
                             </select>
                         </div>
-
                         <div class="form-check form-switch config-switch">
                             <input class="form-check-input" type="checkbox" id="sesionAuto" checked>
                             <label class="form-check-label text-white" for="sesionAuto">
@@ -357,33 +352,21 @@
                         <h5 class="config-title mb-3">
                             <i class="bi bi-diagram-3-fill me-2"></i>Flujo del Servicio
                         </h5>
-
                         <div class="form-check form-switch config-switch mb-3">
                             <input class="form-check-input" type="checkbox" id="editarBorrador" checked>
-                            <label class="form-check-label text-white" for="editarBorrador">
-                                Permitir edición en estado BORRADOR
-                            </label>
+                            <label class="form-check-label text-white" for="editarBorrador">Permitir edición en estado BORRADOR</label>
                         </div>
-
                         <div class="form-check form-switch config-switch mb-3">
                             <input class="form-check-input" type="checkbox" id="editarProceso" checked>
-                            <label class="form-check-label text-white" for="editarProceso">
-                                Permitir edición en estado EN PROCESO
-                            </label>
+                            <label class="form-check-label text-white" for="editarProceso">Permitir edición en estado EN PROCESO</label>
                         </div>
-
                         <div class="form-check form-switch config-switch mb-3">
                             <input class="form-check-input" type="checkbox" id="bloquearFirmado" checked>
-                            <label class="form-check-label text-white" for="bloquearFirmado">
-                                Bloquear edición cuando el servicio esté FIRMADO
-                            </label>
+                            <label class="form-check-label text-white" for="bloquearFirmado">Bloquear edición cuando el servicio esté FIRMADO</label>
                         </div>
-
                         <div class="form-check form-switch config-switch mb-0">
                             <input class="form-check-input" type="checkbox" id="bloquearCerrado" checked>
-                            <label class="form-check-label text-white" for="bloquearCerrado">
-                                Bloquear edición cuando el servicio esté CERRADO
-                            </label>
+                            <label class="form-check-label text-white" for="bloquearCerrado">Bloquear edición cuando el servicio esté CERRADO</label>
                         </div>
                     </div>
                 </div>
@@ -393,33 +376,21 @@
                         <h5 class="config-title mb-3">
                             <i class="bi bi-file-earmark-bar-graph-fill me-2"></i>Reportes
                         </h5>
-
                         <div class="form-check form-switch config-switch mb-3">
                             <input class="form-check-input" type="checkbox" id="pdfActivo" checked>
-                            <label class="form-check-label text-white" for="pdfActivo">
-                                Habilitar exportación en PDF
-                            </label>
+                            <label class="form-check-label text-white" for="pdfActivo">Habilitar exportación en PDF</label>
                         </div>
-
                         <div class="form-check form-switch config-switch mb-3">
                             <input class="form-check-input" type="checkbox" id="excelActivo" checked>
-                            <label class="form-check-label text-white" for="excelActivo">
-                                Habilitar exportación en Excel
-                            </label>
+                            <label class="form-check-label text-white" for="excelActivo">Habilitar exportación en Excel</label>
                         </div>
-
                         <div class="form-check form-switch config-switch mb-3">
                             <input class="form-check-input" type="checkbox" id="logoReporte" checked>
-                            <label class="form-check-label text-white" for="logoReporte">
-                                Incluir logo institucional en reportes
-                            </label>
+                            <label class="form-check-label text-white" for="logoReporte">Incluir logo institucional en reportes</label>
                         </div>
-
                         <div class="form-check form-switch config-switch mb-0">
                             <input class="form-check-input" type="checkbox" id="soloCerrado" checked>
-                            <label class="form-check-label text-white" for="soloCerrado">
-                                Generar reportes solo para servicios cerrados
-                            </label>
+                            <label class="form-check-label text-white" for="soloCerrado">Generar reportes solo para servicios cerrados</label>
                         </div>
                     </div>
                 </div>
@@ -458,13 +429,17 @@
                 </div>
 
                 <div class="mb-3">
-                    <label class="form-label">Rol</label>
+                    <label class="form-label">Rol <span class="text-danger">*</span></label>
                     <select class="form-select" id="editRol"></select>
                 </div>
 
                 <div class="mb-3">
-                    <label class="form-label">Empresa</label>
-                    <select class="form-select" id="editEmpresa"></select>
+                    <!-- ✅ Empresa marcada como opcional en la etiqueta -->
+                    <label class="form-label">Empresa <span class="text-white-50">(opcional)</span></label>
+                    <select class="form-select" id="editUsuarioEmpresa"></select>
+                    <p class="text-white-50 small mb-0 mt-1" id="editUsuarioEmpresaAyuda">
+                        Opcional. Puedes dejar este campo vacío si el usuario no pertenece a ninguna empresa.
+                    </p>
                 </div>
 
                 <div id="editUsuarioError" class="text-danger small" style="display:none;"></div>
@@ -487,37 +462,36 @@
             </div>
             <div class="modal-body">
                 <div class="mb-3">
-                    <label class="form-label">Nombre</label>
+                    <label class="form-label">Nombre <span class="text-danger">*</span></label>
                     <input type="text" class="form-control" id="crearNombre">
                 </div>
 
                 <div class="mb-3">
-                    <label class="form-label">Correo</label>
+                    <label class="form-label">Correo <span class="text-danger">*</span></label>
                     <input type="email" class="form-control" id="crearEmail">
                 </div>
 
                 <div class="mb-3">
-                    <label class="form-label">Contraseña</label>
+                    <label class="form-label">Contraseña <span class="text-danger">*</span></label>
                     <input type="password" class="form-control" id="crearPassword">
                 </div>
 
                 <div class="mb-3">
-                    <label class="form-label">Rol</label>
+                    <label class="form-label">Rol <span class="text-danger">*</span></label>
                     <select class="form-select" id="crearRol">
                         <option value="">Selecciona un rol</option>
-                        <option value="1">ADMINISTRADOR</option>
-                        <option value="2">IMPLEMENTADOR</option>
-                        <option value="3">AUDITOR</option>
-                        <option value="4">CAPACITADOR</option>
-                        <option value="5">USUARIO</option>
                     </select>
                 </div>
 
                 <div class="mb-3">
-                    <label class="form-label">Empresa</label>
+                    <!-- ✅ Empresa opcional también en creación -->
+                    <label class="form-label">Empresa <span class="text-white-50">(opcional)</span></label>
                     <select class="form-select" id="crearEmpresa">
-                        <option value="">Selecciona una empresa</option>
+                        <option value="">Sin empresa</option>
                     </select>
+                    <p class="text-white-50 small mb-0 mt-1">
+                        Puedes asignar una empresa ahora o dejarlo vacío y asignarlo después.
+                    </p>
                 </div>
 
                 <div id="crearUsuarioError" class="text-danger small" style="display:none;"></div>
@@ -543,17 +517,44 @@
                     <label class="form-label">Nombre</label>
                     <input type="text" class="form-control" id="crearEmpresaNombre">
                 </div>
-
                 <div class="mb-3">
                     <label class="form-label">Sector</label>
                     <input type="text" class="form-control" id="crearEmpresaSector">
                 </div>
-
                 <div id="crearEmpresaError" class="text-danger small" style="display:none;"></div>
             </div>
             <div class="modal-footer border-secondary">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
                 <button type="button" class="btn btn-crear" id="btnGuardarNuevaEmpresa">Registrar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL EDITAR EMPRESA -->
+<div class="modal fade" id="modalEditarEmpresa" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content bg-dark text-white">
+            <div class="modal-header border-secondary">
+                <h5 class="modal-title">Editar Empresa</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="editEmpresaId">
+                <div class="mb-3">
+                    <label class="form-label">Nombre</label>
+                    <input type="text" class="form-control" id="editEmpresaNombre">
+                </div>
+                <div class="alert alert-secondary py-2 px-3 small mb-0 text-start">
+                    <strong>Implementador, auditor y capacitador</strong> no se guardan en la empresa: se definen creando o editando
+                    <strong>usuarios</strong> con ese rol y eligiendo esta empresa. La tabla de empresas mostrará esos nombres automáticamente.
+                    Aquí solo cambias el <strong>nombre</strong> de la empresa en la base de datos.
+                </div>
+                <div id="editEmpresaError" class="text-danger small mt-2" style="display:none;"></div>
+            </div>
+            <div class="modal-footer border-secondary">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-crear" id="btnGuardarEdicionEmpresa">Guardar cambios</button>
             </div>
         </div>
     </div>
@@ -573,6 +574,10 @@
 
         document.querySelectorAll(".btn-menu").forEach(b => b.classList.remove("active"));
         if (btn) btn.classList.add("active");
+
+        if (seccion === "empresas" && typeof window.refrescarDatosSeccionEmpresas === "function") {
+            window.refrescarDatosSeccionEmpresas();
+        }
     }
 </script>
 <script src="../js/admin.js"></script>

@@ -1,64 +1,79 @@
 const API_URL = 'http://localhost:8081/api';
 
 // Estado global
-let empresaActual = null;        // { id, nombre, servicioId }
-let estadosChecklist = {};       // { controlId: 'CUMPLE' | 'NO_CUMPLE' | 'PENDIENTE' }
-let justificaciones = {};        // { controlId: 'texto...' }
+let empresaActual = null;          // { id, nombre, servicioId }
+let estadosChecklist = {};         // { itemId: 'CUMPLE' | 'NO_CUMPLE' | 'PENDIENTE' }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// CONTROLES ISO 27001 — Anexo A (misma estructura que el auditor)
+// CONTROLES ISO 27001 — Anexo A (estructura fija del checklist)
 // ─────────────────────────────────────────────────────────────────────────────
 const ANEXOS_ISO = [
   {
-    codigo: 'A.5', titulo: 'Políticas de Seguridad de la Información', icono: 'bi-shield-lock-fill',
+    codigo: 'A.5',
+    titulo: 'Políticas de Seguridad de la Información',
+    icono: 'bi-shield-lock-fill',
     controles: [
       { id: 'a51', titulo: 'A.5.1 — Políticas para la seguridad de la información', pregunta: '¿Existe una política de seguridad aprobada por la dirección?' },
       { id: 'a52', titulo: 'A.5.2 — Revisión de las políticas',                     pregunta: '¿Se revisan las políticas de seguridad a intervalos planificados?' }
     ]
   },
   {
-    codigo: 'A.6', titulo: 'Organización de la Seguridad', icono: 'bi-people-fill',
+    codigo: 'A.6',
+    titulo: 'Organización de la Seguridad',
+    icono: 'bi-people-fill',
     controles: [
       { id: 'a61', titulo: 'A.6.1 — Roles y responsabilidades de seguridad', pregunta: '¿Están definidos los roles y responsabilidades de seguridad?' },
       { id: 'a62', titulo: 'A.6.2 — Segregación de funciones',               pregunta: '¿Se aplica segregación de funciones para reducir riesgos?' }
     ]
   },
   {
-    codigo: 'A.8', titulo: 'Gestión de Activos', icono: 'bi-hdd-stack-fill',
+    codigo: 'A.8',
+    titulo: 'Gestión de Activos',
+    icono: 'bi-hdd-stack-fill',
     controles: [
-      { id: 'a81', titulo: 'A.8.1 — Inventario de activos',    pregunta: '¿Existe un inventario actualizado de los activos de información?' },
-      { id: 'a82', titulo: 'A.8.2 — Clasificación de activos', pregunta: '¿Se clasifican los activos según su nivel de confidencialidad?' }
+      { id: 'a81', titulo: 'A.8.1 — Inventario de activos',     pregunta: '¿Existe un inventario actualizado de los activos de información?' },
+      { id: 'a82', titulo: 'A.8.2 — Clasificación de activos',  pregunta: '¿Se clasifican los activos según su nivel de confidencialidad?' }
     ]
   },
   {
-    codigo: 'A.9', titulo: 'Control de Acceso', icono: 'bi-key-fill',
+    codigo: 'A.9',
+    titulo: 'Control de Acceso',
+    icono: 'bi-key-fill',
     controles: [
       { id: 'a91', titulo: 'A.9.1 — Política de control de acceso', pregunta: '¿Existe una política formal de control de acceso?' },
       { id: 'a92', titulo: 'A.9.2 — Gestión de acceso de usuarios', pregunta: '¿Se aplican controles de acceso según roles y privilegios mínimos?' }
     ]
   },
   {
-    codigo: 'A.12', titulo: 'Seguridad en las Operaciones', icono: 'bi-gear-wide-connected',
+    codigo: 'A.12',
+    titulo: 'Seguridad en las Operaciones',
+    icono: 'bi-gear-wide-connected',
     controles: [
-      { id: 'a121', titulo: 'A.12.3 — Copias de seguridad',         pregunta: '¿Se ejecutan copias de seguridad y pruebas de restauración?' },
-      { id: 'a122', titulo: 'A.12.6 — Gestión de vulnerabilidades', pregunta: '¿Se gestiona la identificación y corrección de vulnerabilidades técnicas?' }
+      { id: 'a121', titulo: 'A.12.3 — Copias de seguridad',           pregunta: '¿Se ejecutan copias de seguridad y pruebas de restauración?' },
+      { id: 'a122', titulo: 'A.12.6 — Gestión de vulnerabilidades',   pregunta: '¿Se gestiona la identificación y corrección de vulnerabilidades técnicas?' }
     ]
   },
   {
-    codigo: 'A.16', titulo: 'Gestión de Incidentes de Seguridad', icono: 'bi-exclamation-triangle-fill',
+    codigo: 'A.16',
+    titulo: 'Gestión de Incidentes de Seguridad',
+    icono: 'bi-exclamation-triangle-fill',
     controles: [
       { id: 'a161', titulo: 'A.16.1 — Gestión de incidentes y mejoras', pregunta: '¿Se realiza gestión de incidentes de seguridad de la información?' }
     ]
   },
   {
-    codigo: 'A.11', titulo: 'Seguridad Física y del Entorno', icono: 'bi-building-lock',
+    codigo: 'A.11',
+    titulo: 'Seguridad Física y del Entorno',
+    icono: 'bi-building-lock',
     controles: [
-      { id: 'a111', titulo: 'A.11.1 — Áreas seguras',            pregunta: '¿Se controlan los accesos físicos y ambientales a los recursos críticos?' },
+      { id: 'a111', titulo: 'A.11.1 — Áreas seguras',           pregunta: '¿Se controlan los accesos físicos y ambientales a los recursos críticos?' },
       { id: 'a112', titulo: 'A.11.2 — Seguridad de los equipos', pregunta: '¿Los equipos están protegidos de amenazas físicas y ambientales?' }
     ]
   },
   {
-    codigo: 'A.7', titulo: 'Seguridad de los Recursos Humanos', icono: 'bi-person-check-fill',
+    codigo: 'A.7',
+    titulo: 'Seguridad de los Recursos Humanos',
+    icono: 'bi-person-check-fill',
     controles: [
       { id: 'a71', titulo: 'A.7.2 — Concienciación y formación', pregunta: '¿Se capacita al personal en seguridad de la información y buenas prácticas?' }
     ]
@@ -70,7 +85,7 @@ const ANEXOS_ISO = [
 // ─────────────────────────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
   cargarDatosUsuario();
-  cargarEmpresaAsignada();
+  cargarEmpresaAsignada();   // carga la empresa del auditor desde el token/API
 
   document.getElementById('btnLogout').addEventListener('click', () => {
     localStorage.clear();
@@ -82,7 +97,7 @@ document.addEventListener('DOMContentLoaded', () => {
 // DATOS DE USUARIO
 // ─────────────────────────────────────────────────────────────────────────────
 function cargarDatosUsuario() {
-  const nombre = localStorage.getItem('nombre') || 'Implementador';
+  const nombre = localStorage.getItem('nombre') || 'Auditor';
   let email = localStorage.getItem('email') || '';
 
   if (!email) {
@@ -96,27 +111,30 @@ function cargarDatosUsuario() {
     }
   }
 
-  setEl('nombreImplementadorSidebar', nombre);
-  setEl('perfilNombreTitulo', nombre);
-  setVal('perfilNombreInput', nombre);
-  setVal('perfilEmailInput', email);
+  document.getElementById('nombreAuditor').textContent = nombre;
+  document.getElementById('perfilNombre').textContent = nombre;
+  document.getElementById('perfilNombreInput').value = nombre;
+  document.getElementById('perfilEmail').value = email;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// EMPRESA ASIGNADA AL IMPLEMENTADOR
+// EMPRESA ASIGNADA AL AUDITOR
+// Llama a /api/usuarios/me para obtener empresa_id, luego busca el servicio
+// activo de esa empresa para obtener servicioId (necesario para firmar).
 // ─────────────────────────────────────────────────────────────────────────────
 async function cargarEmpresaAsignada() {
   const token = localStorage.getItem('token');
 
   try {
-    // 1) Datos del usuario autenticado
+    // 1) Obtener datos del usuario autenticado
     const resME = await fetch(`${API_URL}/usuarios/me`, {
       headers: { 'Authorization': `Bearer ${token}` }
     });
-    if (!resME.ok) throw new Error('Sin datos de usuario');
+
+    if (!resME.ok) throw new Error('No se pudo obtener el usuario');
     const usuario = await resME.json();
 
-    const empresaId   = usuario.empresa?.id     || usuario.empresaId     || null;
+    const empresaId = usuario.empresa?.id || usuario.empresaId || null;
     const empresaNombre = usuario.empresa?.nombre || usuario.empresaNombre || null;
 
     if (!empresaId || !empresaNombre) {
@@ -124,7 +142,7 @@ async function cargarEmpresaAsignada() {
       return;
     }
 
-    // 2) Obtener servicioId de la empresa
+    // 2) Obtener servicio asociado a la empresa
     const resSvc = await fetch(`${API_URL}/servicios`, {
       headers: { 'Authorization': `Bearer ${token}` }
     });
@@ -133,52 +151,100 @@ async function cargarEmpresaAsignada() {
     const servicioId = servicio?.id || null;
 
     empresaActual = { id: empresaId, nombre: empresaNombre, servicioId };
+    localStorage.setItem('empresaActual', JSON.stringify(empresaActual));
 
-    // 3) Pintar en todos los lugares
-    mostrarEmpresaDashboard(empresaNombre, servicioId);
-    setEl('empresaChecklistLabel', empresaNombre);
-    setEl('procesoEmpresaNombre', empresaNombre);
-    setVal('perfilEmpresaInput', empresaNombre);
+    // 3) Pintar en Dashboard
+    mostrarEmpresaEnDashboard(empresaNombre, servicioId);
 
-    // Mostrar sección proceso
-    const alertaEl = document.getElementById('alertaProceso');
-    const contenidoEl = document.getElementById('contenidoProceso');
-    if (alertaEl) alertaEl.style.display = 'none';
-    if (contenidoEl) contenidoEl.style.display = 'block';
+    // 4) Actualizar sección Empresas (card marcada)
+    renderizarEmpresaCard(empresaId, empresaNombre, servicioId);
 
-    // 4) Renderizar checklist y actualizar contadores
-    renderizarChecklist();
+    // 5) Pintar nombre empresa en Procesos
+    document.getElementById('procesoEmpresaNombre').textContent = empresaNombre;
+    document.getElementById('alertaProcesos').style.display = 'none';
+    document.getElementById('contenidoProcesos').style.display = 'block';
+
+    // 6) Cargar checklist guardado si existe
+    await cargarEstadosDesdeAPI(servicioId);
+
+    // 7) Actualizar contadores/porcentaje
     actualizarTodo();
 
   } catch (err) {
-    console.error('Error cargando empresa:', err);
+    console.error('Error cargando empresa asignada:', err);
     mostrarSinEmpresa();
   }
 }
 
 function mostrarSinEmpresa() {
-  const el = document.getElementById('empresaInfoDashboard');
-  if (el) el.innerHTML = `
+  document.getElementById('empresaSeleccionadaInfo').innerHTML = `
     <div class="alerta-info">
-      <i class="bi bi-info-circle me-2" style="color:#3b82f6"></i>
+      <i class="bi bi-info-circle me-2" style="color:#8b5cf6"></i>
       No tienes una empresa asignada. Contacta al administrador.
     </div>`;
 }
 
-function mostrarEmpresaDashboard(nombre, servicioId) {
-  const el = document.getElementById('empresaInfoDashboard');
-  if (!el) return;
-  el.innerHTML = `
+function mostrarEmpresaEnDashboard(nombre, servicioId) {
+  document.getElementById('empresaSeleccionadaInfo').innerHTML = `
     <div class="d-flex align-items-center gap-3 flex-wrap">
       <i class="bi bi-building-check" style="font-size:2rem; color:#10b981"></i>
       <div>
         <p class="text-white fw-bold mb-0">${nombre}</p>
-        <small class="text-muted">Empresa asignada para implementación${servicioId ? ' · Servicio #' + servicioId : ''}</small>
+        <small class="text-muted">Empresa asignada para auditoría${servicioId ? ' · Servicio #' + servicioId : ''}</small>
       </div>
-      <button class="btn-accion ms-auto" onclick="mostrarSeccion('checklist', null)">
+      <button class="btn-crear ms-auto" onclick="mostrarSeccion('empresas', null); setTimeout(abrirChecklistEmpresa, 200)">
         <i class="bi bi-clipboard-check me-1"></i>Ir al Checklist
       </button>
     </div>`;
+}
+
+function renderizarEmpresaCard(empresaId, nombre, servicioId) {
+  const lista = document.getElementById('listaEmpresas');
+  lista.innerHTML = `
+    <div class="col-md-4">
+      <div class="empresa-card seleccionada" id="card-empresa-${empresaId}">
+        <div class="d-flex align-items-center gap-3">
+          <i class="bi bi-building" style="font-size:1.8rem; color:#8b5cf6"></i>
+          <div>
+            <p class="text-white fw-bold mb-0">${nombre}</p>
+            <small class="text-muted">ID: ${empresaId}${servicioId ? ' · Servicio #' + servicioId : ''}</small>
+          </div>
+        </div>
+        <div class="mt-2 d-flex gap-2 align-items-center">
+          <span style="font-size:0.75rem; color:#10b981;">
+            <i class="bi bi-check-circle me-1"></i>Empresa asignada
+          </span>
+          <button class="btn-crear ms-auto" onclick="abrirChecklistEmpresa()">
+            <i class="bi bi-clipboard-check me-1"></i>Auditar
+          </button>
+        </div>
+      </div>
+    </div>`;
+
+  document.getElementById('empresasAuditadas').textContent = '1';
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// CARGAR ESTADOS PREVIOS DESDE LA API (evaluaciones guardadas)
+// ─────────────────────────────────────────────────────────────────────────────
+async function cargarEstadosDesdeAPI(servicioId) {
+  if (!servicioId) return;
+  const token = localStorage.getItem('token');
+  try {
+    const res = await fetch(`${API_URL}/evaluaciones?servicioId=${servicioId}`, {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    if (!res.ok) return;
+    const evaluaciones = await res.json();
+    // Mapear respuesta a estadosChecklist por itemId
+    evaluaciones.forEach(ev => {
+      const key = ev.itemChecklistId || ev.item_checklist_id;
+      if (key) estadosChecklist[key] = ev.estado; // 'CUMPLE' | 'NO_CUMPLE' | 'PENDIENTE'
+    });
+  } catch (e) {
+    // Si el endpoint no existe todavía, simplemente ignoramos
+    console.warn('No se pudieron cargar evaluaciones previas:', e);
+  }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -194,8 +260,21 @@ window.mostrarSeccion = function(seccion, btn) {
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
-// RENDERIZAR CHECKLIST ISO 27001
+// CHECKLIST — abrir y renderizar
 // ─────────────────────────────────────────────────────────────────────────────
+window.abrirChecklistEmpresa = function() {
+  if (!empresaActual) return;
+  document.getElementById('vistaListaEmpresas').style.display = 'none';
+  document.getElementById('vistaChecklist').style.display = 'block';
+  document.getElementById('empresaChecklist').textContent = empresaActual.nombre;
+  renderizarChecklist();
+};
+
+window.volverAEmpresas = function() {
+  document.getElementById('vistaChecklist').style.display = 'none';
+  document.getElementById('vistaListaEmpresas').style.display = 'block';
+};
+
 function renderizarChecklist() {
   const box = document.getElementById('checklistContenido');
   if (!box) return;
@@ -209,111 +288,57 @@ function renderizarChecklist() {
 
     anexo.controles.forEach(ctrl => {
       const estado = estadosChecklist[ctrl.id] || 'PENDIENTE';
-      const justificacion = justificaciones[ctrl.id] || '';
       const badgeClass = estado === 'CUMPLE' ? 'cumple' : estado === 'NO_CUMPLE' ? 'no-cumple' : 'pendiente';
       const badgeLabel = estado === 'CUMPLE' ? 'Cumple' : estado === 'NO_CUMPLE' ? 'No Cumple' : 'Pendiente';
-
-      const activeCumple    = estado === 'CUMPLE'    ? 'active' : '';
-      const activeNoCumple  = estado === 'NO_CUMPLE' ? 'active' : '';
-      const activePendiente = estado === 'PENDIENTE' ? 'active' : '';
-
-      // La justificación solo aparece cuando el estado es NO_CUMPLE
-      const justDisplay = estado === 'NO_CUMPLE' ? '' : 'display:none;';
+      const activeCumple = estado === 'CUMPLE' ? 'active' : '';
+      const activeNoCumple = estado === 'NO_CUMPLE' ? 'active' : '';
 
       html += `
         <div class="checklist-item" data-id="${ctrl.id}" data-estado="${estado}">
-          <div class="row g-3 align-items-start">
-
-            <!-- Título y pregunta -->
-            <div class="col-md-6">
+          <div class="row g-3 align-items-center">
+            <div class="col-md-7">
               <p class="control-title">${ctrl.titulo}</p>
               <p class="control-desc">${ctrl.pregunta}</p>
             </div>
-
-            <!-- Badge de estado -->
-            <div class="col-md-2 d-flex align-items-center">
-              <span class="badge-estado ${badgeClass}" id="badge-${ctrl.id}">${badgeLabel}</span>
+            <div class="col-md-3">
+              <span class="badge-estado ${badgeClass}" id="estado-${ctrl.id}">${badgeLabel}</span>
             </div>
-
-            <!-- Botones -->
-            <div class="col-md-4 d-flex gap-2 flex-wrap align-items-start">
+            <div class="col-md-2 d-flex gap-2">
               <button class="btn-estado cumple ${activeCumple}"
-                onclick="setEstado(this, '${ctrl.id}', 'CUMPLE')">
-                <i class="bi bi-check-lg me-1"></i>Cumple
-              </button>
+                onclick="setEstado(this, '${ctrl.id}', 'CUMPLE')">Cumple</button>
               <button class="btn-estado no-cumple ${activeNoCumple}"
-                onclick="setEstado(this, '${ctrl.id}', 'NO_CUMPLE')">
-                <i class="bi bi-x-lg me-1"></i>No Cumple
-              </button>
-              <button class="btn-estado pendiente ${activePendiente}"
-                onclick="setEstado(this, '${ctrl.id}', 'PENDIENTE')">
-                <i class="bi bi-clock me-1"></i>Pendiente
-              </button>
+                onclick="setEstado(this, '${ctrl.id}', 'NO_CUMPLE')">No Cumple</button>
             </div>
-          </div>
-
-          <!-- Justificación — solo visible cuando No Cumple -->
-          <div class="justificacion-box" id="just-box-${ctrl.id}" style="${justDisplay}">
-            <label class="justificacion-label">
-              <i class="bi bi-exclamation-circle me-1" style="color:#ef4444"></i>
-              Justificación / Plan de acción (obligatorio cuando No Cumple)
-            </label>
-            <textarea class="justificacion-input" rows="3"
-              id="just-texto-${ctrl.id}"
-              placeholder="Describe por qué no cumple y qué acciones se tomarán para corregirlo..."
-              onchange="guardarJustificacion('${ctrl.id}', this.value)"
-            >${justificacion}</textarea>
           </div>
         </div>`;
     });
   });
 
   box.innerHTML = html;
+  actualizarTodo();
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// SETEAR ESTADO
+// SETEAR ESTADO DE UN CONTROL
 // ─────────────────────────────────────────────────────────────────────────────
 window.setEstado = function(btn, controlId, estado) {
   const item = btn.closest('.checklist-item');
   item.dataset.estado = estado;
   estadosChecklist[controlId] = estado;
 
-  // Actualizar badge
-  const badge = document.getElementById('badge-' + controlId);
-  const badgeClass = estado === 'CUMPLE' ? 'cumple' : estado === 'NO_CUMPLE' ? 'no-cumple' : 'pendiente';
-  const badgeLabel = estado === 'CUMPLE' ? 'Cumple' : estado === 'NO_CUMPLE' ? 'No Cumple' : 'Pendiente';
-  badge.className = 'badge-estado ' + badgeClass;
-  badge.textContent = badgeLabel;
+  const badge = document.getElementById('estado-' + controlId);
+  const label = estado === 'CUMPLE' ? 'Cumple' : 'No Cumple';
+  badge.className = 'badge-estado ' + (estado === 'CUMPLE' ? 'cumple' : 'no-cumple');
+  badge.textContent = label;
 
-  // Activar botón seleccionado
   item.querySelectorAll('.btn-estado').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
-
-  // Mostrar/ocultar justificación
-  const justBox = document.getElementById('just-box-' + controlId);
-  if (justBox) {
-    justBox.style.display = estado === 'NO_CUMPLE' ? '' : 'none';
-    // Limpiar justificación si ya no aplica
-    if (estado !== 'NO_CUMPLE') {
-      justificaciones[controlId] = '';
-      const textarea = document.getElementById('just-texto-' + controlId);
-      if (textarea) textarea.value = '';
-    }
-  }
 
   actualizarTodo();
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
-// GUARDAR JUSTIFICACIÓN
-// ─────────────────────────────────────────────────────────────────────────────
-window.guardarJustificacion = function(controlId, valor) {
-  justificaciones[controlId] = valor;
-};
-
-// ─────────────────────────────────────────────────────────────────────────────
-// FILTRAR ITEMS
+// FILTROS
 // ─────────────────────────────────────────────────────────────────────────────
 window.filtrarItems = function(filtro, btn) {
   document.querySelectorAll('.btn-filtro').forEach(b => b.classList.remove('active'));
@@ -322,19 +347,20 @@ window.filtrarItems = function(filtro, btn) {
   document.querySelectorAll('.checklist-item').forEach(item => {
     const estado = item.dataset.estado || 'PENDIENTE';
     const visible = filtro === 'todos'
-      || (filtro === 'cumple'    && estado === 'CUMPLE')
-      || (filtro === 'no-cumple' && estado === 'NO_CUMPLE')
-      || (filtro === 'pendiente' && estado === 'PENDIENTE');
+      || (filtro === 'cumple'     && estado === 'CUMPLE')
+      || (filtro === 'no-cumple'  && estado === 'NO_CUMPLE')
+      || (filtro === 'pendiente'  && estado === 'PENDIENTE');
     item.style.display = visible ? '' : 'none';
   });
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
-// CONTADORES Y PORCENTAJE
+// CONTADORES Y PORCENTAJE — se actualiza en Dashboard y Procesos
 // ─────────────────────────────────────────────────────────────────────────────
 function actualizarTodo() {
+  // Contar todos los controles definidos en ANEXOS_ISO
   let cumple = 0, noCumple = 0, pendiente = 0;
-  const total = ANEXOS_ISO.reduce((s, a) => s + a.controles.length, 0);
+  const total = ANEXOS_ISO.reduce((sum, a) => sum + a.controles.length, 0);
 
   ANEXOS_ISO.forEach(anexo => {
     anexo.controles.forEach(ctrl => {
@@ -346,97 +372,82 @@ function actualizarTodo() {
   });
 
   const respondidos = cumple + noCumple;
-  const porcentaje  = total > 0 ? Math.round((respondidos / total) * 100) : 0;
+  const porcentaje = total > 0 ? Math.round((respondidos / total) * 100) : 0;
+  const porcentajeCumple = total > 0 ? Math.round((cumple / total) * 100) : 0;
 
   // Dashboard
-  setEl('totalCumple',    cumple);
-  setEl('totalNoCumple',  noCumple);
-  setEl('totalPendiente', pendiente);
-  setEl('totalPorcentaje', porcentaje + '%');
-  setEl('barraLabel',     porcentaje + '%');
-  const barra = document.getElementById('barraProgreso');
-  if (barra) barra.style.width = porcentaje + '%';
+  setTexto('totalCumple', cumple);
+  setTexto('totalNoCumple', noCumple);
+  setTexto('totalPendiente', pendiente);
 
-  // Proceso
-  setEl('procesoCumple',        cumple);
-  setEl('procesoNoCumple',      noCumple);
-  setEl('procesoPendiente',     pendiente);
-  setEl('procesoPorcentaje',    porcentaje + '%');
-  setEl('procesoPorcentajeBarra', porcentaje + '%');
-  const barraProceso = document.getElementById('barraProceso');
-  if (barraProceso) barraProceso.style.width = porcentaje + '%';
+  // Procesos
+  setTexto('procesoCumple', cumple);
+  setTexto('procesoNoCumple', noCumple);
+  setTexto('procesoPendiente', pendiente);
+  setTexto('procesoPorcentaje', porcentaje + '%');
+  setTexto('procesoPorcentajeBarra', porcentaje + '%');
+  const barra = document.getElementById('barraProceso');
+  if (barra) barra.style.width = porcentaje + '%';
+}
+
+function setTexto(id, valor) {
+  const el = document.getElementById(id);
+  if (el) el.textContent = valor;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// FIRMAR
+// FIRMAR AUDITORÍA — usa servicioId real de la empresa asignada
 // ─────────────────────────────────────────────────────────────────────────────
-window.firmarChecklist = async function() {
+window.firmarAuditoria = async function() {
   if (!empresaActual) {
-    alert('No tienes una empresa asignada.');
+    alert('No tienes una empresa asignada para firmar.');
     return;
   }
 
-  // Validar que los No Cumple tengan justificación
-  const sinJustificacion = Object.entries(estadosChecklist)
-    .filter(([id, est]) => est === 'NO_CUMPLE' && !justificaciones[id]?.trim())
-    .length;
-
-  if (sinJustificacion > 0) {
-    alert(`Hay ${sinJustificacion} control(es) marcados como "No Cumple" sin justificación. Por favor complétalos antes de firmar.`);
-    return;
-  }
-
-  const totalPendiente = Object.values(estadosChecklist).filter(e => e === 'PENDIENTE').length;
+  const pendientes = Object.values(estadosChecklist).filter(e => e === 'PENDIENTE').length;
   const totalControles = ANEXOS_ISO.reduce((s, a) => s + a.controles.length, 0);
   const sinEvaluar = totalControles - Object.keys(estadosChecklist).length;
-  const pendientesTotal = totalPendiente + sinEvaluar;
+  const totalPendientes = pendientes + sinEvaluar;
 
-  if (pendientesTotal > 0) {
-    const ok = confirm(`Aún tienes ${pendientesTotal} control(es) sin evaluar. ¿Deseas firmar de todas formas?`);
-    if (!ok) return;
+  if (totalPendientes > 0) {
+    const confirmar = confirm(
+      `Aún tienes ${totalPendientes} control(es) sin evaluar. ¿Deseas firmar de todas formas?`
+    );
+    if (!confirmar) return;
   }
+
+  const token = localStorage.getItem('token');
+  const nombre = localStorage.getItem('nombre') || 'Auditor';
 
   if (!empresaActual.servicioId) {
     alert('No se encontró un servicio activo para esta empresa. Contacta al administrador.');
     return;
   }
 
-  const token  = localStorage.getItem('token');
-  const nombre = localStorage.getItem('nombre') || 'Implementador';
-
   try {
     const res = await fetch(`${API_URL}/firmas`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
       body: JSON.stringify({
         nombreFirmante: nombre,
-        cargo: 'Implementador',
+        cargo: 'Auditor',
         estado: 'FIRMADA',
         servicioId: empresaActual.servicioId
       })
     });
 
     if (res.ok) {
-      alert(`✅ Implementación firmada correctamente para ${empresaActual.nombre}`);
+      alert(`✅ Auditoría firmada correctamente para ${empresaActual.nombre}`);
     } else {
-      alert('Error al firmar. Revisa la consola para más detalles.');
-      console.error(await res.text());
+      const errBody = await res.text();
+      console.error('Error respuesta firma:', errBody);
+      alert('Error al firmar la auditoría. Revisa la consola.');
     }
   } catch (e) {
     console.error(e);
     alert('Error de conexión con el servidor.');
   }
 };
-
-// ─────────────────────────────────────────────────────────────────────────────
-// UTILIDADES
-// ─────────────────────────────────────────────────────────────────────────────
-function setEl(id, valor) {
-  const el = document.getElementById(id);
-  if (el) el.textContent = valor;
-}
-
-function setVal(id, valor) {
-  const el = document.getElementById(id);
-  if (el) el.value = valor;
-}

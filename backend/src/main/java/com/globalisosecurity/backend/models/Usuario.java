@@ -31,7 +31,7 @@ public class Usuario {
     private Rol rol;
 
     @ManyToOne
-    @JoinColumn(name = "empresa_id")
+    @JoinColumn(name = "empresa_id", nullable = true)
     private Empresa empresa;
 
     public Long getId() { return id; }
