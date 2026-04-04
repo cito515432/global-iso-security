@@ -12,7 +12,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-
+import com.globalisosecurity.backend.dto.UsuarioMeResponse;
 import java.util.List;
 import java.util.Optional;
 
@@ -36,6 +36,11 @@ public class UsuarioController {
                 .orElseGet(() -> ResponseEntity.status(HttpStatus.NOT_FOUND)
                         .body("Usuario no encontrado"));
     }
+    
+    @GetMapping("/me")
+public ResponseEntity<UsuarioMeResponse> obtenerMiUsuario() {
+    return ResponseEntity.ok(usuarioService.obtenerUsuarioAutenticado());
+}
 
     @PostMapping
     public ResponseEntity<Usuario> crearUsuario(@RequestBody UsuarioCreateRequest request) {

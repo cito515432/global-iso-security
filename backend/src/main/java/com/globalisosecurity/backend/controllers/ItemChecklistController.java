@@ -9,7 +9,7 @@ import com.globalisosecurity.backend.services.ItemChecklistService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-
+import com.globalisosecurity.backend.dto.EvaluarItemRequest;
 import java.util.List;
 import java.util.Optional;
 
@@ -43,7 +43,12 @@ public class ItemChecklistController {
     public List<ItemChecklist> obtenerPorChecklist(@PathVariable Long checklistId) {
         return itemChecklistService.obtenerPorChecklist(checklistId);
     }
-
+@PutMapping("/{itemId}/evaluar")
+public ResponseEntity<ItemChecklist> evaluarItem(
+        @PathVariable Long itemId,
+        @RequestBody EvaluarItemRequest request) {
+    return ResponseEntity.ok(itemChecklistService.evaluarItem(itemId, request));
+}
     @PostMapping
     public ResponseEntity<?> crearItem(@RequestBody ItemChecklist item) {
         ItemChecklist nuevo = itemChecklistService.crearItem(item);

@@ -9,9 +9,10 @@ import com.globalisosecurity.backend.services.ServicioService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-
+import com.globalisosecurity.backend.dto.ServicioResponseDTO;
 import java.util.List;
 import java.util.Optional;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/servicios")
@@ -21,9 +22,24 @@ public class ServicioController {
     private ServicioService servicioService;
 
     @GetMapping
-    public List<Servicio> obtenerTodos() {
-        return servicioService.obtenerTodos();
-    }
+public ResponseEntity<List<ServicioResponseDTO>> obtenerTodos(
+        @RequestParam(required = false) Long empresaId) {
+    return ResponseEntity.ok(servicioService.listarServiciosDTO(empresaId));
+}
+   @GetMapping("/mi-servicio")
+public ResponseEntity<Map<String, Object>> obtenerMiServicio() {
+    return ResponseEntity.ok(servicioService.obtenerMiServicio());
+}
+
+@GetMapping("/{servicioId}/resumen")
+public ResponseEntity<Map<String, Object>> obtenerResumen(@PathVariable Long servicioId) {
+    return ResponseEntity.ok(servicioService.obtenerResumen(servicioId));
+}
+
+@GetMapping("/{servicioId}/estado-completo")
+public ResponseEntity<Map<String, Object>> obtenerEstadoCompleto(@PathVariable Long servicioId) {
+    return ResponseEntity.ok(servicioService.obtenerEstadoCompleto(servicioId));
+}
 
     @GetMapping("/{id}")
     public ResponseEntity<?> obtenerPorId(@PathVariable Long id) {

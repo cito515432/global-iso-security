@@ -12,7 +12,7 @@ import com.globalisosecurity.backend.repositories.ChecklistRepository;
 import com.globalisosecurity.backend.repositories.ItemChecklistRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-
+import com.globalisosecurity.backend.dto.EvaluarItemRequest;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -48,7 +48,37 @@ public class ItemChecklistService {
     public List<ItemChecklist> obtenerPorChecklist(Long checklistId) {
         return itemChecklistRepository.findByChecklistId(checklistId);
     }
+public ItemChecklist evaluarItem(Long itemId, EvaluarItemRequest request) {
+    ItemChecklist item = itemChecklistRepository.findById(itemId)
+            .orElseThrow(() -> new ResourceNotFoundException("Ítem no encontrado"));
 
+    if (request == null) {
+        throw new BadRequestException("El body de la evaluación es obligatorio");
+    }
+
+    if (request.getEstado() == null || request.getEstado().trim().isEmpty()) {
+        throw new BadRequestException("El estado es obligatorio");
+    }
+
+    String estado = normalizarEstado(request.getEstado());
+    validarEstado(estado);
+
+    String observacion = request.getObservacion() != null ? request.getObservacion().trim() : null;
+
+    if ((estado.equals("NO_CUMPLE") || estado.equals("EN_PROCESO"))
+            && (observacion == null || observacion.isEmpty())) {
+        throw new BadRequestException("La observación es obligatoria para NO_CUMPLE o EN_PROCESO");
+    }
+
+    if (estado.equals("CUMPLE") || estado.equals("PENDIENTE")) {
+        observacion = null;
+    }
+
+    item.setEstado(estado);
+    item.setObservacion(observacion);
+
+    return itemChecklistRepository.save(item);
+}
     public ItemChecklist crearItem(ItemChecklist item) {
         validarItem(item);
 
