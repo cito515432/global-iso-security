@@ -9,7 +9,8 @@ import com.globalisosecurity.backend.services.FirmaService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-
+import com.globalisosecurity.backend.dto.FirmaCreateRequest;
+import org.springframework.http.HttpStatus;
 import java.util.List;
 import java.util.Optional;
 
@@ -50,10 +51,10 @@ public class FirmaController {
     }
 
     @PostMapping
-    public ResponseEntity<?> crearFirma(@RequestBody Firma firma) {
-        Firma nueva = firmaService.crearFirma(firma);
-        return ResponseEntity.ok(nueva);
-    }
+public ResponseEntity<Firma> crearFirma(@RequestBody FirmaCreateRequest request) {
+    Firma nueva = firmaService.crearFirma(request);
+    return ResponseEntity.status(HttpStatus.CREATED).body(nueva);
+}
 
     @PutMapping("/{id}")
     public ResponseEntity<?> actualizarFirma(@PathVariable Long id, @RequestBody Firma firma) {

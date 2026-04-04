@@ -12,7 +12,7 @@ import com.globalisosecurity.backend.repositories.FirmaRepository;
 import com.globalisosecurity.backend.repositories.ServicioRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-
+import com.globalisosecurity.backend.dto.FirmaCreateRequest;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -52,7 +52,43 @@ public class FirmaService {
     public List<Firma> obtenerPorEmpresa(Long empresaId) {
         return firmaRepository.findByServicioEmpresaId(empresaId);
     }
+public Firma crearFirma(FirmaCreateRequest request) {
+    if (request == null) {
+        throw new BadRequestException("El body de la firma es obligatorio");
+    }
 
+    if (request.getNombreFirmante() == null || request.getNombreFirmante().trim().isEmpty()) {
+        throw new BadRequestException("El nombre del firmante es obligatorio");
+    }
+
+    if (request.getCargo() == null || request.getCargo().trim().isEmpty()) {
+        throw new BadRequestException("El cargo es obligatorio");
+    }
+
+    if (request.getServicioId() == null) {
+        throw new BadRequestException("El servicioId es obligatorio");
+    }
+
+    String estado = request.getEstado();
+    if (estado == null || estado.trim().isEmpty()) {
+        estado = "PENDIENTE";
+    }
+
+    estado = normalizarEstado(estado);
+    validarEstado(estado);
+
+    Servicio servicio = servicioRepository.findById(request.getServicioId())
+            .orElseThrow(() -> new ResourceNotFoundException("Servicio no encontrado"));
+
+    Firma firma = new Firma();
+    firma.setNombreFirmante(request.getNombreFirmante().trim());
+    firma.setCargo(request.getCargo().trim());
+    firma.setEstado(estado);
+    firma.setFechaFirma(LocalDateTime.now());
+    firma.setServicio(servicio);
+
+    return firmaRepository.save(firma);
+}
     public Firma crearFirma(Firma firma) {
         validarFirma(firma);
 

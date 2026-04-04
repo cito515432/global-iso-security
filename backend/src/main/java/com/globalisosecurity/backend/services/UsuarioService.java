@@ -17,7 +17,8 @@ import com.globalisosecurity.backend.repositories.UsuarioRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
-
+import com.globalisosecurity.backend.dto.UsuarioMeResponse;
+import com.globalisosecurity.backend.utils.SecurityUtils;
 import java.util.List;
 import java.util.Optional;
 
@@ -106,7 +107,28 @@ public class UsuarioService {
 
         usuarioRepository.delete(usuario);
     }
+public UsuarioMeResponse obtenerUsuarioAutenticado() {
+    String email = SecurityUtils.getUsuarioActual();
 
+    Usuario usuario = usuarioRepository.findByEmail(email)
+            .orElseThrow(() -> new ResourceNotFoundException("Usuario autenticado no encontrado"));
+
+    UsuarioMeResponse response = new UsuarioMeResponse();
+    response.setId(usuario.getId());
+    response.setNombre(usuario.getNombre());
+    response.setEmail(usuario.getEmail());
+
+    if (usuario.getEmpresa() != null) {
+        response.setEmpresa(new UsuarioMeResponse.EmpresaResumen(
+                usuario.getEmpresa().getId(),
+                usuario.getEmpresa().getNombre()
+        ));
+    } else {
+        response.setEmpresa(null);
+    }
+
+    return response;
+}
     private void validarRequest(UsuarioCreateRequest request, boolean passwordObligatoria) {
         if (request == null) {
             throw new BadRequestException("El body de la solicitud es obligatorio");

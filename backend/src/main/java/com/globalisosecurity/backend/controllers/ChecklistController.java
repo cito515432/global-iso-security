@@ -10,7 +10,8 @@ import com.globalisosecurity.backend.services.ChecklistService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-
+import com.globalisosecurity.backend.models.ItemChecklist;
+import com.globalisosecurity.backend.services.ItemChecklistService;
 import java.util.List;
 import java.util.Optional;
 
@@ -20,7 +21,9 @@ public class ChecklistController {
 
     @Autowired
     private ChecklistService checklistService;
-
+    @Autowired
+private ItemChecklistService itemChecklistService;
+    
     @GetMapping
     public List<Checklist> obtenerTodos() {
         return checklistService.obtenerTodos();
@@ -44,7 +47,10 @@ public class ChecklistController {
     public List<Checklist> obtenerPorServicio(@PathVariable Long servicioId) {
         return checklistService.obtenerPorServicio(servicioId);
     }
-
+@GetMapping("/{checklistId}/items")
+public ResponseEntity<List<ItemChecklist>> obtenerItemsPorChecklist(@PathVariable Long checklistId) {
+    return ResponseEntity.ok(itemChecklistService.obtenerPorChecklist(checklistId));
+}
     @GetMapping("/servicio/{servicioId}/completo")
     public ResponseEntity<ChecklistCompletoResponse> obtenerChecklistCompletoPorServicio(
             @PathVariable Long servicioId) {
