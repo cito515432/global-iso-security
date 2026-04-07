@@ -1,4 +1,4 @@
-const API_URL = 'http://localhost:8081/api';
+const API_URL  = "https://global-iso-security-production.up.railway.app/api";
 
 async function login() {
     const email = document.getElementById('email').value.trim();
