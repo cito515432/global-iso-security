@@ -1,4 +1,4 @@
-const API_URL = "http://localhost:8081/api";
+const API_URL  = "https://global-iso-security-production.up.railway.app/api";
 
 // LINK REAL DEL MODULO 2
 const VIDEO_MODULO_2 = "https://youtube.com/shorts/wWU18tWttkM?si=nL3gcM3hyPv381pW";
