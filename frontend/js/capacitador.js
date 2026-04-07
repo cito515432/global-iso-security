@@ -1,258 +1,260 @@
-// capacitador.js (frontend demo)
 const API_URL = "http://localhost:8081/api";
 
-let empresas = [];
-let empresaActual = null;
+// LINK REAL DEL MODULO 2
+const VIDEO_MODULO_2 = "https://youtube.com/shorts/wWU18tWttkM?si=nL3gcM3hyPv381pW";
 
-const KEY_MATERIALES = (empresaId) => `cap_materiales_empresa_${empresaId}`;
-const KEY_FIRMAS = "cap_firmas_demo";
+// LINK REAL DEL MODULO 3
+const DIAPOSITIVA_MODULO_3 = "https://docs.google.com/presentation/d/17VIf2HG_O48G-NDCztIkmgOztvfIuV8bWE8sbQ7s4Fk/embed?start=false&loop=false&delayms=3000";
 
-document.addEventListener("DOMContentLoaded", () => {
-  cargarPerfil();
-  configurarLogout();
-  cargarEmpresas();
-  cargarFirmasDemo();
-
-  const btnGuardar = document.getElementById("btnGuardarMaterial");
-  if (btnGuardar) btnGuardar.addEventListener("click", guardarMaterial);
-
-  const btnFirmar = document.getElementById("btnFinalizarFirmar");
-  if (btnFirmar) btnFirmar.addEventListener("click", finalizarYFirmar);
-});
-
-function cargarPerfil() {
-  const nombre = localStorage.getItem("nombre") || "Capacitador";
-  const email = localStorage.getItem("email") || "";
-
-  const sidebar = document.getElementById("nombreCapacitadorSidebar");
-  if (sidebar) sidebar.textContent = nombre;
-
-  const perfilTitulo = document.getElementById("perfilNombreTitulo");
-  if (perfilTitulo) perfilTitulo.textContent = nombre;
-
-  const perfilNombre = document.getElementById("perfilNombreInput");
-  if (perfilNombre) perfilNombre.value = nombre;
-
-  const perfilEmail = document.getElementById("perfilEmailInput");
-  if (perfilEmail) perfilEmail.value = email;
-}
-
-function configurarLogout() {
-  const btn = document.getElementById("btnLogout");
-  if (!btn) return;
-
-  btn.addEventListener("click", () => {
-    localStorage.clear();
-    window.location.href = "login.html";
-  });
-}
-
-async function cargarEmpresas() {
-  const token = localStorage.getItem("token");
-  const cont = document.getElementById("listaEmpresas");
-  if (!cont) return;
-
-  // Intento backend (si existe)
-  try {
-    const res = await fetch(`${API_URL}/empresas`, {
-      headers: { Authorization: `Bearer ${token}` }
-    });
-
-    const texto = await res.text();
-    let data = [];
-    try { data = texto ? JSON.parse(texto) : []; } catch { data = []; }
-
-    if (res.ok && Array.isArray(data)) {
-      empresas = data.map(e => ({
-        id: e.id,
-        nombre: e.nombre || "Sin nombre",
-        sector: e.sector?.nombre || e.sector || "Sin sector"
-      }));
-    }
-  } catch {
-    // ignore
-  }
-
-  // Fallback demo si backend no responde o viene vacío
-  if (empresas.length === 0) {
-    empresas = [
-      { id: 1, nombre: "USB tecnologia", sector: "Tecnologia" },
-      { id: 2, nombre: "Empresa ABC", sector: "Servicios" }
-    ];
-  }
-
-  renderEmpresas();
-}
-
-function renderEmpresas() {
-  const cont = document.getElementById("listaEmpresas");
-  if (!cont) return;
-
-  cont.innerHTML = empresas.map(e => `
-    <div class="col-md-4">
-      <div class="empresa-card" id="empresa-${e.id}" onclick="seleccionarEmpresa(${e.id})">
-        <div class="d-flex align-items-center gap-3">
-          <i class="bi bi-building" style="font-size:1.8rem; color:#10b981"></i>
-          <div>
-            <p class="text-white fw-bold mb-0">${escapeHtml(e.nombre)}</p>
-            <small class="text-white-50">Sector: ${escapeHtml(e.sector)}</small>
-          </div>
-        </div>
-        <div class="mt-2">
-          <span class="pill pendiente">Pendiente</span>
-          <small class="text-white-50 ms-2">Capacitación</small>
-        </div>
-      </div>
-    </div>
-  `).join("");
-}
-
-// Se usa desde onclick en HTML (debe ser global)
-window.seleccionarEmpresa = function(id) {
-  const emp = empresas.find(x => Number(x.id) === Number(id));
-  if (!emp) return;
-
-  empresaActual = emp;
-
-  document.querySelectorAll(".empresa-card").forEach(c => c.classList.remove("seleccionada"));
-  const card = document.getElementById(`empresa-${id}`);
-  if (card) card.classList.add("seleccionada");
-
-  const label = document.getElementById("empresaSeleccionadaNombre");
-  if (label) label.textContent = emp.nombre;
-
-  const btnGuardar = document.getElementById("btnGuardarMaterial");
-  if (btnGuardar) btnGuardar.disabled = false;
-
-  const btnFirmar = document.getElementById("btnFinalizarFirmar");
-  if (btnFirmar) btnFirmar.disabled = false;
-
-  cargarMaterialesEmpresa();
+// Estado real del usuario logueado
+let usuarioActual = {
+  id: null,
+  nombre: "Capacitador",
+  email: "capacitador@globaliso.com",
+  empresa: { id: null, nombre: "Sin empresa asignada" }
 };
 
-function cargarMaterialesEmpresa() {
-  const body = document.getElementById("tablaMaterialesBody");
-  if (!body) return;
+document.addEventListener("DOMContentLoaded", async () => {
+  await cargarPerfilRealDesdeBackend();
+  verModulo(1, document.querySelector(".btn-modulo.active"));
 
-  if (!empresaActual) {
-    body.innerHTML = `<tr><td colspan="5" class="text-white-50">Selecciona una empresa para ver materiales.</td></tr>`;
+  const btnLogout = document.getElementById("btnLogout");
+  if (btnLogout) {
+    btnLogout.addEventListener("click", () => {
+      localStorage.removeItem("token");
+      localStorage.removeItem("nombre");
+      localStorage.removeItem("email");
+      localStorage.removeItem("rol");
+      localStorage.removeItem("empresaId");
+      localStorage.removeItem("empresaNombre");
+      window.location.href = "login.html";
+    });
+  }
+});
+
+// ================================
+// PERFIL REAL DESDE BACKEND
+// ================================
+async function cargarPerfilRealDesdeBackend() {
+  const token = localStorage.getItem("token");
+
+  if (!token) {
+    console.warn("No hay token en localStorage.");
+    cargarPerfilEnPantalla();
     return;
   }
 
-  const raw = localStorage.getItem(KEY_MATERIALES(empresaActual.id));
-  let materiales = [];
-  try { materiales = raw ? JSON.parse(raw) : []; } catch { materiales = []; }
+  try {
+    const resp = await fetch(`${API_URL}/usuarios/me`, {
+      method: "GET",
+      headers: {
+        "Authorization": `Bearer ${token}`,
+        "Content-Type": "application/json"
+      }
+    });
 
-  if (!materiales.length) {
-    body.innerHTML = `<tr><td colspan="5" class="text-white-50">No hay materiales aún para esta empresa.</td></tr>`;
-    return;
+    if (!resp.ok) {
+      throw new Error(`Error al consultar /usuarios/me: ${resp.status}`);
+    }
+
+    const data = await resp.json();
+
+    usuarioActual = {
+      id: data?.id ?? null,
+      nombre: data?.nombre || localStorage.getItem("nombre") || "Capacitador",
+      email: data?.email || localStorage.getItem("email") || "capacitador@globaliso.com",
+      empresa: {
+        id: data?.empresa?.id ?? null,
+        nombre: data?.empresa?.nombre || localStorage.getItem("empresaNombre") || "Sin empresa asignada"
+      }
+    };
+
+    // persistencia opcional para reutilizar en otras vistas
+    localStorage.setItem("nombre", usuarioActual.nombre);
+    localStorage.setItem("email", usuarioActual.email);
+
+    if (usuarioActual.empresa.id !== null) {
+      localStorage.setItem("empresaId", String(usuarioActual.empresa.id));
+    }
+    if (usuarioActual.empresa.nombre) {
+      localStorage.setItem("empresaNombre", usuarioActual.empresa.nombre);
+    }
+
+    cargarPerfilEnPantalla();
+  } catch (error) {
+    console.error("No se pudo cargar el perfil real desde backend:", error);
+
+    // Fallback: intenta con localStorage
+    usuarioActual = {
+      id: null,
+      nombre: localStorage.getItem("nombre") || "Capacitador",
+      email: localStorage.getItem("email") || "capacitador@globaliso.com",
+      empresa: {
+        id: localStorage.getItem("empresaId") || null,
+        nombre: localStorage.getItem("empresaNombre") || "Sin empresa asignada"
+      }
+    };
+
+    cargarPerfilEnPantalla();
+  }
+}
+
+function cargarPerfilEnPantalla() {
+  setEl("nombreCapacitadorSidebar", usuarioActual.nombre);
+  setEl("perfilNombreTitulo", usuarioActual.nombre);
+  setVal("perfilNombreInput", usuarioActual.nombre);
+  setVal("perfilEmailInput", usuarioActual.email);
+  setVal("perfilEmpresaInput", usuarioActual.empresa?.nombre || "Sin empresa asignada");
+}
+
+// ================================
+// NAVEGACION
+// ================================
+window.mostrarSeccion = function(seccion, btn) {
+  document.querySelectorAll(".seccion").forEach(s => s.classList.remove("activa"));
+
+  const target = document.getElementById("seccion-" + seccion);
+  if (target) target.classList.add("activa");
+
+  document.querySelectorAll(".btn-menu").forEach(b => b.classList.remove("active"));
+  if (btn) btn.classList.add("active");
+};
+
+// ================================
+// MODULOS
+// ================================
+window.verModulo = function(numeroModulo, btn = null) {
+  document.querySelectorAll(".btn-modulo").forEach(b => b.classList.remove("active"));
+
+  if (btn) {
+    btn.classList.add("active");
+  } else {
+    const botones = document.querySelectorAll(".btn-modulo");
+    const boton = botones[numeroModulo - 1];
+    if (boton) boton.classList.add("active");
   }
 
-  body.innerHTML = materiales.map((m, i) => `
-    <tr>
-      <td>${i + 1}</td>
-      <td>${escapeHtml(m.titulo)}</td>
-      <td>${m.youtube ? `<a href="${escapeAttr(m.youtube)}" target="_blank" style="color:#10b981">Ver</a>` : '-'}</td>
-      <td>${m.archivoNombre ? escapeHtml(m.archivoNombre) : '-'}</td>
-      <td>${escapeHtml(m.fecha)}</td>
-    </tr>
-  `).join("");
-}
+  const titulo = document.getElementById("tituloModuloActivo");
+  const descripcion = document.getElementById("descripcionModuloActivo");
+  const contenido = document.getElementById("contenidoModuloActivo");
 
-function guardarMaterial() {
-  if (!empresaActual) return;
+  if (!titulo || !descripcion || !contenido) return;
 
-  const titulo = (document.getElementById("matTitulo")?.value || "").trim();
-  const youtube = (document.getElementById("matYoutube")?.value || "").trim();
-  const fileInput = document.getElementById("matArchivo");
-  const archivo = fileInput?.files?.[0];
+  if (numeroModulo === 1) {
+    titulo.textContent = "Módulo 1: Fundamentos de ISO 27001";
+    descripcion.textContent = "Conceptos básicos para comprender el Sistema de Gestión de Seguridad de la Información.";
+    contenido.innerHTML = `
+      <div class="modulo-texto">
+        <h5>¿Qué es ISO 27001?</h5>
+        <p>
+          ISO 27001 es una norma internacional que establece los requisitos para implementar,
+          mantener y mejorar un Sistema de Gestión de Seguridad de la Información (SGSI).
+        </p>
 
-  const estado = document.getElementById("capEstado");
+        <h5>¿Qué es un SGSI?</h5>
+        <p>
+          Es un conjunto de políticas, procesos, procedimientos y controles diseñados para
+          proteger la información de una organización frente a riesgos internos y externos.
+        </p>
 
-  if (!titulo) {
-    if (estado) estado.textContent = "El título es obligatorio.";
-    return;
+        <h5>Objetivos del SGSI</h5>
+        <ul>
+          <li>Proteger la información sensible de la organización.</li>
+          <li>Reducir riesgos relacionados con la seguridad de la información.</li>
+          <li>Garantizar continuidad, confianza y cumplimiento.</li>
+          <li>Establecer controles claros y responsabilidades definidas.</li>
+        </ul>
+
+        <h5>Principios clave</h5>
+        <ul>
+          <li><strong>Confidencialidad:</strong> la información solo debe ser accesible para personas autorizadas.</li>
+          <li><strong>Integridad:</strong> la información debe mantenerse exacta, completa y sin alteraciones no autorizadas.</li>
+          <li><strong>Disponibilidad:</strong> la información debe estar accesible cuando se necesite.</li>
+        </ul>
+
+        <h5>Contexto de la organización</h5>
+        <p>
+          Antes de implementar ISO 27001, la empresa debe identificar su contexto interno y externo,
+          las necesidades de las partes interesadas y el alcance del sistema de gestión.
+        </p>
+
+        <h5>Roles y responsabilidades</h5>
+        <p>
+          Es importante que cada persona dentro de la organización tenga claras sus responsabilidades
+          en materia de seguridad de la información, desde la alta dirección hasta los usuarios operativos.
+        </p>
+
+        <h5>Importancia de la concienciación</h5>
+        <p>
+          La seguridad de la información no depende solo de la tecnología, sino también del comportamiento
+          del personal. Por eso, la capacitación y la sensibilización son fundamentales.
+        </p>
+      </div>
+    `;
+  } else if (numeroModulo === 2) {
+    titulo.textContent = "Módulo 2: Riesgos y Controles";
+    descripcion.textContent = "Video de apoyo sobre riesgos, amenazas, vulnerabilidades y controles de seguridad.";
+
+    const embedUrl = convertirYoutubeAEmbed(VIDEO_MODULO_2);
+
+    contenido.innerHTML = `
+      <iframe
+        class="embed-frame"
+        src="${embedUrl}"
+        title="Video del módulo 2"
+        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+        allowfullscreen>
+      </iframe>
+    `;
+  } else if (numeroModulo === 3) {
+    titulo.textContent = "Módulo 3: Incidentes, Cumplimiento y Cierre";
+    descripcion.textContent = "Presentación visual sobre gestión de incidentes, cumplimiento y cierre de capacitación.";
+
+    contenido.innerHTML = `
+      <iframe
+        class="embed-frame"
+        src="${DIAPOSITIVA_MODULO_3}"
+        title="Diapositiva del módulo 3"
+        allowfullscreen>
+      </iframe>
+    `;
   }
+};
 
-  const raw = localStorage.getItem(KEY_MATERIALES(empresaActual.id));
-  let materiales = [];
-  try { materiales = raw ? JSON.parse(raw) : []; } catch { materiales = []; }
+// ================================
+// HELPERS
+// ================================
+function convertirYoutubeAEmbed(url) {
+  try {
+    const u = new URL(url);
 
-  materiales.unshift({
-    titulo,
-    youtube: youtube || null,
-    archivoNombre: archivo ? archivo.name : null,
-    fecha: new Date().toLocaleString()
-  });
+    if (u.hostname.includes("youtube.com") && u.pathname === "/watch") {
+      const videoId = u.searchParams.get("v");
+      return videoId ? `https://www.youtube.com/embed/${videoId}` : url;
+    }
 
-  localStorage.setItem(KEY_MATERIALES(empresaActual.id), JSON.stringify(materiales));
+    if (u.hostname.includes("youtube.com") && u.pathname.startsWith("/shorts/")) {
+      const videoId = u.pathname.split("/shorts/")[1];
+      return videoId ? `https://www.youtube.com/embed/${videoId}` : url;
+    }
 
-  // limpiar campos
-  document.getElementById("matTitulo").value = "";
-  document.getElementById("matYoutube").value = "";
-  if (fileInput) fileInput.value = "";
+    if (u.hostname.includes("youtu.be")) {
+      const videoId = u.pathname.replace("/", "");
+      return videoId ? `https://www.youtube.com/embed/${videoId}` : url;
+    }
 
-  if (estado) estado.textContent = "Material agregado correctamente (demo).";
-
-  cargarMaterialesEmpresa();
-}
-
-function finalizarYFirmar() {
-  if (!empresaActual) return;
-
-  const nombre = localStorage.getItem("nombre") || "Capacitador";
-
-  const raw = localStorage.getItem(KEY_FIRMAS);
-  let firmas = [];
-  try { firmas = raw ? JSON.parse(raw) : []; } catch { firmas = []; }
-
-  firmas.unshift({
-    empresaId: empresaActual.id,
-    empresaNombre: empresaActual.nombre,
-    estado: "FIRMADA",
-    firmante: nombre,
-    fecha: new Date().toLocaleString()
-  });
-
-  localStorage.setItem(KEY_FIRMAS, JSON.stringify(firmas));
-  cargarFirmasDemo();
-
-  alert(`Capacitación finalizada y firmada para ${empresaActual.nombre} (demo).`);
-}
-
-function cargarFirmasDemo() {
-  const body = document.getElementById("tablaFirmasBody");
-  if (!body) return;
-
-  const raw = localStorage.getItem(KEY_FIRMAS);
-  let firmas = [];
-  try { firmas = raw ? JSON.parse(raw) : []; } catch { firmas = []; }
-
-  if (!firmas.length) {
-    body.innerHTML = `<tr><td colspan="5" class="text-white-50">Sin firmas todavía.</td></tr>`;
-    return;
+    return url;
+  } catch {
+    return url;
   }
-
-  body.innerHTML = firmas.map((f, i) => `
-    <tr>
-      <td>${i + 1}</td>
-      <td>${escapeHtml(f.empresaNombre)}</td>
-      <td><span class="pill completado">${escapeHtml(f.estado)}</span></td>
-      <td>${escapeHtml(f.firmante)}</td>
-      <td>${escapeHtml(f.fecha)}</td>
-    </tr>
-  `).join("");
 }
 
-function escapeHtml(texto) {
-  return String(texto)
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#039;");
+function setEl(id, valor) {
+  const el = document.getElementById(id);
+  if (el) el.textContent = valor;
 }
 
-function escapeAttr(texto) {
-  return String(texto).replace(/"/g, "&quot;");
+function setVal(id, valor) {
+  const el = document.getElementById(id);
+  if (el) el.value = valor;
 }
