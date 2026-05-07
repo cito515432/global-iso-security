@@ -243,29 +243,60 @@
         <div id="seccion-reportes" style="display:none;">
             <div class="d-flex justify-content-between align-items-center mb-4">
                 <h2 class="section-title mb-0">Reportes</h2>
-                <small class="text-white-50">Exportación demo (frontend)</small>
+                <small class="text-white-50">Exportación real desde backend</small>
+            </div>
+
+            <div class="reporte-card p-4 mb-3">
+                <div class="row g-3 align-items-end">
+                    <div class="col-md-5">
+                        <label class="form-label text-white">Empresa</label>
+                        <select class="form-select" id="reporteEmpresaSelect">
+                            <option value="">Cargando empresas...</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label text-white">Tipo de reporte</label>
+                        <select class="form-select" id="reporteTipoSelect">
+                            <option value="general">General</option>
+                            <option value="auditoria">Auditoría</option>
+                            <option value="implementacion">Implementación</option>
+                            <option value="capacitacion">Capacitación</option>
+                        </select>
+                    </div>
+                    <div class="col-md-4 d-flex gap-2 flex-wrap">
+                        <button class="btn btn-crear btn-sm" id="btnReportePdf">
+                            <i class="bi bi-filetype-pdf me-1"></i>Descargar PDF
+                        </button>
+                        <button class="btn btn-crear btn-sm" id="btnReporteExcel">
+                            <i class="bi bi-file-earmark-excel me-1"></i>Descargar Excel
+                        </button>
+                    </div>
+                </div>
+                <div class="mt-3 text-white-50 small">
+                    Selecciona una empresa y el formato requerido. El archivo se descarga desde el backend, no como JSON del navegador.
+                </div>
             </div>
 
             <div class="row g-3">
                 <div class="col-md-4">
-                    <div class="reporte-card p-4 text-center">
-                        <i class="bi bi-file-earmark-check reporte-icon"></i>
-                        <p class="reporte-label">Reporte de Auditoría</p>
-                        <button class="btn btn-crear btn-sm" id="btnReporteAuditoria">Descargar</button>
+                    <div class="reporte-card p-4 text-center h-100">
+                        <i class="bi bi-file-earmark-pdf reporte-icon"></i>
+                        <p class="reporte-label">PDF</p>
+                        <small class="text-white-50">Resumen ejecutivo para entregar o imprimir.</small>
                     </div>
                 </div>
                 <div class="col-md-4">
-                    <div class="reporte-card p-4 text-center">
-                        <i class="bi bi-clipboard-data reporte-icon"></i>
-                        <p class="reporte-label">Reporte de Implementador</p>
-                        <button class="btn btn-crear btn-sm" id="btnReporteImplementador">Descargar</button>
+                    <div class="reporte-card p-4 text-center h-100">
+                        <i class="bi bi-file-earmark-spreadsheet reporte-icon"></i>
+                        <p class="reporte-label">Excel</p>
+                        <small class="text-white-50">Datos tabulados para análisis y evidencias.</small>
                     </div>
                 </div>
                 <div class="col-md-4">
-                    <div class="reporte-card p-4 text-center">
-                        <i class="bi bi-mortarboard reporte-icon"></i>
-                        <p class="reporte-label">Reporte de Capacitador</p>
-                        <button class="btn btn-crear btn-sm" id="btnReporteCapacitador">Descargar</button>
+                    <div class="reporte-card p-4 text-center h-100">
+                        <i class="bi bi-building-check reporte-icon"></i>
+                        <p class="reporte-label">Por empresa</p>
+                        <small class="text-white-50">El reporte se genera con la empresa seleccionada.</small>
                     </div>
                 </div>
             </div>

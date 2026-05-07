@@ -14,6 +14,7 @@ import com.globalisosecurity.backend.repositories.SectorRepository;
 import com.globalisosecurity.backend.repositories.ServicioRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import com.globalisosecurity.backend.dto.ServicioResponseDTO;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -90,6 +91,7 @@ public List<ServicioResponseDTO> listarServiciosDTO(Long empresaId) {
         return servicioRepository.findByEmpresaId(empresaId);
     }
 
+    @Transactional
     public Servicio crearServicio(Servicio servicio) {
         validarEmpresaYSector(servicio);
 
@@ -116,6 +118,8 @@ public List<ServicioResponseDTO> listarServiciosDTO(Long empresaId) {
         servicio.setSector(sector);
 
         Servicio nuevo = servicioRepository.save(servicio);
+
+        crearChecklistInicialPorSector(nuevo);
 
         logAuditoriaService.registrarLog(
                 "CREAR",
@@ -304,6 +308,121 @@ public Map<String, Object> obtenerEstadoCompleto(Long servicioId) {
 
     return response;
 }
+
+    private void crearChecklistInicialPorSector(Servicio servicio) {
+        if (servicio == null || servicio.getId() == null) return;
+        if (!checklistRepository.findByServicioId(servicio.getId()).isEmpty()) return;
+
+        Checklist checklist = new Checklist();
+        checklist.setNombre("Checklist ISO 27001 - " + servicio.getEmpresa().getNombre());
+        checklist.setDescripcion("Checklist dinámico para sector " + servicio.getSector().getNombre());
+        checklist.setEstado("PENDIENTE");
+        checklist.setServicio(servicio);
+
+        Checklist guardado = checklistRepository.save(checklist);
+
+        for (String pregunta : controlesPorSector(servicio.getSector().getNombre())) {
+            ItemChecklist item = new ItemChecklist();
+            item.setPregunta(pregunta);
+            item.setEstado("PENDIENTE");
+            item.setChecklist(guardado);
+            itemChecklistRepository.save(item);
+        }
+    }
+
+    private List<String> controlesPorSector(String sectorNombre) {
+        String sector = sectorNombre == null ? "" : sectorNombre.trim().toUpperCase();
+
+        List<String> base = List.of(
+                "A.5.1 — Políticas de seguridad de la información: ¿Existe una política de seguridad aprobada, comunicada y revisada?",
+                "A.5.2 — Roles y responsabilidades: ¿Están definidos los responsables de seguridad de la información?",
+                "A.5.7 — Inteligencia de amenazas: ¿La organización identifica amenazas relevantes para su operación?",
+                "A.5.15 — Control de acceso: ¿Existe una política formal de control de acceso basada en roles?",
+                "A.5.23 — Seguridad en servicios en la nube: ¿Se evalúan proveedores cloud y sus responsabilidades de seguridad?",
+                "A.6.3 — Concienciación y formación: ¿El personal recibe capacitación periódica en seguridad de la información?",
+                "A.6.7 — Trabajo remoto: ¿Se protegen dispositivos y accesos usados fuera de las instalaciones?",
+                "A.7.1 — Perímetros físicos: ¿Existen controles físicos para proteger áreas críticas?",
+                "A.8.2 — Derechos de acceso privilegiado: ¿Los accesos administrativos están controlados y revisados?",
+                "A.8.5 — Autenticación segura: ¿Se usa autenticación fuerte para sistemas críticos?",
+                "A.8.9 — Gestión de configuración: ¿Los sistemas tienen configuraciones seguras documentadas?",
+                "A.8.13 — Copias de seguridad: ¿Se realizan backups y pruebas de restauración?",
+                "A.8.15 — Registro de eventos: ¿Se conservan logs de seguridad y actividad relevante?",
+                "A.8.16 — Monitoreo: ¿Se monitorean eventos de seguridad para detectar incidentes?",
+                "A.8.24 — Uso de criptografía: ¿La información sensible se protege con cifrado adecuado?"
+        );
+
+        if (sector.contains("SALUD")) {
+            return unir(base, List.of(
+                    "SALUD-01 — Historia clínica: ¿La información clínica tiene acceso restringido por rol asistencial o administrativo?",
+                    "SALUD-02 — Datos sensibles de pacientes: ¿Se protegen diagnósticos, resultados y datos personales de pacientes?",
+                    "SALUD-03 — Consentimiento y privacidad: ¿Se informa al paciente sobre el tratamiento de sus datos?",
+                    "SALUD-04 — Sistemas clínicos: ¿Se controla el acceso a software médico, agenda y admisiones?",
+                    "SALUD-05 — Trazabilidad clínica: ¿Se registra quién consulta, modifica o elimina información del paciente?",
+                    "SALUD-06 — Interoperabilidad: ¿Se valida la seguridad al intercambiar información con laboratorios, EPS o terceros?",
+                    "SALUD-07 — Disponibilidad asistencial: ¿Existen planes para mantener sistemas críticos durante contingencias?",
+                    "SALUD-08 — Dispositivos médicos: ¿Los equipos conectados están inventariados y protegidos?"
+            ));
+        }
+
+        if (sector.contains("EDUC")) {
+            return unir(base, List.of(
+                    "EDU-01 — Datos de estudiantes: ¿Se protegen calificaciones, matrículas, acudientes y expedientes académicos?",
+                    "EDU-02 — Plataformas virtuales: ¿Se controlan accesos a LMS, aulas virtuales y repositorios académicos?",
+                    "EDU-03 — Menores de edad: ¿Se aplican controles adicionales para datos de menores?",
+                    "EDU-04 — Evaluaciones: ¿Se protege la integridad de exámenes, rúbricas y resultados?",
+                    "EDU-05 — Investigación: ¿Se clasifican datos de proyectos, semilleros o investigaciones sensibles?",
+                    "EDU-06 — Correo institucional: ¿Se aplican controles contra phishing y suplantación?",
+                    "EDU-07 — Laboratorios y equipos compartidos: ¿Existen políticas para sesiones, usuarios y limpieza de datos?",
+                    "EDU-08 — Publicación de información: ¿Se revisa que portales y documentos no expongan datos personales?"
+            ));
+        }
+
+        if (sector.contains("FINAN")) {
+            return unir(base, List.of(
+                    "FIN-01 — Datos financieros: ¿Se clasifican y protegen cuentas, transacciones y soportes financieros?",
+                    "FIN-02 — Prevención de fraude: ¿Existen controles para detectar operaciones inusuales o no autorizadas?",
+                    "FIN-03 — Segregación de funciones: ¿Quien aprueba pagos es distinto de quien los registra o ejecuta?",
+                    "FIN-04 — Conciliaciones: ¿Se revisan transacciones críticas y conciliaciones con trazabilidad?",
+                    "FIN-05 — Accesos a banca y ERP: ¿Los sistemas financieros usan MFA y privilegios mínimos?",
+                    "FIN-06 — Retención de registros: ¿Se conservan soportes y logs de operaciones por el tiempo requerido?",
+                    "FIN-07 — Terceros financieros: ¿Se evalúa la seguridad de pasarelas de pago, bancos y proveedores?",
+                    "FIN-08 — Continuidad financiera: ¿Existe plan para operar pagos y reportes críticos ante fallas?"
+            ));
+        }
+
+        if (sector.contains("TECNO")) {
+            return unir(base, List.of(
+                    "TEC-01 — Desarrollo seguro: ¿Se aplican prácticas de codificación segura y revisión de código?",
+                    "TEC-02 — Gestión de vulnerabilidades: ¿Se identifican, priorizan y corrigen vulnerabilidades técnicas?",
+                    "TEC-03 — Ambientes separados: ¿Producción, pruebas y desarrollo están separados?",
+                    "TEC-04 — Secretos y credenciales: ¿Las claves API, tokens y secretos se gestionan fuera del código fuente?",
+                    "TEC-05 — CI/CD: ¿Los pipelines de despliegue tienen controles de aprobación y trazabilidad?",
+                    "TEC-06 — Infraestructura cloud: ¿Se revisan configuraciones de red, permisos y almacenamiento cloud?",
+                    "TEC-07 — Logs de aplicación: ¿Se registran eventos de autenticación, errores y cambios críticos?",
+                    "TEC-08 — Respuesta a incidentes técnicos: ¿Existe procedimiento para caídas, fugas de datos y vulnerabilidades críticas?"
+            ));
+        }
+
+        if (sector.contains("MANUFACT")) {
+            return unir(base, List.of(
+                    "MAN-01 — Sistemas de producción: ¿Se protegen sistemas usados en planta, inventario y operación?",
+                    "MAN-02 — Continuidad operativa: ¿Existen procedimientos ante fallas de sistemas que afecten producción?",
+                    "MAN-03 — Acceso a planta: ¿Se controla el acceso físico a áreas de producción y equipos críticos?",
+                    "MAN-04 — Proveedores industriales: ¿Se evalúan terceros que acceden a información o sistemas productivos?",
+                    "MAN-05 — Propiedad intelectual: ¿Se protegen diseños, fórmulas, planos o procesos de fabricación?",
+                    "MAN-06 — Dispositivos OT/IoT: ¿Los dispositivos conectados en planta están inventariados y segmentados?",
+                    "MAN-07 — Mantenimiento: ¿El mantenimiento de equipos y sistemas queda registrado y autorizado?",
+                    "MAN-08 — Trazabilidad logística: ¿Se protege la información de pedidos, inventario, despachos y clientes?"
+            ));
+        }
+
+        return base;
+    }
+
+    private List<String> unir(List<String> base, List<String> especificos) {
+        return java.util.stream.Stream.concat(base.stream(), especificos.stream()).toList();
+    }
+
     private void validarEmpresaYSector(Servicio servicio) {
         if (servicio == null) {
             throw new BadRequestException("El body del servicio es obligatorio");

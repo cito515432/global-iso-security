@@ -146,7 +146,10 @@ async function cargarEmpresaAsignada() {
     if (alertaEl) alertaEl.style.display = 'none';
     if (contenidoEl) contenidoEl.style.display = 'block';
 
-    // 4) Renderizar checklist y actualizar contadores
+    // 4) Cargar controles reales desde backend y actualizar contadores
+    if (servicioId) {
+      await cargarChecklistDesdeBackend(servicioId);
+    }
     renderizarChecklist();
     actualizarTodo();
 
@@ -192,6 +195,155 @@ window.mostrarSeccion = function(seccion, btn) {
   if (btn) btn.classList.add('active');
   window.scrollTo({ top: 0, behavior: 'smooth' });
 };
+
+
+// ─────────────────────────────────────────────────────────────────────────────
+// CARGAR CHECKLIST REAL DESDE BACKEND
+// ─────────────────────────────────────────────────────────────────────────────
+async function cargarChecklistDesdeBackend(servicioId) {
+  const token = localStorage.getItem('token');
+
+  try {
+    const res = await fetch(`${API_URL}/checklists/servicio/${servicioId}/completo`, {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+
+    if (!res.ok) {
+      console.warn('No se pudo cargar checklist desde backend. Se usa fallback local.');
+      return;
+    }
+
+    const data = await res.json();
+    const items = Array.isArray(data.items) ? data.items : [];
+    if (!items.length) return;
+
+    ANEXOS_ISO.length = 0;
+    estadosChecklist = {};
+    if (typeof justificaciones !== 'undefined') justificaciones = {};
+
+    const grupos = new Map();
+
+    items.forEach((item) => {
+      const parsed = parsearControlBackend(item);
+      if (!grupos.has(parsed.codigo)) {
+        grupos.set(parsed.codigo, {
+          codigo: parsed.codigo,
+          titulo: parsed.grupo,
+          icono: parsed.icono,
+          controles: []
+        });
+      }
+
+      grupos.get(parsed.codigo).controles.push({
+        id: String(item.id),
+        titulo: parsed.titulo,
+        pregunta: parsed.pregunta
+      });
+
+      estadosChecklist[String(item.id)] = normalizarEstadoFrontend(item.estado);
+      if (item.observacion && typeof justificaciones !== 'undefined') {
+        justificaciones[String(item.id)] = item.observacion;
+      }
+    });
+
+    ANEXOS_ISO.push(...Array.from(grupos.values()));
+  } catch (error) {
+    console.error('Error cargando checklist desde backend:', error);
+  }
+}
+
+function parsearControlBackend(item) {
+  const texto = String(item.pregunta || '').trim();
+  const matchIso = texto.match(/^(A\.\d+(?:\.\d+)?)\s*[—-]\s*([^:]+):\s*(.+)$/i);
+  const matchSector = texto.match(/^([A-ZÁÉÍÓÚÑ]{3,10}-\d+)\s*[—-]\s*([^:]+):\s*(.+)$/i);
+
+  if (matchIso) {
+    const codigoControl = matchIso[1].toUpperCase();
+    const anexo = codigoControl.split('.').slice(0, 2).join('.');
+    return {
+      codigo: anexo,
+      grupo: nombreGrupoIso(anexo),
+      icono: iconoPorGrupo(anexo),
+      titulo: `${codigoControl} — ${matchIso[2].trim()}`,
+      pregunta: matchIso[3].trim()
+    };
+  }
+
+  if (matchSector) {
+    const prefijo = matchSector[1].split('-')[0].toUpperCase();
+    return {
+      codigo: prefijo,
+      grupo: nombreGrupoSector(prefijo),
+      icono: iconoPorGrupo(prefijo),
+      titulo: `${matchSector[1].toUpperCase()} — ${matchSector[2].trim()}`,
+      pregunta: matchSector[3].trim()
+    };
+  }
+
+  return {
+    codigo: 'GENERAL',
+    grupo: 'Controles generales',
+    icono: 'bi-shield-check',
+    titulo: `Control #${item.id}`,
+    pregunta: texto || 'Control sin descripción'
+  };
+}
+
+function normalizarEstadoFrontend(estado) {
+  const valor = String(estado || 'PENDIENTE').trim().toUpperCase();
+  return ['CUMPLE', 'NO_CUMPLE', 'EN_PROCESO', 'PENDIENTE'].includes(valor) ? valor : 'PENDIENTE';
+}
+
+function nombreGrupoIso(codigo) {
+  const nombres = {
+    'A.5': 'Controles organizacionales',
+    'A.6': 'Controles de personas',
+    'A.7': 'Controles físicos',
+    'A.8': 'Controles tecnológicos'
+  };
+  return nombres[codigo] || 'Controles ISO 27001';
+}
+
+function nombreGrupoSector(prefijo) {
+  const nombres = {
+    SALUD: 'Controles específicos del sector salud',
+    EDU: 'Controles específicos del sector educación',
+    FIN: 'Controles específicos del sector financiero',
+    TEC: 'Controles específicos del sector tecnología',
+    MAN: 'Controles específicos del sector manufactura'
+  };
+  return nombres[prefijo] || 'Controles específicos del sector';
+}
+
+function iconoPorGrupo(codigo) {
+  if (codigo === 'A.5') return 'bi-diagram-3-fill';
+  if (codigo === 'A.6') return 'bi-people-fill';
+  if (codigo === 'A.7') return 'bi-building-lock';
+  if (codigo === 'A.8') return 'bi-cpu-fill';
+  if (codigo === 'SALUD') return 'bi-hospital-fill';
+  if (codigo === 'EDU') return 'bi-mortarboard-fill';
+  if (codigo === 'FIN') return 'bi-bank2';
+  if (codigo === 'TEC') return 'bi-cloud-lock-fill';
+  if (codigo === 'MAN') return 'bi-gear-wide-connected';
+  return 'bi-shield-check';
+}
+
+async function guardarEstadoBackend(controlId, estado, observacion) {
+  const token = localStorage.getItem('token');
+  const body = { estado };
+  if (observacion && observacion.trim()) body.observacion = observacion.trim();
+
+  const res = await fetch(`${API_URL}/items-checklist/${controlId}/evaluar`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+    body: JSON.stringify(body)
+  });
+
+  if (!res.ok) {
+    const texto = await res.text();
+    throw new Error(texto || 'No se pudo guardar el estado del control');
+  }
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // RENDERIZAR CHECKLIST ISO 27001
@@ -274,7 +426,7 @@ function renderizarChecklist() {
 // ─────────────────────────────────────────────────────────────────────────────
 // SETEAR ESTADO
 // ─────────────────────────────────────────────────────────────────────────────
-window.setEstado = function(btn, controlId, estado) {
+window.setEstado = async function(btn, controlId, estado) {
   const item = btn.closest('.checklist-item');
   item.dataset.estado = estado;
   estadosChecklist[controlId] = estado;
@@ -294,7 +446,6 @@ window.setEstado = function(btn, controlId, estado) {
   const justBox = document.getElementById('just-box-' + controlId);
   if (justBox) {
     justBox.style.display = estado === 'NO_CUMPLE' ? '' : 'none';
-    // Limpiar justificación si ya no aplica
     if (estado !== 'NO_CUMPLE') {
       justificaciones[controlId] = '';
       const textarea = document.getElementById('just-texto-' + controlId);
@@ -303,13 +454,33 @@ window.setEstado = function(btn, controlId, estado) {
   }
 
   actualizarTodo();
+
+  // Guardado real en backend. Si es NO_CUMPLE, se guarda cuando escriba justificación.
+  if (estado !== 'NO_CUMPLE') {
+    try {
+      await guardarEstadoBackend(controlId, estado, null);
+    } catch (error) {
+      console.error(error);
+      alert(error.message || 'No se pudo guardar el estado del control.');
+    }
+  }
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
 // GUARDAR JUSTIFICACIÓN
 // ─────────────────────────────────────────────────────────────────────────────
-window.guardarJustificacion = function(controlId, valor) {
+window.guardarJustificacion = async function(controlId, valor) {
   justificaciones[controlId] = valor;
+  if ((estadosChecklist[controlId] || 'PENDIENTE') !== 'NO_CUMPLE') return;
+
+  if (!valor || !valor.trim()) return;
+
+  try {
+    await guardarEstadoBackend(controlId, 'NO_CUMPLE', valor);
+  } catch (error) {
+    console.error(error);
+    alert(error.message || 'No se pudo guardar la justificación del control.');
+  }
 };
 
 // ─────────────────────────────────────────────────────────────────────────────

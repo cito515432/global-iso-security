@@ -667,6 +667,7 @@ async function cargarEmpresas() {
             if (!response.ok || !Array.isArray(empresas)) continue;
 
             cacheEmpresas = empresas;
+            poblarSelectEmpresasReportes();
             if (tablaEmpresasBody) {
                 renderizarEmpresas(empresas);
             }
@@ -677,6 +678,7 @@ async function cargarEmpresas() {
     }
 
     cacheEmpresas = [];
+    poblarSelectEmpresasReportes();
     if (tablaEmpresasBody) {
         tablaEmpresasBody.innerHTML = `<tr><td colspan="9" class="text-center">No se pudieron cargar las empresas desde la API.</td></tr>`;
     }
@@ -965,41 +967,99 @@ async function cargarRoles() {
 }
 
 /* =========================
-   REPORTES (3 botones)
+   REPORTES REALES PDF / EXCEL
 ========================= */
 
 function configurarReportes() {
-    const btnA = document.getElementById("btnReporteAuditoria");
-    const btnI = document.getElementById("btnReporteImplementador");
-    const btnC = document.getElementById("btnReporteCapacitador");
+    const btnPdf = document.getElementById("btnReportePdf");
+    const btnExcel = document.getElementById("btnReporteExcel");
 
-    if (btnA) btnA.addEventListener("click", () => descargarReporte("auditoria"));
-    if (btnI) btnI.addEventListener("click", () => descargarReporte("implementador"));
-    if (btnC) btnC.addEventListener("click", () => descargarReporte("capacitador"));
+    if (btnPdf) btnPdf.addEventListener("click", () => descargarReporteReal("pdf"));
+    if (btnExcel) btnExcel.addEventListener("click", () => descargarReporteReal("excel"));
+
+    poblarSelectEmpresasReportes();
 }
 
-function descargarReporte(tipo) {
-    const ahora = new Date();
-    const iso = ahora.toISOString().slice(0, 19).replaceAll(":", "-");
-    const nombreArchivo = `reporte_${tipo}_${iso}.json`;
+function poblarSelectEmpresasReportes() {
+    const select = document.getElementById("reporteEmpresaSelect");
+    if (!select) return;
 
-    const payload = {
-        tipo,
-        generadoEn: ahora.toISOString(),
-        usuario: {
-            nombre: localStorage.getItem("nombre") || "Administrador",
-            email: localStorage.getItem("email") || null,
-            rol: localStorage.getItem("rol") || null
-        },
-        resumen: {
-            totalUsuarios: cacheUsuarios.length,
-            totalEmpresas: cacheEmpresas.length
-        },
-        nota: "Reporte demo generado desde frontend (sin backend de reportes)."
-    };
+    if (!cacheEmpresas || cacheEmpresas.length === 0) {
+        select.innerHTML = `<option value="">No hay empresas cargadas</option>`;
+        return;
+    }
 
-    downloadBlob(JSON.stringify(payload, null, 2), nombreArchivo, "application/json");
-    setText("reporteEstado", `Último reporte generado: ${nombreArchivo}`);
+    select.innerHTML =
+        `<option value="">Selecciona una empresa</option>` +
+        cacheEmpresas
+            .map((empresa) => `
+                <option value="${empresa.id}">${escapeHtml(empresa.nombre || `Empresa #${empresa.id}`)}</option>
+            `)
+            .join("");
+}
+
+async function descargarReporteReal(formato) {
+    const token = localStorage.getItem("token");
+    const empresaId = getValue("reporteEmpresaSelect");
+    const tipo = getValue("reporteTipoSelect") || "general";
+
+    if (!empresaId) {
+        alert("Selecciona una empresa para generar el reporte.");
+        return;
+    }
+
+    const extension = formato === "excel" ? "xlsx" : "pdf";
+    const endpoint = `${API_BASE_URL}/reportes/empresa/${empresaId}/${formato}`;
+    const btnPdf = document.getElementById("btnReportePdf");
+    const btnExcel = document.getElementById("btnReporteExcel");
+
+    try {
+        setText("reporteEstado", `Generando reporte ${extension.toUpperCase()}...`);
+        if (btnPdf) btnPdf.disabled = true;
+        if (btnExcel) btnExcel.disabled = true;
+
+        const response = await fetch(endpoint, {
+            method: "GET",
+            headers: { Authorization: `Bearer ${token}` }
+        });
+
+        if (!response.ok) {
+            const texto = await response.text();
+            throw new Error(texto || `No se pudo generar el reporte ${extension.toUpperCase()}`);
+        }
+
+        const blob = await response.blob();
+        const nombreDesdeHeader = obtenerNombreArchivo(response.headers.get("Content-Disposition"));
+        const fecha = new Date().toISOString().slice(0, 10);
+        const nombreArchivo = nombreDesdeHeader || `reporte_${tipo}_empresa_${empresaId}_${fecha}.${extension}`;
+
+        descargarBlob(blob, nombreArchivo);
+        setText("reporteEstado", `Último reporte generado: ${nombreArchivo}`);
+    } catch (error) {
+        console.error("Error descargando reporte:", error);
+        setText("reporteEstado", `Error: ${error.message || "No se pudo descargar el reporte"}`);
+        alert(error.message || "No se pudo descargar el reporte");
+    } finally {
+        if (btnPdf) btnPdf.disabled = false;
+        if (btnExcel) btnExcel.disabled = false;
+    }
+}
+
+function obtenerNombreArchivo(contentDisposition) {
+    if (!contentDisposition) return null;
+    const match = /filename\*?=(?:UTF-8''|")?([^";]+)/i.exec(contentDisposition);
+    return match ? decodeURIComponent(match[1].replaceAll('"', '').trim()) : null;
+}
+
+function descargarBlob(blob, filename) {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
 }
 
 /* =========================
