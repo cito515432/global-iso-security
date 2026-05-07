@@ -1,0 +1,72 @@
+services:
+  - type: pserv
+    name: globaliso-mysql
+    runtime: docker
+    plan: starter
+    dockerfilePath: ./render/mysql/Dockerfile
+    dockerContext: .
+    envVars:
+      - key: MYSQL_DATABASE
+        value: globalisosecurity
+      - key: MYSQL_USER
+        value: globaliso_user
+      - key: MYSQL_PASSWORD
+        generateValue: true
+      - key: MYSQL_ROOT_PASSWORD
+        generateValue: true
+    disk:
+      name: mysql-data
+      mountPath: /var/lib/mysql
+      sizeGB: 10
+
+  - type: web
+    name: globaliso-backend
+    runtime: docker
+    plan: starter
+    dockerfilePath: ./backend/Dockerfile.render
+    dockerContext: ./backend
+    healthCheckPath: /health
+    envVars:
+      - key: PORT
+        value: 10000
+      - key: MYSQL_HOSTPORT
+        fromService:
+          name: globaliso-mysql
+          type: pserv
+          property: hostport
+      - key: MYSQL_DATABASE
+        value: globalisosecurity
+      - key: SPRING_DATASOURCE_USERNAME
+        fromService:
+          name: globaliso-mysql
+          type: pserv
+          envVarKey: MYSQL_USER
+      - key: SPRING_DATASOURCE_PASSWORD
+        fromService:
+          name: globaliso-mysql
+          type: pserv
+          envVarKey: MYSQL_PASSWORD
+      - key: SPRING_JPA_HIBERNATE_DDL_AUTO
+        value: update
+      - key: JWT_SECRET
+        generateValue: true
+      - key: JWT_EXPIRATION
+        value: 86400000
+      - key: CORS_ALLOWED_ORIGINS
+        value: https://globaliso-frontend.onrender.com,http://localhost:8080,http://localhost:5500,http://127.0.0.1:5500
+
+  - type: web
+    name: globaliso-frontend
+    runtime: docker
+    plan: starter
+    dockerfilePath: ./frontend/Dockerfile.render
+    dockerContext: ./frontend
+    healthCheckPath: /pages/login.html
+    envVars:
+      - key: PORT
+        value: 10000
+      - key: BACKEND_HOSTPORT
+        fromService:
+          name: globaliso-backend
+          type: web
+          property: hostport

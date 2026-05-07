@@ -6,8 +6,10 @@
 package com.globalisosecurity.backend.config;
 
 import com.globalisosecurity.backend.services.CustomUserDetailsService;
+import java.util.Arrays;
 import java.util.List;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -33,6 +35,9 @@ public class SecurityConfig {
     @Autowired
     private CustomUserDetailsService customUserDetailsService;
 
+    @Value("${app.cors.allowed-origins:http://localhost:8080,http://localhost:5500,http://127.0.0.1:5500}")
+    private String allowedOrigins;
+
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
@@ -43,7 +48,7 @@ public class SecurityConfig {
             )
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
-                .requestMatchers("/api/auth/**").permitAll()
+                .requestMatchers("/health", "/api/auth/**").permitAll()
                 .anyRequest().authenticated()
             )
             .userDetailsService(customUserDetailsService);
@@ -57,11 +62,12 @@ public class SecurityConfig {
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
 
-        configuration.setAllowedOriginPatterns(List.of(
-            "http://localhost:5500",
-            "http://127.0.0.1:5500",
-            "https://melodious-simplicity-production-3d75.up.railway.app"
-        ));
+        List<String> origins = Arrays.stream(allowedOrigins.split(","))
+            .map(String::trim)
+            .filter(origin -> !origin.isBlank())
+            .toList();
+
+        configuration.setAllowedOriginPatterns(origins);
 
         configuration.setAllowedMethods(List.of(
             "GET", "POST", "PUT", "DELETE", "OPTIONS"

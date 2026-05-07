@@ -1,4 +1,4 @@
-const API_BASE_URL  = "https://global-iso-security-production.up.railway.app/api";
+const API_BASE_URL = "/api";
 
 let cacheUsuarios = [];
 let cacheEmpresas = [];

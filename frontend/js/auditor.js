@@ -1,4 +1,4 @@
-const API_URL  = "https://global-iso-security-production.up.railway.app/api";
+const API_URL = "/api";
 
 // Estado global
 let empresaActual = null;          // { id, nombre, servicioId }
