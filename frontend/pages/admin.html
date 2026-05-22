@@ -800,6 +800,10 @@
         document.querySelectorAll(".btn-menu").forEach(b => b.classList.remove("active"));
         if (btn) btn.classList.add("active");
 
+        if (seccion === "roles" && typeof window.refrescarDatosSeccionRoles === "function") {
+            window.refrescarDatosSeccionRoles();
+        }
+
         if (seccion === "empresas" && typeof window.refrescarDatosSeccionEmpresas === "function") {
             window.refrescarDatosSeccionEmpresas();
         }

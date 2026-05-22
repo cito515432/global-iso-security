@@ -19,7 +19,12 @@ public class RolService {
     private RolRepository rolRepository;
 
     public List<Rol> obtenerTodos() {
-        return rolRepository.findAll(Sort.by(Sort.Direction.ASC, "id"));
+        List<Rol> roles = rolRepository.findAll(Sort.by(Sort.Direction.ASC, "id"));
+        if (roles.isEmpty()) {
+            crearRolesBase();
+            roles = rolRepository.findAll(Sort.by(Sort.Direction.ASC, "id"));
+        }
+        return roles;
     }
 
     public Rol obtenerPorId(Long id) {
@@ -75,6 +80,26 @@ public class RolService {
     public void eliminarRol(Long id) {
         Rol rol = obtenerPorId(id);
         rolRepository.delete(rol);
+    }
+
+
+    private void crearRolesBase() {
+        crearRolBase("ADMINISTRADOR", "Acceso completo al panel administrativo.", "{\"dashboard\":true,\"usuarios\":true,\"roles\":true,\"empresas\":true,\"reportes\":true,\"configuracion\":true,\"crearEditar\":true}");
+        crearRolBase("IMPLEMENTADOR", "Gestiona procesos de implementación y empresas asignadas.", "{\"dashboard\":true,\"usuarios\":false,\"roles\":false,\"empresas\":true,\"reportes\":true,\"configuracion\":false,\"crearEditar\":true}");
+        crearRolBase("AUDITOR", "Revisa auditorías, evidencias y reportes.", "{\"dashboard\":true,\"usuarios\":false,\"roles\":false,\"empresas\":true,\"reportes\":true,\"configuracion\":false,\"crearEditar\":false}");
+        crearRolBase("CAPACITADOR", "Gestiona actividades de capacitación.", "{\"dashboard\":true,\"usuarios\":false,\"roles\":false,\"empresas\":true,\"reportes\":true,\"configuracion\":false,\"crearEditar\":true}");
+        crearRolBase("USUARIO", "Acceso limitado de consulta.", "{\"dashboard\":true,\"usuarios\":false,\"roles\":false,\"empresas\":false,\"reportes\":false,\"configuracion\":false,\"crearEditar\":false}");
+    }
+
+    private void crearRolBase(String nombre, String descripcion, String permisos) {
+        if (rolRepository.existsByNombreIgnoreCase(nombre)) return;
+
+        Rol rol = new Rol();
+        rol.setNombre(nombre);
+        rol.setDescripcion(descripcion);
+        rol.setActivo(true);
+        rol.setPermisos(permisos);
+        rolRepository.save(rol);
     }
 
     private void validarRequest(RolRequest request) {

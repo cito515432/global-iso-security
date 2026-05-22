@@ -22,9 +22,19 @@ const PERMISOS_ROL = [
     { key: "crearEditar", label: "Crear / Editar", inputId: "rolPermCrearEditar" }
 ];
 
+function fetchConTimeout(url, options = {}, timeoutMs = 12000) {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
-document.addEventListener("DOMContentLoaded", async () => {
-    validarSesion();
+    return fetch(url, {
+        ...options,
+        signal: controller.signal
+    }).finally(() => clearTimeout(timeoutId));
+}
+
+
+document.addEventListener("DOMContentLoaded", () => {
+    if (!validarSesion()) return;
     cargarDatosUsuario();
     configurarLogout();
 
@@ -40,10 +50,12 @@ document.addEventListener("DOMContentLoaded", async () => {
     configurarReportes();
     configurarConfiguracion();
 
+    // Cargar cada módulo de forma independiente evita que un error o una demora
+    // en usuarios/empresas deje la sección de roles esperando indefinidamente.
     cargarResumenDashboard();
-    await cargarUsuarios();
-    await cargarRoles(true);
-    await cargarEmpresas();
+    cargarUsuarios();
+    cargarRoles(true);
+    cargarEmpresas();
 });
 
 function validarSesion() {
@@ -745,7 +757,7 @@ async function cargarEmpresas() {
 
     for (const endpoint of endpoints) {
         try {
-            const response = await fetch(endpoint, {
+            const response = await fetchConTimeout(endpoint, {
                 method: "GET",
                 headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` }
             });
@@ -1042,7 +1054,7 @@ async function cargarRoles(force = false) {
 
     for (const endpoint of endpoints) {
         try {
-            const response = await fetch(endpoint, {
+            const response = await fetchConTimeout(endpoint, {
                 method: "GET",
                 headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` }
             });
@@ -1066,6 +1078,7 @@ async function cargarRoles(force = false) {
         }
     }
 
+    console.warn("No se pudieron cargar roles desde la API. Se muestran roles base para mantener operativa la interfaz.");
     cacheRoles = rolesPorDefecto();
     renderizarRoles(cacheRoles);
     return cacheRoles;
@@ -1249,6 +1262,11 @@ async function cambiarEstadoRol(id, activo) {
         alert("Error de conexión al cambiar el estado del rol.");
     }
 }
+
+
+window.refrescarDatosSeccionRoles = async function () {
+    return cargarRoles(true);
+};
 
 function leerPermisosRolDesdeFormulario() {
     const permisos = {};

@@ -42,10 +42,9 @@ public class AuthService {
             return ResponseEntity.status(401).body("Credenciales incorrectas");
         }
 
-        if (usuario.getRol().getActivo() != null && !usuario.getRol().getActivo()) {
-            return ResponseEntity.status(403).body("El rol del usuario se encuentra inactivo");
-        }
-
+        // No se bloquea el inicio de sesión por el estado del rol.
+        // El estado activo/inactivo se mantiene para la administración de roles,
+        // pero no debe impedir que los usuarios existentes ingresen después de una migración.
         String token = jwtUtil.generarToken(usuario.getEmail(), usuario.getRol().getNombre());
 
         Map<String, Object> respuesta = new HashMap<>();
