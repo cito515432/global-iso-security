@@ -42,6 +42,10 @@ public class AuthService {
             return ResponseEntity.status(401).body("Credenciales incorrectas");
         }
 
+        if (usuario.getRol().getActivo() != null && !usuario.getRol().getActivo()) {
+            return ResponseEntity.status(403).body("El rol del usuario se encuentra inactivo");
+        }
+
         String token = jwtUtil.generarToken(usuario.getEmail(), usuario.getRol().getNombre());
 
         Map<String, Object> respuesta = new HashMap<>();
@@ -49,6 +53,9 @@ public class AuthService {
         respuesta.put("email", usuario.getEmail());
         respuesta.put("nombre", usuario.getNombre());
         respuesta.put("rol", usuario.getRol().getNombre());
+        respuesta.put("rolId", usuario.getRol().getId());
+        respuesta.put("rolActivo", usuario.getRol().getActivo());
+        respuesta.put("permisos", usuario.getRol().getPermisos());
 
         return ResponseEntity.ok(respuesta);
     }

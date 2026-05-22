@@ -57,8 +57,11 @@ public class UsuarioService {
         Rol rol = rolRepository.findById(request.getRolId())
                 .orElseThrow(() -> new ResourceNotFoundException("Rol no encontrado"));
 
-        Empresa empresa = empresaRepository.findById(request.getEmpresaId())
-                .orElseThrow(() -> new ResourceNotFoundException("Empresa no encontrada"));
+        Empresa empresa = null;
+        if (request.getEmpresaId() != null) {
+            empresa = empresaRepository.findById(request.getEmpresaId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Empresa no encontrada"));
+        }
 
         Usuario usuario = new Usuario();
         usuario.setNombre(request.getNombre().trim());
@@ -86,8 +89,11 @@ public class UsuarioService {
         Rol rol = rolRepository.findById(request.getRolId())
                 .orElseThrow(() -> new ResourceNotFoundException("Rol no encontrado"));
 
-        Empresa empresa = empresaRepository.findById(request.getEmpresaId())
-                .orElseThrow(() -> new ResourceNotFoundException("Empresa no encontrada"));
+        Empresa empresa = null;
+        if (request.getEmpresaId() != null) {
+            empresa = empresaRepository.findById(request.getEmpresaId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Empresa no encontrada"));
+        }
 
         usuario.setNombre(request.getNombre().trim());
         usuario.setEmail(emailNormalizado);
@@ -152,8 +158,6 @@ public UsuarioMeResponse obtenerUsuarioAutenticado() {
             throw new BadRequestException("El rolId es obligatorio");
         }
 
-        if (request.getEmpresaId() == null) {
-            throw new BadRequestException("El empresaId es obligatorio");
-        }
+        // La empresa es opcional para permitir usuarios administrativos o roles globales.
     }
 }

@@ -45,8 +45,10 @@ document.addEventListener("DOMContentLoaded", () => {
             localStorage.setItem("nombre", data.nombre || "");
             localStorage.setItem("email", data.email || email);
             localStorage.setItem("rol", data.rol || "");
+            localStorage.setItem("rolId", data.rolId || "");
+            localStorage.setItem("permisosRol", data.permisos || "{}");
 
-            redirigirSegunRol(data.rol);
+            redirigirSegunRol(data.rol, data.permisos);
         } catch (error) {
             console.error("Error en login:", error);
             mostrarError("No se pudo conectar con el servidor");
@@ -58,10 +60,11 @@ document.addEventListener("DOMContentLoaded", () => {
         mensajeError.style.display = "block";
     }
 
-    function redirigirSegunRol(rol) {
+    function redirigirSegunRol(rol, permisosRaw) {
         const rolNormalizado = (rol || "").toUpperCase();
+        const permisos = leerPermisos(permisosRaw);
 
-        if (rolNormalizado.includes("ADMIN")) {
+        if (rolNormalizado.includes("ADMIN") || tienePermisosAdministrativos(permisos)) {
             window.location.href = "admin.html";
             return;
         }
@@ -82,5 +85,25 @@ document.addEventListener("DOMContentLoaded", () => {
         }
 
         window.location.href = "admin.html";
+    }
+
+    function leerPermisos(permisosRaw) {
+        if (!permisosRaw) return {};
+        try {
+            return typeof permisosRaw === "string" ? JSON.parse(permisosRaw) : permisosRaw;
+        } catch {
+            return {};
+        }
+    }
+
+    function tienePermisosAdministrativos(permisos) {
+        return !!(
+            permisos.dashboard ||
+            permisos.usuarios ||
+            permisos.roles ||
+            permisos.empresas ||
+            permisos.reportes ||
+            permisos.configuracion
+        );
     }
 });

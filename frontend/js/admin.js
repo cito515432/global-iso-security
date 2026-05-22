@@ -8,8 +8,20 @@ let modalEditarUsuario = null;
 let modalCrearUsuario = null;
 let modalCrearEmpresa = null;
 let modalEditarEmpresa = null;
+let modalCrearRol = null;
 
 const CONFIG_KEY = "globaliso_admin_config_v1";
+
+const PERMISOS_ROL = [
+    { key: "dashboard", label: "Dashboard", inputId: "rolPermDashboard" },
+    { key: "usuarios", label: "Usuarios", inputId: "rolPermUsuarios" },
+    { key: "roles", label: "Roles", inputId: "rolPermRoles" },
+    { key: "empresas", label: "Empresas", inputId: "rolPermEmpresas" },
+    { key: "reportes", label: "Reportes", inputId: "rolPermReportes" },
+    { key: "configuracion", label: "Configuración", inputId: "rolPermConfiguracion" },
+    { key: "crearEditar", label: "Crear / Editar", inputId: "rolPermCrearEditar" }
+];
+
 
 document.addEventListener("DOMContentLoaded", async () => {
     validarSesion();
@@ -17,39 +29,114 @@ document.addEventListener("DOMContentLoaded", async () => {
     configurarLogout();
 
     prepararVistaInicial();
+    aplicarPermisosMenuAdmin();
 
     configurarModalUsuario();
     configurarModalCrearUsuario();
     configurarModalCrearEmpresa();
     configurarModalEditarEmpresa();
+    configurarModalRol();
 
     configurarReportes();
     configurarConfiguracion();
 
     cargarResumenDashboard();
     await cargarUsuarios();
-    await cargarRoles();
+    await cargarRoles(true);
     await cargarEmpresas();
 });
 
 function validarSesion() {
     const token = localStorage.getItem("token");
     const rol = (localStorage.getItem("rol") || "").toUpperCase();
+    const permisos = obtenerPermisosSesion();
 
     if (!token) {
         window.location.href = "login.html";
-        return;
+        return false;
     }
 
-    if (!rol.includes("ADMIN")) {
+    if (!rol.includes("ADMIN") && !tienePermisosAdministrativos(permisos)) {
         alert("No tienes permisos para acceder a este panel");
         window.location.href = "login.html";
+        return false;
     }
+
+    return true;
 }
 
 function cargarDatosUsuario() {
     const nombre = localStorage.getItem("nombre") || "Administrador";
     setText("nombreAdmin", nombre);
+}
+
+function obtenerPermisosSesion() {
+    const raw = localStorage.getItem("permisosRol") || "{}";
+    try {
+        return JSON.parse(raw) || {};
+    } catch {
+        return {};
+    }
+}
+
+function usuarioEsAdministrador() {
+    return (localStorage.getItem("rol") || "").toUpperCase().includes("ADMIN");
+}
+
+function tienePermisosAdministrativos(permisos) {
+    return !!(
+        permisos.dashboard ||
+        permisos.usuarios ||
+        permisos.roles ||
+        permisos.empresas ||
+        permisos.reportes ||
+        permisos.configuracion
+    );
+}
+
+function permisoRequeridoPorSeccion(seccion) {
+    const permisos = {
+        dashboard: "dashboard",
+        usuarios: "usuarios",
+        roles: "roles",
+        empresas: "empresas",
+        reportes: "reportes",
+        configuracion: "configuracion"
+    };
+    return permisos[seccion] || seccion;
+}
+
+function usuarioPuedeVerSeccion(seccion) {
+    if (usuarioEsAdministrador()) return true;
+    const permisos = obtenerPermisosSesion();
+    const permiso = permisoRequeridoPorSeccion(seccion);
+    return !!permisos[permiso];
+}
+
+window.usuarioPuedeVerSeccion = usuarioPuedeVerSeccion;
+
+function aplicarPermisosMenuAdmin() {
+    if (usuarioEsAdministrador()) return;
+
+    let primerBotonVisible = null;
+
+    document.querySelectorAll(".btn-menu").forEach((btn) => {
+        const onclick = btn.getAttribute("onclick") || "";
+        const match = /mostrarSeccion\('([^']+)'/.exec(onclick);
+        const seccion = match ? match[1] : "";
+
+        if (!seccion) return;
+
+        const permitido = usuarioPuedeVerSeccion(seccion);
+        btn.style.display = permitido ? "" : "none";
+
+        if (permitido && !primerBotonVisible) primerBotonVisible = btn;
+    });
+
+    const botonActivo = document.querySelector(".btn-menu.active");
+    if (botonActivo && botonActivo.style.display === "none" && primerBotonVisible) {
+        primerBotonVisible.click();
+    }
 }
 
 function prepararVistaInicial() {
@@ -72,6 +159,14 @@ function prepararVistaInicial() {
     setText("totalImplementadores", "Cargando...");
     setText("totalCapacitadores", "Cargando...");
     setText("totalAuditores", "Cargando...");
+    setText("rolesTotalSeccion", "Cargando...");
+    setText("rolesActivosSeccion", "Cargando...");
+    setText("permisosConfigurablesSeccion", PERMISOS_ROL.length);
+
+    const tablaRolesBody = document.getElementById("tablaRolesBody");
+    if (tablaRolesBody) {
+        tablaRolesBody.innerHTML = `<tr><td colspan="6" class="text-center">Cargando roles...</td></tr>`;
+    }
 
     const tablaUsuariosBody = document.getElementById("tablaUsuariosBody");
     if (tablaUsuariosBody) {
@@ -302,7 +397,7 @@ async function abrirEditarUsuario(id) {
         return;
     }
 
-    await cargarRoles();
+    await cargarRoles(true);
     await cargarEmpresas();
 
     const token = localStorage.getItem("token");
@@ -337,7 +432,7 @@ async function abrirEditarUsuario(id) {
     if (selectRol) {
         selectRol.innerHTML =
             `<option value="">Selecciona un rol</option>` +
-            cacheRoles
+            rolesParaSelect(rolActualId)
                 .map(
                     (rol) => `
                 <option value="${rol.id}" ${String(rol.id) === String(rolActualId) ? "selected" : ""}>
@@ -494,7 +589,7 @@ async function prepararFormularioCrearUsuario() {
     if (selectRol) {
         selectRol.innerHTML =
             `<option value="">Selecciona un rol</option>` +
-            cacheRoles.map((rol) => `<option value="${rol.id}">${escapeHtml(rol.nombre)}</option>`).join("");
+            rolesParaSelect().map((rol) => `<option value="${rol.id}">${escapeHtml(rol.nombre)}</option>`).join("");
     }
 
     const selectEmpresa = document.getElementById("crearEmpresa");
@@ -925,8 +1020,22 @@ async function eliminarEmpresa(id, nombre) {
    ROLES
 ========================= */
 
-async function cargarRoles() {
-    if (cacheRoles.length > 0) return cacheRoles;
+function configurarModalRol() {
+    const modalElement = document.getElementById("modalCrearRol");
+    if (modalElement) modalCrearRol = new bootstrap.Modal(modalElement);
+
+    const btnAbrir = document.getElementById("btnAbrirModalCrearRol");
+    if (btnAbrir) btnAbrir.addEventListener("click", abrirCrearRol);
+
+    const btnGuardar = document.getElementById("btnGuardarRol");
+    if (btnGuardar) btnGuardar.addEventListener("click", guardarRol);
+}
+
+async function cargarRoles(force = false) {
+    if (!force && cacheRoles.length > 0) {
+        renderizarRoles(cacheRoles);
+        return cacheRoles;
+    }
 
     const token = localStorage.getItem("token");
     const endpoints = [`${API_BASE_URL}/roles`, `${API_BASE_URL}/admin/roles`];
@@ -947,8 +1056,9 @@ async function cargarRoles() {
                 continue;
             }
 
-            if (response.ok && Array.isArray(roles) && roles.length > 0) {
+            if (response.ok && Array.isArray(roles)) {
                 cacheRoles = roles;
+                renderizarRoles(cacheRoles);
                 return roles;
             }
         } catch (error) {
@@ -956,14 +1066,308 @@ async function cargarRoles() {
         }
     }
 
-    cacheRoles = [
-        { id: 1, nombre: "ADMINISTRADOR" },
-        { id: 2, nombre: "IMPLEMENTADOR" },
-        { id: 3, nombre: "AUDITOR" },
-        { id: 4, nombre: "CAPACITADOR" },
-        { id: 5, nombre: "USUARIO" }
-    ];
+    cacheRoles = rolesPorDefecto();
+    renderizarRoles(cacheRoles);
     return cacheRoles;
+}
+
+function rolesPorDefecto() {
+    return [
+        { id: 1, nombre: "ADMINISTRADOR", descripcion: "Acceso completo al panel administrativo.", activo: true, permisos: JSON.stringify(permisosPorDefecto("ADMINISTRADOR")) },
+        { id: 2, nombre: "IMPLEMENTADOR", descripcion: "Gestiona procesos de implementación y empresas asignadas.", activo: true, permisos: JSON.stringify(permisosPorDefecto("IMPLEMENTADOR")) },
+        { id: 3, nombre: "AUDITOR", descripcion: "Revisa auditorías, evidencias y reportes.", activo: true, permisos: JSON.stringify(permisosPorDefecto("AUDITOR")) },
+        { id: 4, nombre: "CAPACITADOR", descripcion: "Gestiona actividades de capacitación.", activo: true, permisos: JSON.stringify(permisosPorDefecto("CAPACITADOR")) },
+        { id: 5, nombre: "USUARIO", descripcion: "Acceso limitado de consulta.", activo: true, permisos: JSON.stringify(permisosPorDefecto("USUARIO")) }
+    ];
+}
+
+function renderizarRoles(roles) {
+    const tablaBody = document.getElementById("tablaRolesBody");
+    if (!tablaBody) return;
+
+    const lista = Array.isArray(roles) ? roles : [];
+    setText("rolesTotalSeccion", lista.length);
+    setText("rolesActivosSeccion", lista.filter((rol) => rolActivo(rol)).length);
+    setText("permisosConfigurablesSeccion", PERMISOS_ROL.length);
+
+    if (lista.length === 0) {
+        tablaBody.innerHTML = `<tr><td colspan="6" class="text-center">No hay roles registrados</td></tr>`;
+        actualizarResumenPermisos(null);
+        return;
+    }
+
+    tablaBody.innerHTML = lista
+        .map((rol, index) => {
+            const id = Number(rol.id);
+            const nombre = rol.nombre || "Sin nombre";
+            const descripcion = rol.descripcion || descripcionRolPorDefecto(nombre);
+            const activo = rolActivo(rol);
+            const permisos = permisosDesdeRol(rol);
+            const permisosActivos = permisosEtiquetas(permisos);
+            const permisosHtml = permisosActivos.length
+                ? permisosActivos.map((p) => `<span class="badge bg-success me-1 mb-1">${escapeHtml(p)}</span>`).join("")
+                : `<span class="badge bg-secondary">Sin permisos</span>`;
+
+            return `
+                <tr>
+                    <td>${index + 1}</td>
+                    <td><strong>${escapeHtml(nombre)}</strong></td>
+                    <td>${escapeHtml(descripcion)}</td>
+                    <td>${permisosHtml}</td>
+                    <td><span class="badge-estado ${activo ? "activo" : "inactivo"}">${activo ? "Activo" : "Inactivo"}</span></td>
+                    <td>
+                        <button class="btn btn-sm btn-accion-editar" title="Editar" onclick="abrirEditarRol(${id})">
+                            <i class="bi bi-pencil-fill"></i>
+                        </button>
+                        <button class="btn btn-sm ${activo ? "btn-outline-warning" : "btn-outline-success"}" title="${activo ? "Desactivar" : "Activar"}" onclick="cambiarEstadoRol(${id}, ${!activo})">
+                            ${activo ? "Desactivar" : "Activar"}
+                        </button>
+                    </td>
+                </tr>
+            `;
+        })
+        .join("");
+
+    actualizarResumenPermisos(lista[0]);
+}
+
+function abrirCrearRol() {
+    prepararFormularioRol(null);
+    if (modalCrearRol) modalCrearRol.show();
+}
+
+async function abrirEditarRol(id) {
+    let rol = cacheRoles.find((r) => Number(r.id) === Number(id));
+    if (!rol) {
+        await cargarRoles(true);
+        rol = cacheRoles.find((r) => Number(r.id) === Number(id));
+    }
+
+    if (!rol) {
+        alert("No se encontró el rol seleccionado.");
+        return;
+    }
+
+    prepararFormularioRol(rol);
+    actualizarResumenPermisos(rol);
+    if (modalCrearRol) modalCrearRol.show();
+}
+
+function prepararFormularioRol(rol) {
+    ocultarErrorRol();
+
+    const editando = !!rol;
+    setText("modalRolTitulo", editando ? "Editar Rol" : "Creación de Rol");
+    setValue("rolFormId", rol?.id ?? "");
+    setValue("rolNombre", rol?.nombre ?? "");
+    setValue("rolEstado", String(rolActivo(rol ?? { activo: true })));
+    setValue("rolDescripcion", rol?.descripcion ?? descripcionRolPorDefecto(rol?.nombre));
+
+    const permisos = permisosDesdeRol(rol);
+    PERMISOS_ROL.forEach((permiso) => setChecked(permiso.inputId, permisos[permiso.key] ?? false));
+}
+
+async function guardarRol() {
+    const token = localStorage.getItem("token");
+    const id = getValue("rolFormId");
+    const nombre = getValue("rolNombre").trim();
+    const descripcion = getValue("rolDescripcion").trim();
+    const activo = getValue("rolEstado") !== "false";
+    const permisos = leerPermisosRolDesdeFormulario();
+
+    if (!nombre) {
+        mostrarErrorRol("El nombre del rol es obligatorio.");
+        return;
+    }
+
+    const payload = {
+        nombre,
+        descripcion,
+        activo,
+        permisos: JSON.stringify(permisos)
+    };
+
+    const url = id ? `${API_BASE_URL}/roles/${id}` : `${API_BASE_URL}/roles`;
+    const method = id ? "PUT" : "POST";
+
+    try {
+        const response = await fetch(url, {
+            method,
+            headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+            body: JSON.stringify(payload)
+        });
+
+        const texto = await response.text();
+        let data = {};
+        try {
+            data = texto ? JSON.parse(texto) : {};
+        } catch {}
+
+        if (!response.ok) {
+            mostrarErrorRol(data.message || data.error || texto || "No se pudo guardar el rol.");
+            return;
+        }
+
+        if (modalCrearRol) modalCrearRol.hide();
+        alert(id ? "Rol actualizado correctamente" : "Rol creado correctamente");
+        await cargarRoles(true);
+        await cargarUsuarios();
+    } catch (error) {
+        console.error("Error guardando rol:", error);
+        mostrarErrorRol("Error de conexión al guardar el rol.");
+    }
+}
+
+async function cambiarEstadoRol(id, activo) {
+    const token = localStorage.getItem("token");
+    const accion = activo ? "activar" : "desactivar";
+    const confirmado = confirm(`¿Deseas ${accion} este rol?`);
+    if (!confirmado) return;
+
+    try {
+        const response = await fetch(`${API_BASE_URL}/roles/${id}/estado?activo=${activo}`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+            body: JSON.stringify({ activo })
+        });
+
+        const texto = await response.text();
+        let data = {};
+        try {
+            data = texto ? JSON.parse(texto) : {};
+        } catch {}
+
+        if (!response.ok) {
+            alert(data.message || data.error || texto || "No se pudo actualizar el estado del rol.");
+            return;
+        }
+
+        await cargarRoles(true);
+        alert(activo ? "Rol activado correctamente" : "Rol desactivado correctamente");
+    } catch (error) {
+        console.error("Error cambiando estado del rol:", error);
+        alert("Error de conexión al cambiar el estado del rol.");
+    }
+}
+
+function leerPermisosRolDesdeFormulario() {
+    const permisos = {};
+    PERMISOS_ROL.forEach((permiso) => {
+        permisos[permiso.key] = isChecked(permiso.inputId);
+    });
+    return permisos;
+}
+
+function permisosDesdeRol(rol) {
+    if (!rol) return permisosPorDefecto("");
+
+    if (rol.permisos) {
+        try {
+            const parsed = typeof rol.permisos === "string" ? JSON.parse(rol.permisos) : rol.permisos;
+            if (parsed && typeof parsed === "object") {
+                return { ...permisosPorDefecto(rol.nombre), ...parsed };
+            }
+        } catch {
+            return permisosPorDefecto(rol.nombre);
+        }
+    }
+
+    return permisosPorDefecto(rol.nombre);
+}
+
+function permisosPorDefecto(nombreRol) {
+    const nombre = String(nombreRol || "").toUpperCase();
+    const base = {
+        dashboard: true,
+        usuarios: false,
+        roles: false,
+        empresas: false,
+        reportes: false,
+        configuracion: false,
+        crearEditar: false
+    };
+
+    if (nombre.includes("ADMIN")) {
+        return {
+            dashboard: true,
+            usuarios: true,
+            roles: true,
+            empresas: true,
+            reportes: true,
+            configuracion: true,
+            crearEditar: true
+        };
+    }
+
+    if (nombre.includes("IMPLEMENTADOR")) {
+        return { ...base, empresas: true, reportes: true, crearEditar: true };
+    }
+
+    if (nombre.includes("AUDITOR")) {
+        return { ...base, empresas: true, reportes: true };
+    }
+
+    if (nombre.includes("CAPACITADOR")) {
+        return { ...base, empresas: true, crearEditar: true };
+    }
+
+    return base;
+}
+
+function permisosEtiquetas(permisos) {
+    return PERMISOS_ROL.filter((permiso) => permisos[permiso.key]).map((permiso) => permiso.label);
+}
+
+function descripcionRolPorDefecto(nombreRol) {
+    const nombre = String(nombreRol || "").toUpperCase();
+    if (nombre.includes("ADMIN")) return "Acceso completo al panel administrativo.";
+    if (nombre.includes("IMPLEMENTADOR")) return "Gestiona procesos de implementación y empresas asignadas.";
+    if (nombre.includes("AUDITOR")) return "Revisa auditorías, evidencias y reportes.";
+    if (nombre.includes("CAPACITADOR")) return "Gestiona actividades de capacitación.";
+    if (nombre.includes("USUARIO")) return "Acceso limitado de consulta.";
+    return "Rol personalizado del sistema.";
+}
+
+function rolActivo(rol) {
+    if (!rol) return true;
+    return rol.activo !== false;
+}
+
+
+function rolesParaSelect(rolActualId = null) {
+    const actual = rolActualId === null || rolActualId === undefined || rolActualId === "" ? null : String(rolActualId);
+    return cacheRoles.filter((rol) => rolActivo(rol) || (actual !== null && String(rol.id) === actual));
+}
+
+function actualizarResumenPermisos(rol) {
+    const contenedor = document.getElementById("rolPermisosResumen");
+    if (!contenedor) return;
+
+    const permisos = permisosDesdeRol(rol);
+    contenedor.innerHTML = PERMISOS_ROL
+        .map((permiso) => `
+            <div class="form-check form-switch config-switch mb-2">
+                <input class="form-check-input" type="checkbox" ${permisos[permiso.key] ? "checked" : ""} disabled>
+                <label class="form-check-label text-white">${escapeHtml(permiso.label)}</label>
+            </div>
+        `)
+        .join("");
+}
+
+function mostrarErrorRol(mensaje) {
+    const error = document.getElementById("rolError");
+    if (error) {
+        error.textContent = mensaje;
+        error.style.display = "block";
+    }
+}
+
+function ocultarErrorRol() {
+    const error = document.getElementById("rolError");
+    if (error) {
+        error.textContent = "";
+        error.style.display = "none";
+    }
 }
 
 /* =========================
@@ -1163,6 +1567,8 @@ function configurarLogout() {
         localStorage.removeItem("nombre");
         localStorage.removeItem("email");
         localStorage.removeItem("rol");
+        localStorage.removeItem("rolId");
+        localStorage.removeItem("permisosRol");
         window.location.href = "login.html";
     });
 }
@@ -1310,7 +1716,7 @@ function downloadBlob(content, filename, mimeType) {
 
 window.refrescarDatosSeccionEmpresas = async function () {
     await cargarUsuarios();
-    await cargarRoles();
+    await cargarRoles(true);
     if (cacheEmpresas.length > 0) {
         renderizarEmpresas(cacheEmpresas);
     } else {

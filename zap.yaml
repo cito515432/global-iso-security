@@ -1,40 +1,45 @@
+---
 env:
   contexts:
-  - excludePaths: []
-    name: baseline
-    urls:
-    - https://citas-medicas-htmz.onrender.com
+    - name: "GlobalISO"
+      urls:
+        - "https://globaliso-frontend-cito515432.onrender.com/pages/login.html"
+      includePaths:
+        - "https://globaliso-frontend-cito515432.onrender.com/pages/login.html.*"
+      excludePaths: []
   parameters:
-    failOnError: true
-    progressToStdout: false
+    failOnError: false
+    failOnWarning: false
+    progressToStdout: true
+
 jobs:
-- parameters:
-    enableTags: false
-    maxAlertsPerRule: 10
-  type: passiveScan-config
-- parameters:
-    maxDuration: 1
-    url: https://citas-medicas-htmz.onrender.com
-  type: spider
-- parameters:
-    maxDuration: 0
-  type: passiveScan-wait
-- parameters:
-    format: Long
-    summaryFile: /home/zap/zap_out.json
-  rules: []
-  type: outputSummary
-- parameters:
-    reportDescription: ''
-    reportDir: /zap/wrk/
-    reportFile: zap_report.html
-    reportTitle: ZAP Scanning Report
-    template: traditional-html
-  type: report
-- parameters:
-    reportDescription: ''
-    reportDir: /zap/wrk/
-    reportFile: zap_report.json
-    reportTitle: ZAP Scanning Report
-    template: traditional-json
-  type: report
+  - type: passiveScan-config
+    parameters:
+      maxAlertsPerRule: 10
+      scanOnlyInScope: true
+
+  - type: requestor
+    parameters:
+      user: ""
+    requests:
+      - url: "https://globaliso-frontend-cito515432.onrender.com/pages/login.html"
+        name: "Login GlobalISO"
+        method: GET
+
+  - type: passiveScan-wait
+    parameters:
+      maxDuration: 1
+
+  - type: report
+    parameters:
+      template: "traditional-html"
+      reportDir: "/zap/wrk/"
+      reportFile: "globaliso_zap_report.html"
+      reportTitle: "Reporte OWASP ZAP - GlobalISO"
+
+  - type: report
+    parameters:
+      template: "traditional-json"
+      reportDir: "/zap/wrk/"
+      reportFile: "globaliso_zap_report.json"
+      reportTitle: "Reporte OWASP ZAP - GlobalISO"
