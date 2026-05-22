@@ -27,6 +27,9 @@
             <button class="btn btn-menu" onclick="mostrarSeccion('usuarios', this)">
                 <i class="bi bi-people-fill me-2"></i>Gestión de Usuarios
             </button>
+            <button class="btn btn-menu" onclick="mostrarSeccion('roles', this)">
+                <i class="bi bi-person-badge-fill me-2"></i>Roles
+            </button>
             <button class="btn btn-menu" onclick="mostrarSeccion('empresas', this)">
                 <i class="bi bi-building me-2"></i>Empresas
             </button>
@@ -304,6 +307,185 @@
             <div class="mt-3 text-white-50 small" id="reporteEstado"></div>
         </div>
 
+        <!-- ROLES -->
+        <div id="seccion-roles" style="display:none;">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div>
+                    <h2 class="section-title mb-0">Roles</h2>
+                    <small class="text-white-50">Vista visual para consultar, crear y preparar permisos por rol.</small>
+                </div>
+                <button class="btn btn-crear" data-bs-toggle="modal" data-bs-target="#modalCrearRol">
+                    <i class="bi bi-plus-circle me-1"></i> Creación de Roles
+                </button>
+            </div>
+
+            <div class="row g-3 mb-4">
+                <div class="col-md-4">
+                    <div class="stat-card">
+                        <i class="bi bi-person-badge-fill stat-icon"></i>
+                        <div>
+                            <p class="stat-label">Roles existentes</p>
+                            <h4 class="stat-number">5</h4>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="stat-card">
+                        <i class="bi bi-toggle-on stat-icon"></i>
+                        <div>
+                            <p class="stat-label">Roles activos</p>
+                            <h4 class="stat-number">4</h4>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="stat-card">
+                        <i class="bi bi-shield-lock-fill stat-icon"></i>
+                        <div>
+                            <p class="stat-label">Permisos configurables</p>
+                            <h4 class="stat-number">Visual</h4>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row g-3 mb-4">
+                <div class="col-md-8">
+                    <div class="table-wrapper">
+                        <table class="table table-hover mb-0">
+                            <thead>
+                                <tr>
+                                    <th>#</th>
+                                    <th>Rol</th>
+                                    <th>Descripción</th>
+                                    <th>Permisos visibles</th>
+                                    <th>Estado</th>
+                                    <th>Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>1</td>
+                                    <td><strong>Administrador</strong></td>
+                                    <td>Acceso completo al panel.</td>
+                                    <td>
+                                        <span class="badge bg-success me-1">Usuarios</span>
+                                        <span class="badge bg-success me-1">Empresas</span>
+                                        <span class="badge bg-success me-1">Reportes</span>
+                                        <span class="badge bg-success">Configuración</span>
+                                    </td>
+                                    <td><span class="badge bg-success">Activo</span></td>
+                                    <td>
+                                        <button class="btn btn-sm btn-outline-light" disabled>Editar</button>
+                                        <button class="btn btn-sm btn-outline-warning" disabled>Desactivar</button>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>2</td>
+                                    <td><strong>Implementador</strong></td>
+                                    <td>Puede consultar empresas y servicios asignados.</td>
+                                    <td>
+                                        <span class="badge bg-success me-1">Dashboard</span>
+                                        <span class="badge bg-success me-1">Empresas</span>
+                                        <span class="badge bg-secondary">Reportes limitados</span>
+                                    </td>
+                                    <td><span class="badge bg-success">Activo</span></td>
+                                    <td>
+                                        <button class="btn btn-sm btn-outline-light" disabled>Editar</button>
+                                        <button class="btn btn-sm btn-outline-warning" disabled>Desactivar</button>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>3</td>
+                                    <td><strong>Capacitador</strong></td>
+                                    <td>Acceso visual a empresas y capacitaciones.</td>
+                                    <td>
+                                        <span class="badge bg-success me-1">Dashboard</span>
+                                        <span class="badge bg-success me-1">Empresas</span>
+                                        <span class="badge bg-secondary">Sin configuración</span>
+                                    </td>
+                                    <td><span class="badge bg-success">Activo</span></td>
+                                    <td>
+                                        <button class="btn btn-sm btn-outline-light" disabled>Editar</button>
+                                        <button class="btn btn-sm btn-outline-warning" disabled>Desactivar</button>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>4</td>
+                                    <td><strong>Auditor</strong></td>
+                                    <td>Puede revisar auditorías y generar reportes.</td>
+                                    <td>
+                                        <span class="badge bg-success me-1">Dashboard</span>
+                                        <span class="badge bg-success me-1">Reportes</span>
+                                        <span class="badge bg-secondary">Empresas asignadas</span>
+                                    </td>
+                                    <td><span class="badge bg-success">Activo</span></td>
+                                    <td>
+                                        <button class="btn btn-sm btn-outline-light" disabled>Editar</button>
+                                        <button class="btn btn-sm btn-outline-warning" disabled>Desactivar</button>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>5</td>
+                                    <td><strong>Cliente / Empresa</strong></td>
+                                    <td>Vista limitada para consultar información propia.</td>
+                                    <td>
+                                        <span class="badge bg-success me-1">Dashboard</span>
+                                        <span class="badge bg-secondary">Solo lectura</span>
+                                    </td>
+                                    <td><span class="badge bg-secondary">Inactivo</span></td>
+                                    <td>
+                                        <button class="btn btn-sm btn-outline-light" disabled>Editar</button>
+                                        <button class="btn btn-sm btn-outline-success" disabled>Activar</button>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="col-md-4">
+                    <div class="reporte-card p-4 h-100">
+                        <h5 class="config-title mb-3">
+                            <i class="bi bi-sliders me-2"></i>Permisos visuales
+                        </h5>
+                        <p class="text-white-50 small mb-3">
+                            Esta tarjeta muestra cómo se vería el control de opciones por rol. Más adelante estos permisos podrán conectarse al backend.
+                        </p>
+                        <div class="form-check form-switch config-switch mb-2">
+                            <input class="form-check-input" type="checkbox" checked disabled>
+                            <label class="form-check-label text-white">Ver Dashboard</label>
+                        </div>
+                        <div class="form-check form-switch config-switch mb-2">
+                            <input class="form-check-input" type="checkbox" checked disabled>
+                            <label class="form-check-label text-white">Gestionar Usuarios</label>
+                        </div>
+                        <div class="form-check form-switch config-switch mb-2">
+                            <input class="form-check-input" type="checkbox" checked disabled>
+                            <label class="form-check-label text-white">Gestionar Empresas</label>
+                        </div>
+                        <div class="form-check form-switch config-switch mb-2">
+                            <input class="form-check-input" type="checkbox" checked disabled>
+                            <label class="form-check-label text-white">Generar Reportes</label>
+                        </div>
+                        <div class="form-check form-switch config-switch mb-0">
+                            <input class="form-check-input" type="checkbox" disabled>
+                            <label class="form-check-label text-white">Modificar Configuración</label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="reporte-card p-4">
+                <h5 class="config-title mb-3">
+                    <i class="bi bi-person-plus-fill me-2"></i>Asignación visual a usuarios
+                </h5>
+                <p class="text-white-50 small mb-0">
+                    Cuando se conecte la funcionalidad, los roles creados aparecerán en el campo <strong>Rol</strong> al crear o editar usuarios. Por ahora esta sección solo representa la estructura visual.
+                </p>
+            </div>
+        </div>
+
         <!-- CONFIGURACIÓN -->
         <div id="seccion-configuracion" style="display:none;">
             <div class="d-flex justify-content-between align-items-center mb-4">
@@ -430,6 +612,79 @@
             <div class="mt-3 text-white-50 small" id="configEstado"></div>
         </div>
 
+    </div>
+</div>
+
+<!-- MODAL CREAR ROL - SOLO VISUAL -->
+<div class="modal fade" id="modalCrearRol" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content bg-dark text-white">
+            <div class="modal-header border-secondary">
+                <h5 class="modal-title">Creación de Rol</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-secondary small">
+                    Vista visual. Este formulario todavía no guarda información en la base de datos.
+                </div>
+
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label">Nombre del rol</label>
+                        <input type="text" class="form-control" placeholder="Ej: Supervisor">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Estado</label>
+                        <select class="form-select">
+                            <option selected>Activo</option>
+                            <option>Inactivo</option>
+                        </select>
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label">Descripción</label>
+                        <textarea class="form-control" rows="2" placeholder="Describe qué podrá hacer este rol dentro del sistema"></textarea>
+                    </div>
+                </div>
+
+                <hr class="border-secondary my-4">
+
+                <h6 class="mb-3">Opciones que podrá ver o usar</h6>
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <div class="form-check form-switch config-switch mb-2">
+                            <input class="form-check-input" type="checkbox" id="rolPermDashboard" checked>
+                            <label class="form-check-label text-white" for="rolPermDashboard">Dashboard</label>
+                        </div>
+                        <div class="form-check form-switch config-switch mb-2">
+                            <input class="form-check-input" type="checkbox" id="rolPermUsuarios">
+                            <label class="form-check-label text-white" for="rolPermUsuarios">Gestión de Usuarios</label>
+                        </div>
+                        <div class="form-check form-switch config-switch mb-2">
+                            <input class="form-check-input" type="checkbox" id="rolPermEmpresas" checked>
+                            <label class="form-check-label text-white" for="rolPermEmpresas">Empresas</label>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-check form-switch config-switch mb-2">
+                            <input class="form-check-input" type="checkbox" id="rolPermReportes" checked>
+                            <label class="form-check-label text-white" for="rolPermReportes">Reportes</label>
+                        </div>
+                        <div class="form-check form-switch config-switch mb-2">
+                            <input class="form-check-input" type="checkbox" id="rolPermConfiguracion">
+                            <label class="form-check-label text-white" for="rolPermConfiguracion">Configuración</label>
+                        </div>
+                        <div class="form-check form-switch config-switch mb-2">
+                            <input class="form-check-input" type="checkbox" id="rolPermCrearEditar">
+                            <label class="form-check-label text-white" for="rolPermCrearEditar">Crear / Editar registros</label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer border-secondary">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-crear" data-bs-dismiss="modal">Guardar rol visual</button>
+            </div>
+        </div>
     </div>
 </div>
 
@@ -594,7 +849,7 @@
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script>
     function mostrarSeccion(seccion, btn) {
-        const secciones = ["dashboard", "usuarios", "empresas", "reportes", "configuracion"];
+        const secciones = ["dashboard", "usuarios", "roles", "empresas", "reportes", "configuracion"];
         secciones.forEach(s => {
             const nodo = document.getElementById("seccion-" + s);
             if (nodo) nodo.style.display = "none";
