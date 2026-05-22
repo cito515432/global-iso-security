@@ -1,0 +1,45 @@
+---
+env:
+  contexts:
+    - name: "GlobalISO"
+      urls:
+        - "https://globaliso-frontend-cito515432.onrender.com/pages/login.html"
+      includePaths:
+        - "https://globaliso-frontend-cito515432.onrender.com/pages/login.html.*"
+      excludePaths: []
+  parameters:
+    failOnError: false
+    failOnWarning: false
+    progressToStdout: true
+
+jobs:
+  - type: passiveScan-config
+    parameters:
+      maxAlertsPerRule: 10
+      scanOnlyInScope: true
+
+  - type: requestor
+    parameters:
+      user: ""
+    requests:
+      - url: "https://globaliso-frontend-cito515432.onrender.com/pages/login.html"
+        name: "Login GlobalISO"
+        method: GET
+
+  - type: passiveScan-wait
+    parameters:
+      maxDuration: 1
+
+  - type: report
+    parameters:
+      template: "traditional-html"
+      reportDir: "/zap/wrk/"
+      reportFile: "globaliso_zap_report.html"
+      reportTitle: "Reporte OWASP ZAP - GlobalISO"
+
+  - type: report
+    parameters:
+      template: "traditional-json"
+      reportDir: "/zap/wrk/"
+      reportFile: "globaliso_zap_report.json"
+      reportTitle: "Reporte OWASP ZAP - GlobalISO"
