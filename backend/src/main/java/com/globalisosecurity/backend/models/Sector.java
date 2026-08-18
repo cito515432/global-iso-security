@@ -11,7 +11,15 @@ import jakarta.persistence.*;
 public class Sector {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @TableGenerator(
+            name = "sector_table_gen",
+            table = "legacy_id_generators",
+            pkColumnName = "entity_name",
+            valueColumnName = "next_val",
+            pkColumnValue = "sectores",
+            initialValue = 1000000,
+            allocationSize = 1)
+    @GeneratedValue(strategy = GenerationType.TABLE, generator = "sector_table_gen")
     private Long id;
 
     @Column(nullable = false, unique = true)

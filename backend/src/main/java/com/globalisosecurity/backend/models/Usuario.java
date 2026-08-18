@@ -13,7 +13,15 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 public class Usuario {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @TableGenerator(
+            name = "usuario_table_gen",
+            table = "legacy_id_generators",
+            pkColumnName = "entity_name",
+            valueColumnName = "next_val",
+            pkColumnValue = "usuarios",
+            initialValue = 1000000,
+            allocationSize = 1)
+    @GeneratedValue(strategy = GenerationType.TABLE, generator = "usuario_table_gen")
     private Long id;
 
     @Column(nullable = false)

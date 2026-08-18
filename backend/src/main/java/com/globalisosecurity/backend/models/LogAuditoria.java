@@ -12,7 +12,15 @@ import java.time.LocalDateTime;
 public class LogAuditoria {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @TableGenerator(
+            name = "log_auditoria_table_gen",
+            table = "legacy_id_generators",
+            pkColumnName = "entity_name",
+            valueColumnName = "next_val",
+            pkColumnValue = "logs_auditoria",
+            initialValue = 1000000,
+            allocationSize = 1)
+    @GeneratedValue(strategy = GenerationType.TABLE, generator = "log_auditoria_table_gen")
     private Long id;
 
     @Column(nullable = false)

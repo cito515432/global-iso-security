@@ -12,7 +12,15 @@ import java.time.LocalDateTime;
 public class Firma {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @TableGenerator(
+            name = "firma_table_gen",
+            table = "legacy_id_generators",
+            pkColumnName = "entity_name",
+            valueColumnName = "next_val",
+            pkColumnValue = "firmas",
+            initialValue = 1000000,
+            allocationSize = 1)
+    @GeneratedValue(strategy = GenerationType.TABLE, generator = "firma_table_gen")
     private Long id;
 
     @Column(nullable = false)

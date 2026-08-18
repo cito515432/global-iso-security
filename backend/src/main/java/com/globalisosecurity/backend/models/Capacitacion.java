@@ -10,7 +10,15 @@ import java.time.LocalDateTime;
 public class Capacitacion {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @TableGenerator(
+            name = "capacitacion_table_gen",
+            table = "legacy_id_generators",
+            pkColumnName = "entity_name",
+            valueColumnName = "next_val",
+            pkColumnValue = "capacitaciones",
+            initialValue = 1000000,
+            allocationSize = 1)
+    @GeneratedValue(strategy = GenerationType.TABLE, generator = "capacitacion_table_gen")
     private Long id;
 
     @Column(nullable = false)

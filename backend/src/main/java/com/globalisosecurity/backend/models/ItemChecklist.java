@@ -11,7 +11,15 @@ import jakarta.persistence.*;
 public class ItemChecklist {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @TableGenerator(
+            name = "item_checklist_table_gen",
+            table = "legacy_id_generators",
+            pkColumnName = "entity_name",
+            valueColumnName = "next_val",
+            pkColumnValue = "items_checklist",
+            initialValue = 1000000,
+            allocationSize = 1)
+    @GeneratedValue(strategy = GenerationType.TABLE, generator = "item_checklist_table_gen")
     private Long id;
 
     @Column(nullable = false, length = 1000)
