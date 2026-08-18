@@ -16,7 +16,7 @@ services:
       - key: SPRING_DATASOURCE_PASSWORD
         sync: false
       - key: SPRING_JPA_HIBERNATE_DDL_AUTO
-        value: update
+        value: none
       - key: JWT_SECRET
         generateValue: true
       - key: JWT_EXPIRATION
