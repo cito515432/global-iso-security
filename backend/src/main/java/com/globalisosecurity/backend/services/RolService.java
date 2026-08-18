@@ -11,9 +11,12 @@ import org.springframework.stereotype.Service;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 @Service
 public class RolService {
+
+    private static final Set<String> ROLES_SISTEMA = Set.of("ADMINISTRADOR", "IMPLEMENTADOR", "AUDITOR", "CAPACITADOR", "USUARIO_EMPRESA");
 
     @Autowired
     private RolRepository rolRepository;
@@ -54,6 +57,10 @@ public class RolService {
         String nombreNormalizado = normalizarNombre(request.getNombre());
 
         Rol rol = obtenerPorId(id);
+        if (ROLES_SISTEMA.contains(rol.getNombre().toUpperCase())
+                && !rol.getNombre().equalsIgnoreCase(nombreNormalizado)) {
+            throw new BadRequestException("Los roles base no pueden cambiar de nombre porque protegen rutas del sistema");
+        }
         Optional<Rol> existente = rolRepository.findByNombreIgnoreCase(nombreNormalizado);
         if (existente.isPresent() && !existente.get().getId().equals(id)) {
             throw new BadRequestException("Ya existe otro rol con ese nombre");
@@ -79,6 +86,9 @@ public class RolService {
 
     public void eliminarRol(Long id) {
         Rol rol = obtenerPorId(id);
+        if (ROLES_SISTEMA.contains(rol.getNombre().toUpperCase())) {
+            throw new BadRequestException("Los roles base no se eliminan; puede desactivarlos de forma controlada");
+        }
         rolRepository.delete(rol);
     }
 
@@ -88,7 +98,7 @@ public class RolService {
         crearRolBase("IMPLEMENTADOR", "Gestiona procesos de implementación y empresas asignadas.", "{\"dashboard\":true,\"usuarios\":false,\"roles\":false,\"empresas\":true,\"reportes\":true,\"configuracion\":false,\"crearEditar\":true}");
         crearRolBase("AUDITOR", "Revisa auditorías, evidencias y reportes.", "{\"dashboard\":true,\"usuarios\":false,\"roles\":false,\"empresas\":true,\"reportes\":true,\"configuracion\":false,\"crearEditar\":false}");
         crearRolBase("CAPACITADOR", "Gestiona actividades de capacitación.", "{\"dashboard\":true,\"usuarios\":false,\"roles\":false,\"empresas\":true,\"reportes\":true,\"configuracion\":false,\"crearEditar\":true}");
-        crearRolBase("USUARIO", "Acceso limitado de consulta.", "{\"dashboard\":true,\"usuarios\":false,\"roles\":false,\"empresas\":false,\"reportes\":false,\"configuracion\":false,\"crearEditar\":false}");
+        crearRolBase("USUARIO_EMPRESA", "Portal ejecutivo de progreso, decisiones, riesgos y reportes.", "{\"dashboard\":true,\"usuarios\":false,\"roles\":false,\"empresas\":false,\"reportes\":false,\"configuracion\":false,\"crearEditar\":false}");
     }
 
     private void crearRolBase(String nombre, String descripcion, String permisos) {

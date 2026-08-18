@@ -29,6 +29,9 @@ public class EmpresaService {
     @Autowired
     private LogAuditoriaService logAuditoriaService;
 
+    @Autowired
+    private AccesoEmpresaService accesoEmpresaService;
+
     public List<Empresa> obtenerTodas() {
         return empresaRepository.findAll();
     }
@@ -47,6 +50,7 @@ public class EmpresaService {
     }
 
     public Optional<Empresa> obtenerPorId(Long id) {
+        accesoEmpresaService.validarEmpresa(id);
         return empresaRepository.findById(id);
     }
 

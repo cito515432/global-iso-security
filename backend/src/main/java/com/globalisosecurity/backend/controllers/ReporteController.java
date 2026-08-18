@@ -1,144 +1,42 @@
-/*
- * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
- * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Class.java to edit this template
- */
 package com.globalisosecurity.backend.controllers;
 
 import com.globalisosecurity.backend.dto.ReporteResumenDTO;
 import com.globalisosecurity.backend.services.ReporteService;
-import com.itextpdf.text.Document;
-import com.itextpdf.text.Paragraph;
-import com.itextpdf.text.pdf.PdfWriter;
-import org.apache.poi.ss.usermodel.Row;
-import org.apache.poi.xssf.usermodel.XSSFSheet;
-import org.apache.poi.xssf.usermodel.XSSFWorkbook;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.ContentDisposition;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.MediaType;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
-
+import com.itextpdf.text.*;
+import com.itextpdf.text.pdf.*;
 import java.io.ByteArrayOutputStream;
+import org.apache.poi.ss.usermodel.*;
+import org.apache.poi.xssf.usermodel.*;
+import org.springframework.http.*;
+import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/reportes")
 public class ReporteController {
+    private final ReporteService reporteService;
+    public ReporteController(ReporteService reporteService){this.reporteService=reporteService;}
 
-    @Autowired
-    private ReporteService reporteService;
-
-    @GetMapping("/empresa/{empresaId}")
-    public ReporteResumenDTO obtenerReportePorEmpresa(@PathVariable Long empresaId) {
-        return reporteService.obtenerReportePorEmpresa(empresaId);
-    }
+    @GetMapping("/empresa/{empresaId}") public ReporteResumenDTO obtener(@PathVariable Long empresaId){return reporteService.obtenerReportePorEmpresa(empresaId);}
 
     @GetMapping("/empresa/{empresaId}/excel")
-    public ResponseEntity<byte[]> exportarExcel(@PathVariable Long empresaId) {
-        try {
-            ReporteResumenDTO reporte = reporteService.obtenerReportePorEmpresa(empresaId);
-
-            XSSFWorkbook workbook = new XSSFWorkbook();
-            XSSFSheet sheet = workbook.createSheet("Reporte");
-
-            int rowNum = 0;
-
-            Row row0 = sheet.createRow(rowNum++);
-            row0.createCell(0).setCellValue("Empresa ID");
-            row0.createCell(1).setCellValue(reporte.getEmpresaId());
-
-            Row row1 = sheet.createRow(rowNum++);
-            row1.createCell(0).setCellValue("Total Servicios");
-            row1.createCell(1).setCellValue(reporte.getTotalServicios());
-
-            Row row2 = sheet.createRow(rowNum++);
-            row2.createCell(0).setCellValue("Total Evaluaciones");
-            row2.createCell(1).setCellValue(reporte.getTotalEvaluaciones());
-
-            Row row3 = sheet.createRow(rowNum++);
-            row3.createCell(0).setCellValue("Total Firmas");
-            row3.createCell(1).setCellValue(reporte.getTotalFirmas());
-
-            Row row4 = sheet.createRow(rowNum++);
-            row4.createCell(0).setCellValue("Total Capacitaciones");
-            row4.createCell(1).setCellValue(reporte.getTotalCapacitaciones());
-
-            rowNum++;
-            Row headerEstados = sheet.createRow(rowNum++);
-            headerEstados.createCell(0).setCellValue("Estados de Servicios");
-
-            for (String estado : reporte.getEstadosServicios()) {
-                Row rowEstado = sheet.createRow(rowNum++);
-                rowEstado.createCell(0).setCellValue(estado);
-            }
-
-            sheet.autoSizeColumn(0);
-            sheet.autoSizeColumn(1);
-
-            ByteArrayOutputStream out = new ByteArrayOutputStream();
-            workbook.write(out);
-            workbook.close();
-
-            HttpHeaders headers = new HttpHeaders();
-            headers.setContentType(MediaType.parseMediaType(
-                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-            ));
-            headers.setContentDisposition(
-                    ContentDisposition.attachment()
-                            .filename("reporte_empresa_" + empresaId + ".xlsx")
-                            .build()
-            );
-
-            return ResponseEntity.ok()
-                    .headers(headers)
-                    .body(out.toByteArray());
-
-        } catch (Exception e) {
-            throw new RuntimeException("Error al generar el Excel", e);
-        }
+    public ResponseEntity<byte[]> excel(@PathVariable Long empresaId){
+        try(XSSFWorkbook wb=new XSSFWorkbook();ByteArrayOutputStream out=new ByteArrayOutputStream()){
+            ReporteResumenDTO r=reporteService.obtenerReportePorEmpresa(empresaId);CellStyle head=header(wb);
+            XSSFSheet resumen=wb.createSheet("Resumen");int row=0;row=kv(resumen,row,"Empresa",r.getEmpresaNombre());row=kv(resumen,row,"Sector",r.getSector());row=kv(resumen,row,"Estado del servicio",r.getEstadoServicio());row=kv(resumen,row,"Controles de referencia",r.getTotalControles());row=kv(resumen,row,"Aplicables",r.getControlesAplicables());row=kv(resumen,row,"No aplicables",r.getControlesNoAplicables());row=kv(resumen,row,"Pendientes",r.getControlesPendientes());row=kv(resumen,row,"Implementados",r.getControlesImplementados());row=kv(resumen,row,"Avance promedio",r.getPorcentajeImplementacion()+"%");row=kv(resumen,row,"Riesgos",r.getTotalRiesgos());row=kv(resumen,row,"Riesgos críticos",r.getRiesgosCriticos());row=kv(resumen,row,"Riesgos altos",r.getRiesgosAltos());row=kv(resumen,row,"Evidencias validadas",r.getEvidenciasValidadas());row=kv(resumen,row,"Alertas RPM",r.getAlertasRpm());resumen.autoSizeColumn(0);resumen.autoSizeColumn(1);
+            XSSFSheet soa=wb.createSheet("Declaración de Aplicabilidad");String[] hs={"Código","Título","Dominio","Aplicabilidad","Justificación","Estado","Avance %","Responsable","Fecha objetivo","Evidencias","Riesgos"};Row hr=soa.createRow(0);for(int i=0;i<hs.length;i++){Cell c=hr.createCell(i);c.setCellValue(hs[i]);c.setCellStyle(head);}int i=1;for(var x:r.getSoa()){Row rr=soa.createRow(i++);Object[] vals={x.codigo(),x.titulo(),x.dominio(),x.aplicabilidad(),x.justificacion(),x.estado(),x.porcentaje(),x.responsable(),x.fechaObjetivo(),x.evidencias(),x.riesgos()};for(int j=0;j<vals.length;j++)rr.createCell(j).setCellValue(String.valueOf(vals[j]));}auto(soa,hs.length);
+            XSSFSheet riesgos=wb.createSheet("Riesgos");String[] rh={"Código","Nombre","Activo","Probabilidad","Impacto","Nivel","Categoría","Tratamiento","Estado","Controles"};hr=riesgos.createRow(0);for(int j=0;j<rh.length;j++){Cell c=hr.createCell(j);c.setCellValue(rh[j]);c.setCellStyle(head);}i=1;for(var x:r.getRiesgos()){Row rr=riesgos.createRow(i++);Object[] vals={x.codigo(),x.nombre(),x.activo(),x.probabilidad(),x.impacto(),x.nivel(),x.categoria(),x.tratamiento(),x.estado(),x.controles()};for(int j=0;j<vals.length;j++)rr.createCell(j).setCellValue(String.valueOf(vals[j]));}auto(riesgos,rh.length);
+            XSSFSheet rpm=wb.createSheet("Análisis RPM");String[] ah={"Control","Prioridad","Puntaje","Estado","Resumen","Acciones sugeridas"};hr=rpm.createRow(0);for(int j=0;j<ah.length;j++){Cell c=hr.createCell(j);c.setCellValue(ah[j]);c.setCellStyle(head);}i=1;for(var x:r.getRpm()){Row rr=rpm.createRow(i++);Object[] vals={x.control(),x.prioridad(),x.puntaje(),x.estado(),x.resumen(),x.acciones()};for(int j=0;j<vals.length;j++)rr.createCell(j).setCellValue(String.valueOf(vals[j]));}auto(rpm,ah.length);
+            wb.write(out);return archivo(out.toByteArray(),"reporte_integral_empresa_"+empresaId+".xlsx","application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+        }catch(Exception e){throw new RuntimeException("Error al generar el Excel integral",e);}
     }
 
     @GetMapping("/empresa/{empresaId}/pdf")
-    public ResponseEntity<byte[]> exportarPdf(@PathVariable Long empresaId) {
-        try {
-            ReporteResumenDTO reporte = reporteService.obtenerReportePorEmpresa(empresaId);
-
-            Document document = new Document();
-            ByteArrayOutputStream out = new ByteArrayOutputStream();
-
-            PdfWriter.getInstance(document, out);
-            document.open();
-
-            document.add(new Paragraph("Reporte de Empresa"));
-            document.add(new Paragraph(" "));
-            document.add(new Paragraph("Empresa ID: " + reporte.getEmpresaId()));
-            document.add(new Paragraph("Total Servicios: " + reporte.getTotalServicios()));
-            document.add(new Paragraph("Total Evaluaciones: " + reporte.getTotalEvaluaciones()));
-            document.add(new Paragraph("Total Firmas: " + reporte.getTotalFirmas()));
-            document.add(new Paragraph("Total Capacitaciones: " + reporte.getTotalCapacitaciones()));
-            document.add(new Paragraph(" "));
-
-            document.add(new Paragraph("Estados de Servicios:"));
-            for (String estado : reporte.getEstadosServicios()) {
-                document.add(new Paragraph("- " + estado));
-            }
-
-            document.close();
-
-            HttpHeaders headers = new HttpHeaders();
-            headers.setContentType(MediaType.APPLICATION_PDF);
-            headers.setContentDisposition(
-                    ContentDisposition.attachment()
-                            .filename("reporte_empresa_" + empresaId + ".pdf")
-                            .build()
-            );
-
-            return ResponseEntity.ok()
-                    .headers(headers)
-                    .body(out.toByteArray());
-
-        } catch (Exception e) {
-            throw new RuntimeException("Error al generar el PDF", e);
-        }
+    public ResponseEntity<byte[]> pdf(@PathVariable Long empresaId){
+        try{ReporteResumenDTO r=reporteService.obtenerReportePorEmpresa(empresaId);Document d=new Document(PageSize.A4.rotate(),28,28,28,28);ByteArrayOutputStream out=new ByteArrayOutputStream();PdfWriter.getInstance(d,out);d.open();com.itextpdf.text.Font title=FontFactory.getFont(FontFactory.HELVETICA_BOLD,16);com.itextpdf.text.Font sub=FontFactory.getFont(FontFactory.HELVETICA_BOLD,11);d.add(new Paragraph("Global ISO Security — Reporte integral SGSI / SoA / RPM",title));d.add(new Paragraph("Empresa: "+r.getEmpresaNombre()+" | Sector: "+r.getSector()+" | Estado: "+r.getEstadoServicio()));d.add(new Paragraph(" "));PdfPTable sum=new PdfPTable(6);sum.setWidthPercentage(100);cell(sum,"Controles",sub);cell(sum,"Avance",sub);cell(sum,"Riesgos críticos",sub);cell(sum,"Evidencias validadas",sub);cell(sum,"Alertas RPM",sub);cell(sum,"Capacitaciones",sub);cell(sum,String.valueOf(r.getTotalControles()),null);cell(sum,r.getPorcentajeImplementacion()+"%",null);cell(sum,String.valueOf(r.getRiesgosCriticos()),null);cell(sum,String.valueOf(r.getEvidenciasValidadas()),null);cell(sum,String.valueOf(r.getAlertasRpm()),null);cell(sum,String.valueOf(r.getTotalCapacitaciones()),null);d.add(sum);d.add(new Paragraph(" "));d.add(new Paragraph("Declaración de Aplicabilidad",sub));PdfPTable t=new PdfPTable(new float[]{1.1f,3.2f,1.2f,1.2f,1.2f,0.8f});t.setWidthPercentage(100);for(String h:new String[]{"Código","Control","Aplicabilidad","Estado","Responsable","Avance"})cell(t,h,sub);for(var x:r.getSoa()){cell(t,x.codigo(),null);cell(t,x.titulo(),null);cell(t,x.aplicabilidad(),null);cell(t,x.estado(),null);cell(t,x.responsable(),null);cell(t,x.porcentaje()+"%",null);}d.add(t);if(!r.getRiesgos().isEmpty()){d.newPage();d.add(new Paragraph("Riesgos",sub));PdfPTable rt=new PdfPTable(new float[]{1,3,2,1,1,1,1.5f});rt.setWidthPercentage(100);for(String h:new String[]{"Código","Nombre","Activo","P","I","Nivel","Tratamiento"})cell(rt,h,sub);for(var x:r.getRiesgos()){cell(rt,x.codigo(),null);cell(rt,x.nombre(),null);cell(rt,x.activo(),null);cell(rt,String.valueOf(x.probabilidad()),null);cell(rt,String.valueOf(x.impacto()),null);cell(rt,x.categoria(),null);cell(rt,x.tratamiento(),null);}d.add(rt);}if(!r.getRpm().isEmpty()){d.newPage();d.add(new Paragraph("Análisis RPM",sub));for(var x:r.getRpm()){d.add(new Paragraph(x.control()+" — "+x.prioridad()+" ("+x.puntaje()+"/100)",sub));d.add(new Paragraph(x.resumen()));d.add(new Paragraph("Acciones: "+x.acciones()));d.add(new Paragraph(" "));}}d.close();return archivo(out.toByteArray(),"reporte_integral_empresa_"+empresaId+".pdf","application/pdf");}catch(Exception e){throw new RuntimeException("Error al generar el PDF integral",e);}
     }
+    private int kv(Sheet s,int row,String k,Object v){Row r=s.createRow(row);r.createCell(0).setCellValue(k);r.createCell(1).setCellValue(String.valueOf(v));return row+1;}
+    private CellStyle header(XSSFWorkbook wb){CellStyle st=wb.createCellStyle();org.apache.poi.ss.usermodel.Font f=wb.createFont();f.setBold(true);st.setFont(f);st.setWrapText(true);return st;}
+    private void auto(Sheet s,int n){for(int i=0;i<n;i++){s.autoSizeColumn(i);if(s.getColumnWidth(i)>14000)s.setColumnWidth(i,14000);}}
+    private void cell(PdfPTable t,String v,com.itextpdf.text.Font f){PdfPCell c=new PdfPCell(new Phrase(v==null?"":v,f));c.setPadding(4);t.addCell(c);}
+    private ResponseEntity<byte[]> archivo(byte[] b,String n,String mt){HttpHeaders h=new HttpHeaders();h.setContentType(MediaType.parseMediaType(mt));h.setContentDisposition(ContentDisposition.attachment().filename(n).build());return ResponseEntity.ok().headers(h).body(b);}
 }

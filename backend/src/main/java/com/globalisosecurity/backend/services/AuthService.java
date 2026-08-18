@@ -30,7 +30,7 @@ public class AuthService {
     private PasswordEncoder passwordEncoder;
 
     public ResponseEntity<?> login(String email, String password) {
-        Optional<Usuario> usuarioOpt = usuarioRepository.findByEmail(email);
+        Optional<Usuario> usuarioOpt = usuarioRepository.findByEmail(email == null ? "" : email.trim().toLowerCase());
 
         if (usuarioOpt.isEmpty()) {
             return ResponseEntity.status(401).body("Credenciales incorrectas");
@@ -42,9 +42,13 @@ public class AuthService {
             return ResponseEntity.status(401).body("Credenciales incorrectas");
         }
 
-        // No se bloquea el inicio de sesión por el estado del rol.
-        // El estado activo/inactivo se mantiene para la administración de roles,
-        // pero no debe impedir que los usuarios existentes ingresen después de una migración.
+        if (usuario.getRol() == null) {
+            return ResponseEntity.status(403).body("El usuario no tiene un rol asignado");
+        }
+        if (Boolean.FALSE.equals(usuario.getRol().getActivo())) {
+            return ResponseEntity.status(403).body("El rol del usuario está inactivo");
+        }
+
         String token = jwtUtil.generarToken(usuario.getEmail(), usuario.getRol().getNombre());
 
         Map<String, Object> respuesta = new HashMap<>();
@@ -55,6 +59,13 @@ public class AuthService {
         respuesta.put("rolId", usuario.getRol().getId());
         respuesta.put("rolActivo", usuario.getRol().getActivo());
         respuesta.put("permisos", usuario.getRol().getPermisos());
+        if (usuario.getEmpresa() != null) {
+            respuesta.put("empresaId", usuario.getEmpresa().getId());
+            respuesta.put("empresaNombre", usuario.getEmpresa().getNombre());
+        } else {
+            respuesta.put("empresaId", null);
+            respuesta.put("empresaNombre", null);
+        }
 
         return ResponseEntity.ok(respuesta);
     }

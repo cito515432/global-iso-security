@@ -1,69 +1,36 @@
-/*
- * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
- * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Class.java to edit this template
- */
 package com.globalisosecurity.backend.controllers;
 
 import com.globalisosecurity.backend.models.Capacitacion;
 import com.globalisosecurity.backend.services.CapacitacionService;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
-
 import java.util.List;
-import java.util.Optional;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/capacitaciones")
 public class CapacitacionController {
+    private final CapacitacionService service;
+    public CapacitacionController(CapacitacionService service) { this.service = service; }
 
-    @Autowired
-    private CapacitacionService capacitacionService;
-
-    @GetMapping
-    public List<Capacitacion> obtenerTodas() {
-        return capacitacionService.obtenerTodas();
+    @GetMapping public List<Capacitacion> obtenerTodas() { return service.obtenerTodas(); }
+    @GetMapping("/{id}") public ResponseEntity<?> obtenerPorId(@PathVariable Long id) {
+        return service.obtenerPorId(id).<ResponseEntity<?>>map(ResponseEntity::ok)
+                .orElseGet(() -> ResponseEntity.status(404).body("Capacitación no encontrada"));
     }
-
-    @GetMapping("/{id}")
-    public ResponseEntity<?> obtenerPorId(@PathVariable Long id) {
-        Optional<Capacitacion> capacitacion = capacitacionService.obtenerPorId(id);
-        if (capacitacion.isPresent()) {
-            return ResponseEntity.ok(capacitacion.get());
-        }
-        return ResponseEntity.status(404).body("Capacitación no encontrada");
-    }
-
-    @GetMapping("/estado/{estado}")
-    public List<Capacitacion> obtenerPorEstado(@PathVariable String estado) {
-        return capacitacionService.obtenerPorEstado(estado);
-    }
-
-    @GetMapping("/servicio/{servicioId}")
-    public List<Capacitacion> obtenerPorServicio(@PathVariable Long servicioId) {
-        return capacitacionService.obtenerPorServicio(servicioId);
-    }
-
-    @GetMapping("/empresa/{empresaId}")
-    public List<Capacitacion> obtenerPorEmpresa(@PathVariable Long empresaId) {
-        return capacitacionService.obtenerPorEmpresa(empresaId);
-    }
+    @GetMapping("/estado/{estado}") public List<Capacitacion> obtenerPorEstado(@PathVariable String estado) { return service.obtenerPorEstado(estado); }
+    @GetMapping("/servicio/{servicioId}") public List<Capacitacion> obtenerPorServicio(@PathVariable Long servicioId) { return service.obtenerPorServicio(servicioId); }
+    @GetMapping("/empresa/{empresaId}") public List<Capacitacion> obtenerPorEmpresa(@PathVariable Long empresaId) { return service.obtenerPorEmpresa(empresaId); }
 
     @PostMapping
-    public ResponseEntity<?> crearCapacitacion(@RequestBody Capacitacion capacitacion) {
-        Capacitacion nueva = capacitacionService.crearCapacitacion(capacitacion);
-        return ResponseEntity.ok(nueva);
-    }
+    @PreAuthorize("hasAnyRole('ADMINISTRADOR','CAPACITADOR')")
+    public Capacitacion crear(@RequestBody Capacitacion capacitacion) { return service.crearCapacitacion(capacitacion); }
 
     @PutMapping("/{id}")
-    public ResponseEntity<?> actualizarCapacitacion(@PathVariable Long id, @RequestBody Capacitacion capacitacion) {
-        Capacitacion actualizada = capacitacionService.actualizarCapacitacion(id, capacitacion);
-        return ResponseEntity.ok(actualizada);
-    }
+    @PreAuthorize("hasAnyRole('ADMINISTRADOR','CAPACITADOR')")
+    public Capacitacion actualizar(@PathVariable Long id, @RequestBody Capacitacion capacitacion) { return service.actualizarCapacitacion(id, capacitacion); }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<?> eliminarCapacitacion(@PathVariable Long id) {
-        capacitacionService.eliminarCapacitacion(id);
-        return ResponseEntity.ok("Capacitación eliminada correctamente");
-    }
+    @PreAuthorize("hasAnyRole('ADMINISTRADOR','CAPACITADOR')")
+    public void eliminar(@PathVariable Long id) { service.eliminarCapacitacion(id); }
 }

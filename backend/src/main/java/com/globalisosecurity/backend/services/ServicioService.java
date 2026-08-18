@@ -63,12 +63,20 @@ private FirmaRepository firmaRepository;
     @Autowired
     private LogAuditoriaService logAuditoriaService;
 
+    @Autowired
+    private SoaService soaService;
+
+    @Autowired
+    private AccesoEmpresaService accesoEmpresaService;
+
     public List<Servicio> obtenerTodos() {
         return servicioRepository.findAll();
     }
 
     public Optional<Servicio> obtenerPorId(Long id) {
-        return servicioRepository.findById(id);
+        Optional<Servicio> servicio = servicioRepository.findById(id);
+        servicio.ifPresent(s -> accesoEmpresaService.validarEmpresa(s.getEmpresa().getId()));
+        return servicio;
     }
 
     public List<Servicio> obtenerPorEstado(String estado) {
@@ -78,6 +86,7 @@ public List<ServicioResponseDTO> listarServiciosDTO(Long empresaId) {
     List<Servicio> servicios;
 
     if (empresaId != null) {
+        accesoEmpresaService.validarEmpresa(empresaId);
         servicios = servicioRepository.findByEmpresaId(empresaId);
     } else {
         servicios = servicioRepository.findAll();
@@ -88,6 +97,7 @@ public List<ServicioResponseDTO> listarServiciosDTO(Long empresaId) {
             .toList();
 }
     public List<Servicio> obtenerPorEmpresa(Long empresaId) {
+        accesoEmpresaService.validarEmpresa(empresaId);
         return servicioRepository.findByEmpresaId(empresaId);
     }
 
@@ -120,6 +130,9 @@ public List<ServicioResponseDTO> listarServiciosDTO(Long empresaId) {
         Servicio nuevo = servicioRepository.save(servicio);
 
         crearChecklistInicialPorSector(nuevo);
+        // La SoA principal se inicializa con el catálogo completo de 93 controles.
+        // El checklist heredado se conserva temporalmente por compatibilidad con pantallas antiguas.
+        soaService.inicializar(nuevo.getId());
 
         logAuditoriaService.registrarLog(
                 "CREAR",
@@ -221,31 +234,28 @@ public Map<String, Object> obtenerMiServicio() {
         throw new BadRequestException("El usuario no tiene empresa asignada");
     }
 
-    List<Servicio> servicios = servicioRepository.findByEmpresaId(usuario.getEmpresa().getId());
-    if (servicios.isEmpty()) {
-        throw new ResourceNotFoundException("No se encontró servicio para la empresa del usuario");
-    }
-
-    Servicio servicio = servicios.get(0);
+    Servicio servicio = servicioRepository.findFirstByEmpresaIdOrderByFechaCreacionDesc(usuario.getEmpresa().getId())
+            .orElseThrow(() -> new ResourceNotFoundException("No se encontró servicio para la empresa del usuario"));
 
     List<Checklist> checklists = checklistRepository.findByServicioId(servicio.getId());
-    if (checklists.isEmpty()) {
-        throw new ResourceNotFoundException("No se encontró checklist para el servicio");
-    }
-
-    Checklist checklist = checklists.get(0);
+    Checklist checklist = checklists.isEmpty() ? null : checklists.get(0);
 
     Map<String, Object> response = new HashMap<>();
     response.put("servicioId", servicio.getId());
     response.put("estado", servicio.getEstado());
+    response.put("empresaId", servicio.getEmpresa() != null ? servicio.getEmpresa().getId() : null);
     response.put("empresaNombre", servicio.getEmpresa() != null ? servicio.getEmpresa().getNombre() : null);
+    response.put("sectorId", servicio.getSector() != null ? servicio.getSector().getId() : null);
     response.put("sectorNombre", servicio.getSector() != null ? servicio.getSector().getNombre() : null);
-    response.put("checklistId", checklist.getId());
+    response.put("checklistId", checklist != null ? checklist.getId() : null);
+    response.put("soaInicializada", true);
 
     return response;
 }
 public Map<String, Object> obtenerResumen(Long servicioId) {
-    Servicio servicio = servicioRepository.findById(servicioId)
+    Servicio servicio = accesoEmpresaService.servicioAutorizado(servicioId);
+    /* Compatibilidad con el checklist heredado. El resumen principal de la SoA está en /api/soa. */
+    servicio = servicioRepository.findById(servicioId)
             .orElseThrow(() -> new ResourceNotFoundException("Servicio no encontrado"));
 
     List<Checklist> checklists = checklistRepository.findByServicioId(servicio.getId());
@@ -288,7 +298,8 @@ public Map<String, Object> obtenerResumen(Long servicioId) {
 }
 
 public Map<String, Object> obtenerEstadoCompleto(Long servicioId) {
-    Servicio servicio = servicioRepository.findById(servicioId)
+    Servicio servicio = accesoEmpresaService.servicioAutorizado(servicioId);
+    servicio = servicioRepository.findById(servicioId)
             .orElseThrow(() -> new ResourceNotFoundException("Servicio no encontrado"));
 
     List<Firma> firmas = firmaRepository.findByServicioId(servicioId);

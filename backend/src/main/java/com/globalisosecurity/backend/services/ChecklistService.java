@@ -1,7 +1,3 @@
-/*
- * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
- * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Class.java to edit this template
- */
 package com.globalisosecurity.backend.services;
 
 import com.globalisosecurity.backend.dto.ChecklistCompletoResponse;
@@ -12,41 +8,44 @@ import com.globalisosecurity.backend.models.ItemChecklist;
 import com.globalisosecurity.backend.models.Servicio;
 import com.globalisosecurity.backend.repositories.ChecklistRepository;
 import com.globalisosecurity.backend.repositories.ItemChecklistRepository;
-import com.globalisosecurity.backend.repositories.ServicioRepository;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Service;
-
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
+import org.springframework.stereotype.Service;
 
+/**
+ * Compatibilidad con el checklist legado. El flujo principal del proyecto usa
+ * la SoA estructurada de 93 controles, pero estas operaciones siguen aisladas
+ * por empresa para no exponer información histórica.
+ */
 @Service
 public class ChecklistService {
 
-    private static final Set<String> ESTADOS_VALIDOS = Set.of(
-            "PENDIENTE",
-            "EN_PROCESO",
-            "COMPLETADO"
-    );
+    private static final Set<String> ESTADOS_VALIDOS = Set.of("PENDIENTE", "EN_PROCESO", "COMPLETADO");
 
-    @Autowired
-    private ChecklistRepository checklistRepository;
+    private final ChecklistRepository checklistRepository;
+    private final ItemChecklistRepository itemChecklistRepository;
+    private final AccesoEmpresaService acceso;
+    private final LogAuditoriaService logs;
 
-    @Autowired
-    private ServicioRepository servicioRepository;
-
-    @Autowired
-    private ItemChecklistRepository itemChecklistRepository;
-
-    @Autowired
-    private LogAuditoriaService logAuditoriaService;
+    public ChecklistService(ChecklistRepository checklistRepository,
+            ItemChecklistRepository itemChecklistRepository,
+            AccesoEmpresaService acceso,
+            LogAuditoriaService logs) {
+        this.checklistRepository = checklistRepository;
+        this.itemChecklistRepository = itemChecklistRepository;
+        this.acceso = acceso;
+        this.logs = logs;
+    }
 
     public List<Checklist> obtenerTodos() {
         return checklistRepository.findAll();
     }
 
     public Optional<Checklist> obtenerPorId(Long id) {
-        return checklistRepository.findById(id);
+        Optional<Checklist> result = checklistRepository.findById(id);
+        result.ifPresent(this::validarAcceso);
+        return result;
     }
 
     public List<Checklist> obtenerPorEstado(String estado) {
@@ -54,131 +53,92 @@ public class ChecklistService {
     }
 
     public List<Checklist> obtenerPorServicio(Long servicioId) {
+        acceso.servicioAutorizado(servicioId);
         return checklistRepository.findByServicioId(servicioId);
     }
 
     public ChecklistCompletoResponse obtenerChecklistCompletoPorServicio(Long servicioId) {
+        acceso.servicioAutorizado(servicioId);
         List<Checklist> checklists = checklistRepository.findByServicioId(servicioId);
-
         if (checklists.isEmpty()) {
-            throw new ResourceNotFoundException("No hay checklist para ese servicio");
+            throw new ResourceNotFoundException("No hay checklist legado para ese servicio");
         }
-
         Checklist checklist = checklists.get(0);
         List<ItemChecklist> items = itemChecklistRepository.findByChecklistId(checklist.getId());
-
         ChecklistCompletoResponse response = new ChecklistCompletoResponse();
         response.setChecklist(checklist);
         response.setItems(items);
-
         return response;
     }
 
     public Checklist crearChecklist(Checklist checklist) {
         validarChecklist(checklist);
-
         String estado = checklist.getEstado();
-        if (estado == null || estado.trim().isEmpty()) {
-            estado = "PENDIENTE";
-        }
-
+        if (estado == null || estado.isBlank()) estado = "PENDIENTE";
         estado = normalizarEstado(estado);
         validarEstado(estado);
 
-        Servicio servicio = servicioRepository.findById(checklist.getServicio().getId())
-                .orElseThrow(() -> new ResourceNotFoundException("Servicio no encontrado"));
-
+        Servicio servicio = acceso.servicioAutorizado(checklist.getServicio().getId());
         checklist.setNombre(checklist.getNombre().trim());
-        if (checklist.getDescripcion() != null) {
-            checklist.setDescripcion(checklist.getDescripcion().trim());
-        }
+        checklist.setDescripcion(trim(checklist.getDescripcion()));
         checklist.setEstado(estado);
         checklist.setServicio(servicio);
-
-        Checklist nuevo = checklistRepository.save(checklist);
-
-        logAuditoriaService.registrarLog(
-                "CREAR",
-                "CHECKLIST",
-                "Se creó el checklist: " + nuevo.getNombre()
-        );
-
-        return nuevo;
+        Checklist saved = checklistRepository.save(checklist);
+        logs.registrarLog("CREAR", "CHECKLIST_LEGADO", "Se creó el checklist legado " + saved.getNombre());
+        return saved;
     }
 
-    public Checklist actualizarChecklist(Long id, Checklist checklistActualizado) {
-        Checklist checklistExistente = checklistRepository.findById(id)
+    public Checklist actualizarChecklist(Long id, Checklist input) {
+        Checklist current = checklistRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Checklist no encontrado"));
-
-        validarChecklist(checklistActualizado);
-
-        String estado = checklistActualizado.getEstado();
-        if (estado == null || estado.trim().isEmpty()) {
+        validarAcceso(current);
+        validarChecklist(input);
+        if (input.getEstado() == null || input.getEstado().isBlank()) {
             throw new BadRequestException("El estado del checklist es obligatorio");
         }
-
-        estado = normalizarEstado(estado);
+        String estado = normalizarEstado(input.getEstado());
         validarEstado(estado);
-
-        Servicio servicio = servicioRepository.findById(checklistActualizado.getServicio().getId())
-                .orElseThrow(() -> new ResourceNotFoundException("Servicio no encontrado"));
-
-        checklistExistente.setNombre(checklistActualizado.getNombre().trim());
-        checklistExistente.setDescripcion(
-                checklistActualizado.getDescripcion() != null
-                        ? checklistActualizado.getDescripcion().trim()
-                        : null
-        );
-        checklistExistente.setEstado(estado);
-        checklistExistente.setServicio(servicio);
-
-        Checklist actualizado = checklistRepository.save(checklistExistente);
-
-        logAuditoriaService.registrarLog(
-                "ACTUALIZAR",
-                "CHECKLIST",
-                "Se actualizó el checklist con ID: " + actualizado.getId() + " y nombre: " + actualizado.getNombre()
-        );
-
-        return actualizado;
+        Servicio servicio = acceso.servicioAutorizado(input.getServicio().getId());
+        current.setNombre(input.getNombre().trim());
+        current.setDescripcion(trim(input.getDescripcion()));
+        current.setEstado(estado);
+        current.setServicio(servicio);
+        Checklist saved = checklistRepository.save(current);
+        logs.registrarLog("ACTUALIZAR", "CHECKLIST_LEGADO", "Se actualizó el checklist legado " + id);
+        return saved;
     }
 
     public void eliminarChecklist(Long id) {
         Checklist checklist = checklistRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Checklist no encontrado"));
-
+        validarAcceso(checklist);
         checklistRepository.delete(checklist);
-
-        logAuditoriaService.registrarLog(
-                "ELIMINAR",
-                "CHECKLIST",
-                "Se eliminó el checklist con ID: " + checklist.getId() + " y nombre: " + checklist.getNombre()
-        );
+        logs.registrarLog("ELIMINAR", "CHECKLIST_LEGADO", "Se eliminó el checklist legado " + id);
     }
 
     private void validarChecklist(Checklist checklist) {
-        if (checklist == null) {
-            throw new BadRequestException("El body del checklist es obligatorio");
-        }
-
-        if (checklist.getNombre() == null || checklist.getNombre().trim().isEmpty()) {
+        if (checklist == null) throw new BadRequestException("El body del checklist es obligatorio");
+        if (checklist.getNombre() == null || checklist.getNombre().isBlank()) {
             throw new BadRequestException("El nombre del checklist es obligatorio");
         }
-
         if (checklist.getServicio() == null || checklist.getServicio().getId() == null) {
             throw new BadRequestException("El servicio es obligatorio");
         }
     }
 
+    private void validarAcceso(Checklist checklist) {
+        if (checklist.getServicio() == null || checklist.getServicio().getId() == null) {
+            throw new BadRequestException("El checklist no tiene servicio asociado");
+        }
+        acceso.servicioAutorizado(checklist.getServicio().getId());
+    }
+
     private void validarEstado(String estado) {
         if (!ESTADOS_VALIDOS.contains(estado)) {
-            throw new BadRequestException(
-                    "Estado no válido. Use: PENDIENTE, EN_PROCESO o COMPLETADO"
-            );
+            throw new BadRequestException("Estado no válido. Use PENDIENTE, EN_PROCESO o COMPLETADO");
         }
     }
 
-    private String normalizarEstado(String estado) {
-        return estado.trim().toUpperCase();
-    }
+    private String normalizarEstado(String estado) { return estado.trim().toUpperCase(); }
+    private String trim(String value) { return value == null ? null : value.trim(); }
 }

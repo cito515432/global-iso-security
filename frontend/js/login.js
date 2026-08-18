@@ -1,109 +1,110 @@
 const API_BASE_URL = "/api";
 
 document.addEventListener("DOMContentLoaded", () => {
-    const form = document.getElementById("loginForm");
-    const mensajeError = document.getElementById("mensajeError");
+  if (localStorage.getItem("token")) return routeByRole(localStorage.getItem("rol"));
+  const form = document.getElementById("loginForm");
+  const errorBox = document.getElementById("mensajeError");
+  const button = document.getElementById("loginButton");
+  const password = document.getElementById("password");
 
-    form.addEventListener("submit", async (e) => {
-        e.preventDefault();
+  document.getElementById("togglePassword").addEventListener("click", e => {
+    password.type = password.type === "password" ? "text" : "password";
+    e.currentTarget.innerHTML = `<i class="bi bi-${password.type === "password" ? "eye" : "eye-slash"}"></i>`;
+  });
 
-        const email = document.getElementById("email").value.trim();
-        const password = document.getElementById("password").value.trim();
+  document.querySelectorAll("[data-demo]").forEach(item => item.addEventListener("click", () => {
+    const [email, pass] = item.dataset.demo.split("|");
+    document.getElementById("email").value = email;
+    password.value = pass;
+  }));
 
-        if (!email || !password) {
-            mostrarError("Debes ingresar usuario y contraseña");
-            return;
-        }
+  document.getElementById("verifyButton").addEventListener("click", verifyCertificate);
+  document.getElementById("verifyCode").addEventListener("keydown", event => {
+    if (event.key === "Enter") { event.preventDefault(); verifyCertificate(); }
+  });
 
-        try {
-            const response = await fetch(`${API_BASE_URL}/auth/login`, {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json"
-                },
-                body: JSON.stringify({
-                    email: email,
-                    password: password
-                })
-            });
-
-            const responseText = await response.text();
-            let data;
-
-            try {
-                data = JSON.parse(responseText);
-            } catch (e) {
-                data = { message: responseText };
-            }
-
-            if (!response.ok) {
-                mostrarError(data.message || "Credenciales inválidas");
-                return;
-            }
-
-            localStorage.setItem("token", data.token);
-            localStorage.setItem("nombre", data.nombre || "");
-            localStorage.setItem("email", data.email || email);
-            localStorage.setItem("rol", data.rol || "");
-            localStorage.setItem("rolId", data.rolId || "");
-            localStorage.setItem("permisosRol", data.permisos || "{}");
-
-            redirigirSegunRol(data.rol, data.permisos);
-        } catch (error) {
-            console.error("Error en login:", error);
-            mostrarError("No se pudo conectar con el servidor");
-        }
-    });
-
-    function mostrarError(mensaje) {
-        mensajeError.textContent = mensaje;
-        mensajeError.style.display = "block";
+  form.addEventListener("submit", async event => {
+    event.preventDefault();
+    hideError();
+    const email = document.getElementById("email").value.trim();
+    const pass = password.value;
+    if (!email || !pass) return showError("Ingrese el correo y la contraseña.");
+    button.disabled = true;
+    button.innerHTML = '<span class="spinner-border spinner-border-sm"></span><span>Validando...</span>';
+    try {
+      const response = await fetch(`${API_BASE_URL}/auth/login`, {
+        method: "POST", headers: {"Content-Type":"application/json"},
+        body: JSON.stringify({email, password:pass})
+      });
+      const raw = await response.text();
+      let data; try { data = JSON.parse(raw); } catch { data = {message:raw}; }
+      if (!response.ok) throw new Error(data.message || data.error || raw || "Credenciales inválidas");
+      localStorage.setItem("token", data.token);
+      localStorage.setItem("nombre", data.nombre || "");
+      localStorage.setItem("email", data.email || email);
+      localStorage.setItem("rol", data.rol || "");
+      localStorage.setItem("rolId", String(data.rolId || ""));
+      localStorage.setItem("permisosRol", data.permisos || "{}");
+      if (data.empresaId != null) localStorage.setItem("empresaId", String(data.empresaId));
+      if (data.empresaNombre) localStorage.setItem("empresaNombre", data.empresaNombre);
+      routeByRole(data.rol);
+    } catch (error) {
+      showError(error.message || "No fue posible conectarse con el servidor.");
+      button.disabled = false;
+      button.innerHTML = '<span>Ingresar</span><i class="bi bi-arrow-right"></i>';
     }
+  });
 
-    function redirigirSegunRol(rol, permisosRaw) {
-        const rolNormalizado = (rol || "").toUpperCase();
-        const permisos = leerPermisos(permisosRaw);
-
-        if (rolNormalizado.includes("ADMIN") || tienePermisosAdministrativos(permisos)) {
-            window.location.href = "admin.html";
-            return;
-        }
-
-        if (rolNormalizado.includes("IMPLEMENTADOR")) {
-            window.location.href = "implementador.html";
-            return;
-        }
-
-        if (rolNormalizado.includes("AUDITOR")) {
-            window.location.href = "auditor.html";
-            return;
-        }
-
-        if (rolNormalizado.includes("CAPACITADOR")) {
-            window.location.href = "capacitador.html";
-            return;
-        }
-
-        window.location.href = "admin.html";
-    }
-
-    function leerPermisos(permisosRaw) {
-        if (!permisosRaw) return {};
-        try {
-            return typeof permisosRaw === "string" ? JSON.parse(permisosRaw) : permisosRaw;
-        } catch {
-            return {};
-        }
-    }
-
-    function tienePermisosAdministrativos(permisos) {
-        return !!(
-            permisos.dashboard ||
-            permisos.usuarios ||
-            permisos.roles ||
-            permisos.empresas ||
-            permisos.reportes ||
-            permisos.configuracion
-        );
-    }
+  function showError(message) { errorBox.textContent = message; errorBox.style.display = "block"; }
+  function hideError() { errorBox.style.display = "none"; }
 });
+
+
+async function verifyCertificate() {
+  const input = document.getElementById("verifyCode");
+  const button = document.getElementById("verifyButton");
+  const result = document.getElementById("verifyResult");
+  const code = input.value.trim();
+  if (!code) {
+    result.className = "verify-result error";
+    result.textContent = "Ingrese el código de verificación.";
+    return;
+  }
+  button.disabled = true;
+  result.className = "verify-result";
+  result.textContent = "Consultando...";
+  try {
+    const response = await fetch(`${API_BASE_URL}/constancias-capacitacion/verificar/${encodeURIComponent(code)}`);
+    const raw = await response.text();
+    let data; try { data = JSON.parse(raw); } catch { data = {message:raw}; }
+    if (!response.ok) throw new Error(data.message || "No se encontró la constancia");
+    result.className = `verify-result ${data.valida ? "ok" : "warn"}`;
+    result.innerHTML = `<strong>${escapeText(data.valida ? "Constancia vigente" : "Constancia no vigente")}</strong><span>${escapeText(data.nombreCompleto)} · ${escapeText(data.capacitacion)}</span><small>${escapeText(data.empresa)} · ${formatDate(data.fechaEmision)}</small>`;
+  } catch (error) {
+    result.className = "verify-result error";
+    result.textContent = error.message || "No fue posible verificar la constancia.";
+  } finally {
+    button.disabled = false;
+  }
+}
+
+function escapeText(value) {
+  const div = document.createElement("div");
+  div.textContent = String(value ?? "");
+  return div.innerHTML;
+}
+
+function formatDate(value) {
+  if (!value) return "Fecha no disponible";
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? escapeText(value) : date.toLocaleDateString("es-CO");
+}
+
+function routeByRole(value) {
+  const role = String(value || "").toUpperCase();
+  if (role.includes("ADMIN")) return location.replace("admin.html");
+  if (role.includes("IMPLEMENTADOR")) return location.replace("implementador.html");
+  if (role.includes("AUDITOR")) return location.replace("auditor.html");
+  if (role.includes("CAPACITADOR")) return location.replace("capacitador.html");
+  return location.replace("empresa.html");
+}

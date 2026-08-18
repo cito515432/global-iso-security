@@ -1,77 +1,55 @@
-/*
- * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
- * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Class.java to edit this template
- */
 package com.globalisosecurity.backend.controllers;
 
 import com.globalisosecurity.backend.dto.ChecklistCompletoResponse;
 import com.globalisosecurity.backend.models.Checklist;
-import com.globalisosecurity.backend.services.ChecklistService;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
 import com.globalisosecurity.backend.models.ItemChecklist;
+import com.globalisosecurity.backend.services.ChecklistService;
 import com.globalisosecurity.backend.services.ItemChecklistService;
 import java.util.List;
 import java.util.Optional;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.*;
 
+/** API de compatibilidad para checklists históricos. La SoA es el flujo principal. */
 @RestController
 @RequestMapping("/api/checklists")
 public class ChecklistController {
+    private final ChecklistService checklistService;
+    private final ItemChecklistService itemService;
 
-    @Autowired
-    private ChecklistService checklistService;
-    @Autowired
-private ItemChecklistService itemChecklistService;
-    
-    @GetMapping
-    public List<Checklist> obtenerTodos() {
-        return checklistService.obtenerTodos();
+    public ChecklistController(ChecklistService checklistService, ItemChecklistService itemService) {
+        this.checklistService = checklistService;
+        this.itemService = itemService;
     }
 
-    @GetMapping("/{id}")
-    public ResponseEntity<?> obtenerPorId(@PathVariable Long id) {
-        Optional<Checklist> checklist = checklistService.obtenerPorId(id);
-        if (checklist.isPresent()) {
-            return ResponseEntity.ok(checklist.get());
-        }
-        return ResponseEntity.status(404).body("Checklist no encontrado");
+    @GetMapping @PreAuthorize("hasRole('ADMINISTRADOR')")
+    public List<Checklist> todos(){ return checklistService.obtenerTodos(); }
+
+    @GetMapping("/{id}") @PreAuthorize("hasAnyRole('ADMINISTRADOR','IMPLEMENTADOR','AUDITOR')")
+    public ResponseEntity<?> uno(@PathVariable Long id){
+        Optional<Checklist> c=checklistService.obtenerPorId(id);
+        return c.<ResponseEntity<?>>map(ResponseEntity::ok).orElseGet(()->ResponseEntity.notFound().build());
     }
 
-    @GetMapping("/estado/{estado}")
-    public List<Checklist> obtenerPorEstado(@PathVariable String estado) {
-        return checklistService.obtenerPorEstado(estado);
-    }
+    @GetMapping("/estado/{estado}") @PreAuthorize("hasRole('ADMINISTRADOR')")
+    public List<Checklist> porEstado(@PathVariable String estado){ return checklistService.obtenerPorEstado(estado); }
 
-    @GetMapping("/servicio/{servicioId}")
-    public List<Checklist> obtenerPorServicio(@PathVariable Long servicioId) {
-        return checklistService.obtenerPorServicio(servicioId);
-    }
-@GetMapping("/{checklistId}/items")
-public ResponseEntity<List<ItemChecklist>> obtenerItemsPorChecklist(@PathVariable Long checklistId) {
-    return ResponseEntity.ok(itemChecklistService.obtenerPorChecklist(checklistId));
-}
-    @GetMapping("/servicio/{servicioId}/completo")
-    public ResponseEntity<ChecklistCompletoResponse> obtenerChecklistCompletoPorServicio(
-            @PathVariable Long servicioId) {
-        return ResponseEntity.ok(checklistService.obtenerChecklistCompletoPorServicio(servicioId));
-    }
+    @GetMapping("/servicio/{servicioId}") @PreAuthorize("hasAnyRole('ADMINISTRADOR','IMPLEMENTADOR','AUDITOR')")
+    public List<Checklist> porServicio(@PathVariable Long servicioId){ return checklistService.obtenerPorServicio(servicioId); }
 
-    @PostMapping
-    public ResponseEntity<?> crearChecklist(@RequestBody Checklist checklist) {
-        Checklist nuevo = checklistService.crearChecklist(checklist);
-        return ResponseEntity.ok(nuevo);
-    }
+    @GetMapping("/{checklistId}/items") @PreAuthorize("hasAnyRole('ADMINISTRADOR','IMPLEMENTADOR','AUDITOR')")
+    public List<ItemChecklist> items(@PathVariable Long checklistId){ return itemService.obtenerPorChecklist(checklistId); }
 
-    @PutMapping("/{id}")
-    public ResponseEntity<?> actualizarChecklist(@PathVariable Long id, @RequestBody Checklist checklist) {
-        Checklist actualizado = checklistService.actualizarChecklist(id, checklist);
-        return ResponseEntity.ok(actualizado);
-    }
+    @GetMapping("/servicio/{servicioId}/completo") @PreAuthorize("hasAnyRole('ADMINISTRADOR','IMPLEMENTADOR','AUDITOR')")
+    public ChecklistCompletoResponse completo(@PathVariable Long servicioId){ return checklistService.obtenerChecklistCompletoPorServicio(servicioId); }
 
-    @DeleteMapping("/{id}")
-    public ResponseEntity<?> eliminarChecklist(@PathVariable Long id) {
-        checklistService.eliminarChecklist(id);
-        return ResponseEntity.ok("Checklist eliminado correctamente");
-    }
+    @PostMapping @PreAuthorize("hasAnyRole('ADMINISTRADOR','IMPLEMENTADOR')")
+    public Checklist crear(@RequestBody Checklist checklist){ return checklistService.crearChecklist(checklist); }
+
+    @PutMapping("/{id}") @PreAuthorize("hasAnyRole('ADMINISTRADOR','IMPLEMENTADOR')")
+    public Checklist actualizar(@PathVariable Long id,@RequestBody Checklist checklist){ return checklistService.actualizarChecklist(id,checklist); }
+
+    @DeleteMapping("/{id}") @PreAuthorize("hasRole('ADMINISTRADOR')")
+    public void eliminar(@PathVariable Long id){ checklistService.eliminarChecklist(id); }
 }

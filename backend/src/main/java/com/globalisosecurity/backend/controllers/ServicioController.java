@@ -1,80 +1,40 @@
-/*
- * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
- * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Class.java to edit this template
- */
 package com.globalisosecurity.backend.controllers;
 
+import com.globalisosecurity.backend.dto.ServicioResponseDTO;
 import com.globalisosecurity.backend.models.Servicio;
 import com.globalisosecurity.backend.services.ServicioService;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
-import com.globalisosecurity.backend.dto.ServicioResponseDTO;
 import java.util.List;
-import java.util.Optional;
 import java.util.Map;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/servicios")
 public class ServicioController {
-
-    @Autowired
-    private ServicioService servicioService;
+    private final ServicioService service;
+    public ServicioController(ServicioService service) { this.service = service; }
 
     @GetMapping
-public ResponseEntity<List<ServicioResponseDTO>> obtenerTodos(
-        @RequestParam(required = false) Long empresaId) {
-    return ResponseEntity.ok(servicioService.listarServiciosDTO(empresaId));
-}
-   @GetMapping("/mi-servicio")
-public ResponseEntity<Map<String, Object>> obtenerMiServicio() {
-    return ResponseEntity.ok(servicioService.obtenerMiServicio());
-}
+    @PreAuthorize("hasRole('ADMINISTRADOR')")
+    public List<ServicioResponseDTO> obtenerTodos(@RequestParam(required=false) Long empresaId) { return service.listarServiciosDTO(empresaId); }
 
-@GetMapping("/{servicioId}/resumen")
-public ResponseEntity<Map<String, Object>> obtenerResumen(@PathVariable Long servicioId) {
-    return ResponseEntity.ok(servicioService.obtenerResumen(servicioId));
-}
+    @GetMapping("/mi-servicio") public Map<String,Object> miServicio() { return service.obtenerMiServicio(); }
+    @GetMapping("/{servicioId}/resumen") public Map<String,Object> resumen(@PathVariable Long servicioId) { return service.obtenerResumen(servicioId); }
+    @GetMapping("/{servicioId}/estado-completo") public Map<String,Object> estado(@PathVariable Long servicioId) { return service.obtenerEstadoCompleto(servicioId); }
 
-@GetMapping("/{servicioId}/estado-completo")
-public ResponseEntity<Map<String, Object>> obtenerEstadoCompleto(@PathVariable Long servicioId) {
-    return ResponseEntity.ok(servicioService.obtenerEstadoCompleto(servicioId));
-}
-
-    @GetMapping("/{id}")
-    public ResponseEntity<?> obtenerPorId(@PathVariable Long id) {
-        Optional<Servicio> servicio = servicioService.obtenerPorId(id);
-        if (servicio.isPresent()) {
-            return ResponseEntity.ok(servicio.get());
-        }
-        return ResponseEntity.status(404).body("Servicio no encontrado");
+    @GetMapping("/{id}") public ResponseEntity<?> obtener(@PathVariable Long id) {
+        return service.obtenerPorId(id).<ResponseEntity<?>>map(ResponseEntity::ok)
+                .orElseGet(() -> ResponseEntity.status(404).body("Servicio no encontrado"));
     }
 
     @GetMapping("/estado/{estado}")
-    public List<Servicio> obtenerPorEstado(@PathVariable String estado) {
-        return servicioService.obtenerPorEstado(estado);
-    }
+    @PreAuthorize("hasRole('ADMINISTRADOR')")
+    public List<Servicio> porEstado(@PathVariable String estado) { return service.obtenerPorEstado(estado); }
 
-    @GetMapping("/empresa/{empresaId}")
-    public List<Servicio> obtenerPorEmpresa(@PathVariable Long empresaId) {
-        return servicioService.obtenerPorEmpresa(empresaId);
-    }
+    @GetMapping("/empresa/{empresaId}") public List<Servicio> porEmpresa(@PathVariable Long empresaId) { return service.obtenerPorEmpresa(empresaId); }
 
-    @PostMapping
-    public ResponseEntity<?> crearServicio(@RequestBody Servicio servicio) {
-        Servicio nuevo = servicioService.crearServicio(servicio);
-        return ResponseEntity.ok(nuevo);
-    }
-
-    @PutMapping("/{id}")
-    public ResponseEntity<?> actualizarServicio(@PathVariable Long id, @RequestBody Servicio servicio) {
-        Servicio actualizado = servicioService.actualizarServicio(id, servicio);
-        return ResponseEntity.ok(actualizado);
-    }
-
-    @DeleteMapping("/{id}")
-    public ResponseEntity<?> eliminarServicio(@PathVariable Long id) {
-        servicioService.eliminarServicio(id);
-        return ResponseEntity.ok("Servicio eliminado correctamente");
-    }
+    @PostMapping @PreAuthorize("hasRole('ADMINISTRADOR')") public Servicio crear(@RequestBody Servicio servicio) { return service.crearServicio(servicio); }
+    @PutMapping("/{id}") @PreAuthorize("hasRole('ADMINISTRADOR')") public Servicio actualizar(@PathVariable Long id,@RequestBody Servicio servicio) { return service.actualizarServicio(id,servicio); }
+    @DeleteMapping("/{id}") @PreAuthorize("hasRole('ADMINISTRADOR')") public void eliminar(@PathVariable Long id) { service.eliminarServicio(id); }
 }

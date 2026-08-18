@@ -1,0 +1,2 @@
+package com.globalisosecurity.backend.dto;
+public record PerfilOrganizacionalRequest(Long sectorId,String tamano,Boolean manejaDatosSensibles,Boolean usaServiciosNube,Boolean permiteTrabajoRemoto,Boolean procesaPagos,Boolean infraestructuraPropia,Boolean dependeProveedores,Boolean servicioCritico24x7,Boolean manejaMenores,Boolean operaOtIot,String alcanceSgsi,String responsableSgsi,Integer umbralAceptacion){}

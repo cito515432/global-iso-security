@@ -38,8 +38,15 @@ services:
       SPRING_DATASOURCE_PASSWORD: ${MYSQL_ROOT_PASSWORD:-123456789}
       JWT_SECRET: ${JWT_SECRET:-GlobalIsoSecurity2026ClaveSecretaCambiarEnProduccion}
       JWT_EXPIRATION: ${JWT_EXPIRATION:-86400000}
+      EVIDENCE_STORAGE_PATH: /app/storage/evidencias
+      SEED_ENABLED: ${SEED_ENABLED:-true}
+      SEED_DEMO_DATA: ${SEED_DEMO_DATA:-true}
+      SEED_ADMIN_EMAIL: ${SEED_ADMIN_EMAIL:-admin@globalisosecurity.com}
+      SEED_ADMIN_PASSWORD: ${SEED_ADMIN_PASSWORD:-Admin123*}
     expose:
       - "8081"
+    volumes:
+      - evidence_data:/app/storage/evidencias
     networks:
       - globaliso_net
 
@@ -58,6 +65,7 @@ services:
 
 volumes:
   mysql_data:
+  evidence_data:
 
 networks:
   globaliso_net:

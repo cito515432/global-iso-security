@@ -1,22 +1,27 @@
-/*
- * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
- * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Class.java to edit this template
- */
-
 package com.globalisosecurity.backend.utils;
 
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
-import org.springframework.stereotype.Component;
-
 import java.util.Date;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Component;
 
 @Component
 public class JwtUtil {
 
-    private final String secret = "GlobalIsoSecurity2026ClaveSecreta";
-    private final long expiration = 86400000; // 24 horas
+    private final String secret;
+    private final long expiration;
+
+    public JwtUtil(
+            @Value("${jwt.secret}") String secret,
+            @Value("${jwt.expiration:86400000}") long expiration) {
+        if (secret == null || secret.trim().length() < 32) {
+            throw new IllegalStateException("JWT_SECRET debe contener al menos 32 caracteres");
+        }
+        this.secret = secret;
+        this.expiration = Math.max(60_000L, expiration);
+    }
 
     public String generarToken(String email, String rol) {
         return Jwts.builder()
@@ -29,12 +34,13 @@ public class JwtUtil {
     }
 
     public boolean validarToken(String token) {
+        if (token == null || token.isBlank()) {
+            return false;
+        }
         try {
-            Jwts.parser()
-                    .setSigningKey(secret)
-                    .parseClaimsJws(token);
+            obtenerClaims(token);
             return true;
-        } catch (Exception e) {
+        } catch (Exception ignored) {
             return false;
         }
     }

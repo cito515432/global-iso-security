@@ -18,3 +18,6 @@ target/
 .idea/
 .vscode/
 .DS_Store
+
+# Evidencias locales
+storage/evidencias/

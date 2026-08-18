@@ -1,327 +1,182 @@
-# 🔐 Global ISO Security
+# Global ISO Security — SoA, riesgos y modelo bioinspirado RPM
 
-Herramienta web para **auditoría, implementación y capacitación de ISO 27001**, desarrollada como proyecto académico para la asignatura de **Ingeniería Web**.
+Aplicación web para apoyar la construcción y seguimiento de la **Declaración de Aplicabilidad (SoA)** de un Sistema de Gestión de Seguridad de la Información, integrando gestión de riesgos, evidencias, auditoría, formación y un motor bioinspirado RPM explicable.
 
----
+Esta versión evoluciona el prototipo original hacia un flujo multiempresa funcional. La aplicación web es el medio tecnológico; el aporte investigativo está en la representación, detección, priorización, coordinación humana, evaluación y memoria del modelo RPM.
 
-## 📌 Descripción general
+## Funcionalidades principales
 
-**Global ISO Security** es una aplicación web orientada a apoyar la gestión de procesos relacionados con la norma **ISO 27001**, permitiendo administrar múltiples empresas, usuarios por rol, servicios, checklists, evaluaciones, firmas, capacitaciones, trazabilidad y reportes.
+- Catálogo maestro de **93 controles de referencia** de ISO/IEC 27001:2022, con textos de trabajo parafraseados.
+- SoA independiente por servicio/organización: aplicabilidad, justificación, estado, porcentaje, responsable y fecha objetivo.
+- Perfil organizacional persistente: sector, tamaño, nube, teletrabajo, datos sensibles, pagos, proveedores, servicio 24x7, menores y OT/IoT.
+- Recomendación contextual de controles sin excluirlos automáticamente por sector.
+- Registro de riesgos y relación riesgo–control.
+- Carga, descarga, hash SHA-256, vigencia y validación de evidencias.
+- Hallazgos de auditoría, recurrencia y cierre.
+- Motor RPM determinista y explicable con antígenos, señales de peligro, prioridad, respuesta, validación y memoria.
+- Portal ejecutivo para la organización.
+- Formación completa: programas, módulos, participantes, preguntas, intentos, calificación y constancias verificables mediante código público sin exponer documentos de identidad.
+- Recomendaciones RPM que pueden convertirse en acciones formativas.
+- Reportes PDF y Excel con SoA, riesgos y resultados RPM.
+- Autenticación JWT, BCrypt, autorización por rol y aislamiento por empresa.
+- Persistencia real en MySQL; las evidencias se conservan en un volumen de Docker.
 
-El sistema fue diseñado para centralizar la información del proceso, mejorar la evidencia documental y facilitar el seguimiento del cumplimiento mediante una arquitectura web cliente-servidor con autenticación JWT y persistencia en MySQL.
+## Arquitectura tecnológica
 
----
+- **Backend:** Java 20, Spring Boot 3.2, Spring Security, JWT, JPA/Hibernate, MySQL.
+- **Frontend:** HTML5, CSS3 y JavaScript sin framework.
+- **Despliegue local:** Docker Compose con MySQL, backend y Nginx.
+- **Archivos:** volumen persistente `evidence_data`.
 
-## 👥 Equipo de desarrollo
+```text
+frontend por rol
+      │
+      ▼
+API REST Spring Boot
+      │
+      ├── SoA ── Riesgos ── Evidencias ── Hallazgos
+      ├── Formación ── Evaluaciones ── Constancias
+      └── Motor RPM ── Decisiones humanas ── Memoria
+      │
+      ▼
+MySQL + almacenamiento persistente de evidencias
+```
 
-| Integrante | Rol principal |
+## Roles
+
+| Rol | Responsabilidad principal |
 |---|---|
-| **Andrés Felipe Obando Barriga** | Backend |
-| **María Camila Sarmiento** | Frontend |
-| **Juan Esteban Pardo Bedoya** | Base de datos |
+| `ADMINISTRADOR` | Empresas, usuarios, servicios, catálogo, roles y reportes. |
+| `IMPLEMENTADOR` | Contexto, SoA, riesgos, evidencias y ejecución del análisis RPM. |
+| `AUDITOR` | Validación de evidencias, hallazgos, firmas y decisiones RPM. |
+| `CAPACITADOR` | Programas, módulos, participantes, evaluaciones, constancias y respuestas formativas RPM. |
+| `USUARIO_EMPRESA` | Portal ejecutivo, progreso, riesgos, decisiones, formación y reportes de su organización. |
 
-**Universidad San Buenaventura – Sede Bogotá**  
-**Programa:** Ingeniería de Sistemas  
-**Asignatura:** Ingeniería Web  
-**Docente:** Jairo Armando Salcedo Aranda
+La matriz completa se encuentra en [`docs/MATRIZ_ROLES_PERMISOS.md`](docs/MATRIZ_ROLES_PERMISOS.md).
 
----
+## Ejecución rápida con Docker
 
-## 🛠️ Stack tecnológico
+### 1. Preparar variables
 
-### Backend
-- Java 20
-- Spring Boot 3.2.0
-- Spring Security
-- JWT
-- Spring Data JPA / Hibernate
-- BCrypt
-- Maven
+```bash
+cp .env.example .env
+```
 
-### Frontend
-- HTML5
-- CSS3
-- Bootstrap 5
-- JavaScript vanilla
+Cambie, como mínimo, `MYSQL_ROOT_PASSWORD`, `JWT_SECRET` y `SEED_ADMIN_PASSWORD`. Use `SEED_ENABLED=false` para impedir cualquier carga automática en un entorno controlado y `SEED_DEMO_DATA=false` fuera de demostraciones.
 
-### Base de datos
-- MySQL 8
-- XAMPP / phpMyAdmin
+### 2. Iniciar
 
-### Herramientas de apoyo
-- NetBeans o IntelliJ IDEA
-- VS Code
-- Postman
-- Git + GitHub
-- Python (`python -m http.server 5500` para servir frontend local)
+```bash
+docker compose up --build
+```
 
----
+Abra:
 
-## 🧱 Arquitectura del proyecto
+```text
+http://localhost:8080/pages/login.html
+```
+
+La base inicial se importa desde `database/init/01_globalisosecurity_backup.sql` únicamente al crear por primera vez el volumen MySQL. Las tablas nuevas también pueden crearse mediante Hibernate (`ddl-auto=update`). Para una migración controlada sobre una base existente use:
+
+```text
+database/migrations/2026_08_rpm_soa_formacion_integral.sql
+```
+
+### Reinicio limpio de base de datos
+
+> Este comando elimina los datos locales del volumen MySQL.
+
+```bash
+docker compose down -v
+docker compose up --build
+```
+
+## Cuentas académicas de demostración
+
+Se crean de forma idempotente cuando `SEED_DEMO_DATA=true`:
+
+| Rol | Usuario | Contraseña |
+|---|---|---|
+| Administrador | `admin@globalisosecurity.com` | valor de `SEED_ADMIN_PASSWORD` |
+| Implementador | `implementador@demo.com` | `Demo123*` |
+| Auditor | `auditor@demo.com` | `Demo123*` |
+| Capacitador | `capacitador@demo.com` | `Demo123*` |
+| Empresa | `empresa@demo.com` | `Demo123*` |
+
+Desactive las semillas y cambie todas las credenciales antes de un despliegue real.
+
+## Motor bioinspirado RPM
+
+La adaptación toma como referencia principal el marco inmunoinspirado de Darmoul, Pierreval y Hajri-Gabouj para gestionar disrupciones. El proyecto traslada sus funciones de **detectar, reaccionar, coordinar y evaluar** al análisis de condiciones relacionadas con la SoA.
+
+```text
+Controles, riesgos y evidencias ──► células y tejido artificial
+Desviaciones observadas          ──► antígenos
+Situación de riesgo              ──► patógeno
+Consecuencias/contexto           ──► señales de peligro
+Alternativas de respuesta        ──► células B / anticuerpos
+Validación por especialistas     ──► células Th
+Casos y resultados históricos   ──► memoria inmunológica
+```
+
+El motor actual es **determinista, trazable y explicable**. No se incorporó de forma arbitraria un algoritmo de Machine Learning. La tabla `rpm_memoria` conserva las variables, decisiones y resultados que permitirán construir posteriormente un conjunto de datos y aplicar CRISP-DM con una función de ML justificada.
+
+Véase [`docs/ARQUITECTURA_RPM.md`](docs/ARQUITECTURA_RPM.md).
+
+## Catálogo de controles y derechos de uso
+
+El archivo `backend/src/main/resources/data/iso27001_controls.csv` contiene códigos, títulos cortos, descripciones y preguntas **parafraseadas para fines académicos y operativos**. No es una copia ni reemplaza el texto oficial de ISO/IEC 27001 o ISO/IEC 27002. Para una implementación comercial o certificable debe cargarse contenido autorizado/licenciado y ser revisado por un profesional competente.
+
+## Estructura relevante
 
 ```text
 global-iso-security/
-│
 ├── backend/
-│   └── src/main/java/com/globalisosecurity/backend/
-│       ├── config/         # Seguridad, CORS y configuración general
-│       ├── controllers/    # Endpoints REST
-│       ├── dto/            # DTOs para contratos con frontend
-│       ├── exceptions/     # Manejo global de errores
-│       ├── models/         # Entidades JPA
-│       ├── repositories/   # Acceso a datos
-│       ├── services/       # Lógica de negocio
-│       └── utils/          # JWT, seguridad y utilidades
-│
+│   ├── src/main/java/.../controllers
+│   ├── src/main/java/.../models
+│   ├── src/main/java/.../services
+│   └── src/main/resources/data/iso27001_controls.csv
 ├── frontend/
-│   ├── pages/              # Vistas HTML por rol
-│   ├── css/                # Estilos
-│   ├── js/                 # Lógica JS de frontend
-│   └── assets/             # Recursos estáticos
-│
-└── database/
-    ├── schema.sql          # Scripts base
-    └── backups/            # Respaldos SQL si se incluyen
-🔐 Roles del sistema
-Rol	Tipo	Funciones principales
-ADMINISTRADOR	Interno	Gestionar usuarios, empresas, servicios y reportes
-IMPLEMENTADOR	Interno	Diligenciar checklist, registrar evaluaciones y observaciones
-AUDITOR	Interno	Validar resultados, registrar auditoría y firmas
-CAPACITADOR	Interno	Gestionar capacitaciones, materiales y constancias
-USUARIO EMPRESA	Externo	Consultar estado del servicio, firmas y reportes
-✅ Funcionalidades implementadas
-Autenticación y seguridad
-Login con JWT
-Protección de rutas con Bearer Token
-Spring Security configurado
-Passwords hasheadas con BCrypt
-CORS global habilitado para integración frontend-backend
-Gestión de usuarios
-Listar usuarios
-Crear usuario con DTO
-Actualizar usuario
-Eliminar usuario
-Normalización de email
-Validaciones de negocio
-Gestión de roles
-Consulta de roles para poblar selects del frontend
-Gestión de empresas
-CRUD de empresas
-Consulta de empresas asignadas al usuario autenticado
-Gestión de sectores
-CRUD de sectores
-Gestión de servicios
-CRUD de servicios
-Asociación con empresa y sector
-Control de estados del servicio
-Restricción de edición/eliminación en estados finales
-Checklists
-CRUD de checklist
-CRUD de ítems del checklist
-Endpoint combinado para obtener checklist + ítems por servicio
-Evaluaciones
-Persistencia de evaluaciones por ítem/control
-Asociación a servicio, ítem y usuario
-Validación de observación obligatoria para ciertos estados
-Consultas por servicio y por empresa
-Firmas
-CRUD funcional
-Consulta por servicio y por empresa
-Capacitaciones
-CRUD funcional
-Asociación con servicio
-Material, video, estado y fecha de finalización
-Consulta por servicio y empresa
-Dashboard
-Resumen global del sistema
-Resumen por empresa
-Reportes
-Reporte JSON por empresa
-Exportación en PDF
-Exportación en Excel
-Trazabilidad
-Logs de auditoría
-Registro de usuario autenticado real
-Registro de IP real del request
-📡 Endpoints principales
-Autenticación
-POST /api/auth/login
-Usuarios
-GET /api/usuarios
-POST /api/usuarios
-PUT /api/usuarios/{id}
-DELETE /api/usuarios/{id}
-Roles
-GET /api/roles
-Empresas
-GET /api/empresas
-GET /api/empresas/asignadas
-POST /api/empresas
-PUT /api/empresas/{id}
-DELETE /api/empresas/{id}
-Sectores
-GET /api/sectores
-POST /api/sectores
-PUT /api/sectores/{id}
-DELETE /api/sectores/{id}
-Servicios
-GET /api/servicios
-GET /api/servicios/empresa/{empresaId}
-POST /api/servicios
-PUT /api/servicios/{id}
-DELETE /api/servicios/{id}
-Checklists
-GET /api/checklists
-POST /api/checklists
-PUT /api/checklists/{id}
-DELETE /api/checklists/{id}
-GET /api/checklists/servicio/{servicioId}/completo
-Ítems del checklist
-GET /api/items-checklist
-POST /api/items-checklist
-PUT /api/items-checklist/{id}
-DELETE /api/items-checklist/{id}
-Evaluaciones
-POST /api/evaluaciones
-GET /api/evaluaciones/empresa/{empresaId}
-Firmas
-POST /api/firmas
-GET /api/firmas/empresa/{empresaId}
-Capacitaciones
-POST /api/capacitaciones
-GET /api/capacitaciones/empresa/{empresaId}
-Dashboard
-GET /api/dashboard/resumen
-GET /api/dashboard/resumen/empresa/{empresaId}
-Reportes
-GET /api/reportes/empresa/{empresaId}
-GET /api/reportes/empresa/{empresaId}/pdf
-GET /api/reportes/empresa/{empresaId}/excel
-🚀 Ejecución local
-1. Requisitos previos
+│   ├── pages/admin.html
+│   ├── pages/implementador.html
+│   ├── pages/auditor.html
+│   ├── pages/capacitador.html
+│   ├── pages/empresa.html
+│   └── js/
+├── database/
+│   ├── init/
+│   └── migrations/2026_08_rpm_soa_formacion_integral.sql
+├── docs/
+└── docker-compose.yml
+```
 
-Instala lo siguiente:
+## Documentación
 
-Java JDK 20
-Maven
-XAMPP con MySQL activo
-NetBeans o IntelliJ IDEA
-Python
-2. Clonar el repositorio
-git clone https://github.com/cito515432/global-iso-security.git
-cd global-iso-security
-3. Crear la base de datos
+- [`IMPLEMENTACION_RPM_INTEGRAL.md`](IMPLEMENTACION_RPM_INTEGRAL.md): inventario funcional y decisiones de implementación.
+- [`docs/ARQUITECTURA_RPM.md`](docs/ARQUITECTURA_RPM.md): capas, entradas, salidas y trazabilidad del modelo.
+- [`docs/GUIA_PRUEBAS.md`](docs/GUIA_PRUEBAS.md): pruebas funcionales y demostración integral por roles.
+- [`docs/MATRIZ_ROLES_PERMISOS.md`](docs/MATRIZ_ROLES_PERMISOS.md): permisos y responsabilidades.
+- [`docs/CAMBIOS_VERSION_RPM.md`](docs/CAMBIOS_VERSION_RPM.md): cambios frente al prototipo original.
 
-Abre XAMPP, enciende MySQL y crea una base de datos llamada exactamente:
+## Estado de validación de esta entrega
 
-globalisosecurity
-4. Configurar application.properties
+- Compilación estática de las **140 fuentes Java**: realizada.
+- Arranque del contexto Spring y análisis de consultas derivadas de repositorios: realizado con una base embebida solo para validación estructural.
+- Validación de sintaxis de todos los archivos JavaScript: realizada.
+- Verificación cruzada del catálogo CSV y la migración: **93 códigos únicos y coincidentes**.
+- Verificación de IDs y controladores de eventos entre las páginas HTML y sus archivos JavaScript: realizada.
+- Pruebas de integración completas contra MySQL/Docker: deben ejecutarse en un equipo con Docker o MySQL disponible siguiendo `docs/GUIA_PRUEBAS.md`.
 
-Ubicación:
+La validación estática puede repetirse con:
 
-backend/src/main/resources/application.properties
+```bash
+./scripts/validate-project.sh
+```
 
-Configuración mínima sugerida:
+## Equipo académico
 
-spring.datasource.url=jdbc:mysql://localhost:3306/globalisosecurity
-spring.datasource.username=root
-spring.datasource.password=TU_PASSWORD
-spring.jpa.hibernate.ddl-auto=update
-server.port=8081
+- Andrés Felipe Obando Barriga
+- María Camila Sarmiento
+- Juan Esteban Pardo Bedoya
 
-# JWT
-jwt.secret=TU_CLAVE_SECRETA
-jwt.expiration=86400000
-5. Ejecutar backend
-
-Abre la carpeta backend en NetBeans o IntelliJ y ejecuta el proyecto.
-
-El backend debe levantar en:
-
-http://localhost:8081
-6. Ejecutar frontend
-
-Desde la raíz del proyecto:
-
-python -m http.server 5500
-
-Abrir en navegador:
-
-http://localhost:5500/frontend/pages/login.html
-
-No abrir el frontend con file:///, porque eso genera problemas de origen y conexión con el backend.
-
-🗄️ Base de datos y datos de prueba
-
-Spring Boot puede crear automáticamente las tablas si la base está vacía, pero no deja la base lista con datos útiles de prueba. Por eso, para trabajar con el mismo estado funcional del proyecto, se recomienda:
-
-importar un respaldo .sql desde phpMyAdmin, o
-poblar la base con datos mínimos de roles, empresas, sectores, servicios y checklist.
-Recomendación de trabajo
-Crear usuarios funcionales por API en lugar de insertarlos manualmente por SQL
-Compartir un respaldo .sql actualizado entre integrantes del equipo
-Mantener el nombre de la base exactamente como globalisosecurity
-👤 Contrato actual para crear usuarios
-
-Body esperado por el backend:
-
-{
-  "nombre": "Juan Pérez",
-  "email": "juan@empresa.com",
-  "rawPassword": "123456",
-  "rolId": 2,
-  "empresaId": 1
-}
-🧪 Flujo recomendado de prueba
-
-Se recomienda validar el sistema en este orden:
-
-Login
-Dashboard administrador
-Consulta de roles
-Consulta de empresas
-Creación de usuarios
-Servicios por empresa
-Checklist completo por servicio
-Evaluaciones
-Firmas
-Capacitaciones
-Reportes JSON / PDF / Excel
-📄 Documentación complementaria
-
-La documentación del proyecto incluye:
-
-análisis y contexto del sistema
-requisitos funcionales y no funcionales
-casos de uso
-historias de usuario
-informes técnicos de avance
-guías de instalación local
-handoff técnico entre backend y frontend
-📌 Estado actual del proyecto
-Componente	Estado
-Backend	✅ Muy avanzado
-Seguridad JWT	✅ Implementada
-CRUD principales	✅ Implementados
-Dashboard	✅ Implementado
-Reportes PDF / Excel	✅ Implementados
-Frontend visual	✅ Avanzado
-Integración frontend-backend	🔄 En cierre
-Pruebas end-to-end	🔄 En validación
-Deploy	⏳ Pendiente
-🚧 Pendientes de cierre
-Validación funcional completa de extremo a extremo
-Revisión final de integración frontend-backend
-Ajustes menores de limpieza técnica
-Respaldo SQL final compartido entre integrantes
-Evidencia de pruebas y entrega académica
-📬 Repositorio
-
-Repositorio GitHub del proyecto:
-
-https://github.com/cito515432/global-iso-security
-📝 Licencia / uso
-
-Proyecto académico desarrollado con fines formativos para la asignatura de Ingeniería Web.
-
-Última actualización: Abril de 2026
+Universidad de San Buenaventura, sede Bogotá — Ingeniería de Sistemas.

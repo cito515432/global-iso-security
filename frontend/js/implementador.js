@@ -1,613 +1,90 @@
-const API_URL = "/api";
-
-// Estado global
-let empresaActual = null;        // { id, nombre, servicioId }
-let estadosChecklist = {};       // { controlId: 'CUMPLE' | 'NO_CUMPLE' | 'PENDIENTE' }
-let justificaciones = {};        // { controlId: 'texto...' }
-
-// ─────────────────────────────────────────────────────────────────────────────
-// CONTROLES ISO 27001 — Anexo A (misma estructura que el auditor)
-// ─────────────────────────────────────────────────────────────────────────────
-const ANEXOS_ISO = [
-  {
-    codigo: 'A.5', titulo: 'Políticas de Seguridad de la Información', icono: 'bi-shield-lock-fill',
-    controles: [
-      { id: 'a51', titulo: 'A.5.1 — Políticas para la seguridad de la información', pregunta: '¿Existe una política de seguridad aprobada por la dirección?' },
-      { id: 'a52', titulo: 'A.5.2 — Revisión de las políticas',                     pregunta: '¿Se revisan las políticas de seguridad a intervalos planificados?' }
-    ]
-  },
-  {
-    codigo: 'A.6', titulo: 'Organización de la Seguridad', icono: 'bi-people-fill',
-    controles: [
-      { id: 'a61', titulo: 'A.6.1 — Roles y responsabilidades de seguridad', pregunta: '¿Están definidos los roles y responsabilidades de seguridad?' },
-      { id: 'a62', titulo: 'A.6.2 — Segregación de funciones',               pregunta: '¿Se aplica segregación de funciones para reducir riesgos?' }
-    ]
-  },
-  {
-    codigo: 'A.8', titulo: 'Gestión de Activos', icono: 'bi-hdd-stack-fill',
-    controles: [
-      { id: 'a81', titulo: 'A.8.1 — Inventario de activos',    pregunta: '¿Existe un inventario actualizado de los activos de información?' },
-      { id: 'a82', titulo: 'A.8.2 — Clasificación de activos', pregunta: '¿Se clasifican los activos según su nivel de confidencialidad?' }
-    ]
-  },
-  {
-    codigo: 'A.9', titulo: 'Control de Acceso', icono: 'bi-key-fill',
-    controles: [
-      { id: 'a91', titulo: 'A.9.1 — Política de control de acceso', pregunta: '¿Existe una política formal de control de acceso?' },
-      { id: 'a92', titulo: 'A.9.2 — Gestión de acceso de usuarios', pregunta: '¿Se aplican controles de acceso según roles y privilegios mínimos?' }
-    ]
-  },
-  {
-    codigo: 'A.12', titulo: 'Seguridad en las Operaciones', icono: 'bi-gear-wide-connected',
-    controles: [
-      { id: 'a121', titulo: 'A.12.3 — Copias de seguridad',         pregunta: '¿Se ejecutan copias de seguridad y pruebas de restauración?' },
-      { id: 'a122', titulo: 'A.12.6 — Gestión de vulnerabilidades', pregunta: '¿Se gestiona la identificación y corrección de vulnerabilidades técnicas?' }
-    ]
-  },
-  {
-    codigo: 'A.16', titulo: 'Gestión de Incidentes de Seguridad', icono: 'bi-exclamation-triangle-fill',
-    controles: [
-      { id: 'a161', titulo: 'A.16.1 — Gestión de incidentes y mejoras', pregunta: '¿Se realiza gestión de incidentes de seguridad de la información?' }
-    ]
-  },
-  {
-    codigo: 'A.11', titulo: 'Seguridad Física y del Entorno', icono: 'bi-building-lock',
-    controles: [
-      { id: 'a111', titulo: 'A.11.1 — Áreas seguras',            pregunta: '¿Se controlan los accesos físicos y ambientales a los recursos críticos?' },
-      { id: 'a112', titulo: 'A.11.2 — Seguridad de los equipos', pregunta: '¿Los equipos están protegidos de amenazas físicas y ambientales?' }
-    ]
-  },
-  {
-    codigo: 'A.7', titulo: 'Seguridad de los Recursos Humanos', icono: 'bi-person-check-fill',
-    controles: [
-      { id: 'a71', titulo: 'A.7.2 — Concienciación y formación', pregunta: '¿Se capacita al personal en seguridad de la información y buenas prácticas?' }
-    ]
-  }
+let currentUser, companyId, serviceId, serviceInfo, portal, profile, sectors=[], soa=[], risks=[], evidences=[], rpm=[], report;
+const contextFlags=[
+  ["manejaDatosSensibles","Maneja datos sensibles"],["usaServiciosNube","Usa servicios en la nube"],
+  ["permiteTrabajoRemoto","Permite trabajo remoto"],["procesaPagos","Procesa pagos"],
+  ["infraestructuraPropia","Cuenta con infraestructura propia"],["dependeProveedores","Depende de terceros/proveedores"],
+  ["servicioCritico24x7","Opera servicios críticos 24/7"],["manejaMenores","Trata datos de menores"],
+  ["operaOtIot","Opera entornos OT/IoT"]
 ];
 
-// ─────────────────────────────────────────────────────────────────────────────
-// INIT
-// ─────────────────────────────────────────────────────────────────────────────
-document.addEventListener('DOMContentLoaded', () => {
-  cargarDatosUsuario();
-  cargarEmpresaAsignada();
-
-  document.getElementById('btnLogout').addEventListener('click', () => {
-    localStorage.clear();
-    window.location.href = 'login.html';
-  });
+document.addEventListener("DOMContentLoaded",async()=>{
+  if(!App.requireAuth(["IMPLEMENTADOR"]))return;
+  App.bindNavigation();bindTitles();bindForms();renderContextChecks();
+  try{
+    currentUser=await App.user();companyId=currentUser.empresa?.id;
+    serviceInfo=await App.api("/servicios/mi-servicio");serviceId=serviceInfo.servicioId;companyId=serviceInfo.empresaId||companyId;
+    document.getElementById("serviceLabel").textContent=`Servicio #${serviceId} · ${serviceInfo.sectorNombre||'Sin sector'} · ${App.pretty(serviceInfo.estado)}`;
+    sectors=await App.api("/sectores");
+    populateStaticSelects();
+    await refreshImplementer();
+  }catch(e){showFatal(e.message);}
 });
-
-// ─────────────────────────────────────────────────────────────────────────────
-// DATOS DE USUARIO
-// ─────────────────────────────────────────────────────────────────────────────
-function cargarDatosUsuario() {
-  const nombre = localStorage.getItem('nombre') || 'Implementador';
-  let email = localStorage.getItem('email') || '';
-
-  if (!email) {
-    const token = localStorage.getItem('token');
-    if (token) {
-      try {
-        const payload = JSON.parse(atob(token.split('.')[1]));
-        email = payload.sub || '';
-        localStorage.setItem('email', email);
-      } catch (e) { console.error('Error leyendo token:', e); }
-    }
-  }
-
-  setEl('nombreImplementadorSidebar', nombre);
-  setEl('perfilNombreTitulo', nombre);
-  setVal('perfilNombreInput', nombre);
-  setVal('perfilEmailInput', email);
+function bindTitles(){document.querySelectorAll("[data-section]").forEach(b=>b.addEventListener("click",()=>document.getElementById("pageTitle").textContent=b.textContent.trim()));}
+function bindForms(){
+  document.getElementById("contextForm").addEventListener("submit",saveContext);
+  document.getElementById("soaForm").addEventListener("submit",saveSoa);
+  document.getElementById("riskForm").addEventListener("submit",saveRisk);
+  document.getElementById("associationForm").addEventListener("submit",saveAssociation);
+  document.getElementById("evidenceForm").addEventListener("submit",uploadEvidence);
+  ["soaSearch","soaApplicability","soaState","soaRelevance"].forEach(id=>document.getElementById(id).addEventListener("input",renderSoa));
+  ["riskSearch","riskCategory"].forEach(id=>document.getElementById(id).addEventListener("input",renderRisks));
+  ["evidenceSearch","evidenceState"].forEach(id=>document.getElementById(id).addEventListener("input",renderEvidences));
+  ["rpmSearch","rpmPriority"].forEach(id=>document.getElementById(id).addEventListener("input",renderRpm));
 }
-
-// ─────────────────────────────────────────────────────────────────────────────
-// EMPRESA ASIGNADA AL IMPLEMENTADOR
-// ─────────────────────────────────────────────────────────────────────────────
-async function cargarEmpresaAsignada() {
-  const token = localStorage.getItem('token');
-
-  try {
-    // 1) Datos del usuario autenticado
-    const resME = await fetch(`${API_URL}/usuarios/me`, {
-      headers: { 'Authorization': `Bearer ${token}` }
-    });
-    if (!resME.ok) throw new Error('Sin datos de usuario');
-    const usuario = await resME.json();
-
-    const empresaId   = usuario.empresa?.id     || usuario.empresaId     || null;
-    const empresaNombre = usuario.empresa?.nombre || usuario.empresaNombre || null;
-
-    if (!empresaId || !empresaNombre) {
-      mostrarSinEmpresa();
-      return;
-    }
-
-    // 2) Obtener servicioId de la empresa
-    const resSvc = await fetch(`${API_URL}/servicios`, {
-      headers: { 'Authorization': `Bearer ${token}` }
-    });
-    const servicios = await resSvc.json();
-    const servicio = servicios.find(s => (s.empresa?.id || s.empresaId) === empresaId);
-    const servicioId = servicio?.id || null;
-
-    empresaActual = { id: empresaId, nombre: empresaNombre, servicioId };
-
-    // 3) Pintar en todos los lugares
-    mostrarEmpresaDashboard(empresaNombre, servicioId);
-    setEl('empresaChecklistLabel', empresaNombre);
-    setEl('procesoEmpresaNombre', empresaNombre);
-    setVal('perfilEmpresaInput', empresaNombre);
-
-    // Mostrar sección proceso
-    const alertaEl = document.getElementById('alertaProceso');
-    const contenidoEl = document.getElementById('contenidoProceso');
-    if (alertaEl) alertaEl.style.display = 'none';
-    if (contenidoEl) contenidoEl.style.display = 'block';
-
-    // 4) Cargar controles reales desde backend y actualizar contadores
-    if (servicioId) {
-      await cargarChecklistDesdeBackend(servicioId);
-    }
-    renderizarChecklist();
-    actualizarTodo();
-
-  } catch (err) {
-    console.error('Error cargando empresa:', err);
-    mostrarSinEmpresa();
-  }
+function renderContextChecks(){document.getElementById("contextChecks").innerHTML=contextFlags.map(([id,label])=>`<label class="form-check-app"><input id="ctx_${id}" type="checkbox"> ${label}</label>`).join("");}
+function populateStaticSelects(){document.getElementById("ctxSector").innerHTML=sectors.map(s=>`<option value="${s.id}">${App.esc(s.nombre)}</option>`).join("");}
+async function refreshImplementer(){
+  try{
+    [portal,profile,soa,risks,evidences,rpm,report]=await Promise.all([
+      App.api(`/portal-empresa/empresa/${companyId}`),App.api(`/contexto/empresa/${companyId}`),App.api(`/soa/servicio/${serviceId}`),App.api(`/riesgos/servicio/${serviceId}`),App.api(`/evidencias/servicio/${serviceId}`),App.api(`/rpm/servicio/${serviceId}`),App.api(`/reportes/empresa/${companyId}`)
+    ]);
+    populateDynamicSelects();renderContext();renderDashboard();renderSoa();renderRisks();renderEvidences();renderRpm();renderReport();
+  }catch(e){App.toast(e.message,"error");}
 }
-
-function mostrarSinEmpresa() {
-  const el = document.getElementById('empresaInfoDashboard');
-  if (el) el.innerHTML = `
-    <div class="alerta-info">
-      <i class="bi bi-info-circle me-2" style="color:#3b82f6"></i>
-      No tienes una empresa asignada. Contacta al administrador.
-    </div>`;
+function metric(label,value,icon,hint=""){return `<div class="card-app metric"><i class="bi ${icon} icon"></i><div class="label">${App.esc(label)}</div><div class="value">${App.esc(value)}</div><div class="hint">${App.esc(hint)}</div></div>`;}
+function renderDashboard(){
+  document.getElementById("implementerMetrics").innerHTML=[
+    metric("Avance general",`${portal.progresoGeneral}%`,"bi-speedometer2"),metric("Avance SoA",`${portal.soa.porcentaje}%`,"bi-list-check",`${portal.soa.aplicables} aplicables`),
+    metric("Riesgos abiertos",portal.riesgos.abiertos,"bi-exclamation-diamond",`${portal.riesgos.criticos} críticos`),metric("Evidencias pendientes",portal.evidencias.pendientes,"bi-paperclip",`${portal.evidencias.validadas} validadas`),
+    metric("Alertas RPM",portal.rpm.alertasActivas,"bi-activity",`${portal.rpm.pendientesValidacion} por validar`),metric("Hallazgos abiertos",portal.hallazgos.abiertos,"bi-search",`${portal.hallazgos.recurrentes} recurrentes`)
+  ].join("");
+  const stages=[["Contexto",portal.etapas.contexto],["Riesgos",portal.etapas.riesgos],["SoA",portal.etapas.soa],["Implementación",portal.etapas.implementacion],["Auditoría",portal.etapas.auditoria],["Cierre",portal.etapas.cierre]];
+  document.getElementById("projectStages").innerHTML=stages.map(([n,v])=>`<div class="stage"><strong>${n}</strong><small>${v}%</small><div class="progress-app"><span style="width:${v}%"></span></div></div>`).join("");
+  document.getElementById("prioritySummary").innerHTML=portal.prioridades.length?portal.prioridades.slice(0,6).map(x=>`<div class="priority-card ${String(x.prioridad).toLowerCase()}"><div class="d-flex justify-content-between"><h4>${App.esc(x.controlCodigo)} · ${App.esc(x.controlTitulo)}</h4>${App.badge(x.prioridad)}</div><p>${App.esc(x.resumen)}</p></div>`).join(""):'<div class="empty"><i class="bi bi-check-circle"></i>No hay alertas altas o críticas.</div>';
+  document.getElementById("pendingActivities").innerHTML=portal.actividadesPendientes.length?portal.actividadesPendientes.map(a=>`<div class="priority-card ${String(a.prioridad).toLowerCase()}"><div class="d-flex justify-content-between"><h4>${App.esc(a.titulo)}</h4>${App.badge(a.prioridad)}</div><p>${App.esc(a.detalle)}</p></div>`).join(""):'<div class="empty"><i class="bi bi-check2-all"></i>No hay actividades pendientes registradas.</div>';
 }
-
-function mostrarEmpresaDashboard(nombre, servicioId) {
-  const el = document.getElementById('empresaInfoDashboard');
-  if (!el) return;
-  el.innerHTML = `
-    <div class="d-flex align-items-center gap-3 flex-wrap">
-      <i class="bi bi-building-check" style="font-size:2rem; color:#10b981"></i>
-      <div>
-        <p class="text-white fw-bold mb-0">${nombre}</p>
-        <small class="text-muted">Empresa asignada para implementación${servicioId ? ' · Servicio #' + servicioId : ''}</small>
-      </div>
-      <button class="btn-accion ms-auto" onclick="mostrarSeccion('checklist', null)">
-        <i class="bi bi-clipboard-check me-1"></i>Ir al Checklist
-      </button>
-    </div>`;
+function renderContext(){
+  document.getElementById("ctxSector").value=profile.sector?.id||serviceInfo.sectorId||sectors[0]?.id||"";document.getElementById("ctxSize").value=profile.tamano||"PEQUENA";document.getElementById("ctxOwner").value=profile.responsableSgsi||"";document.getElementById("ctxThreshold").value=profile.umbralAceptacion||6;document.getElementById("ctxScope").value=profile.alcanceSgsi||"";contextFlags.forEach(([id])=>document.getElementById(`ctx_${id}`).checked=!!profile[id]);
+  const high=soa.filter(x=>x.nivelRelevancia==="ALTA").slice(0,7);document.getElementById("contextRecommendations").innerHTML=high.length?high.map(x=>`<div class="priority-card"><h4>${App.esc(x.control.codigo)} · ${App.esc(x.control.titulo)}</h4><p>${App.esc(x.recomendacionContextual)}</p></div>`).join(""):'<div class="empty">Aún no hay recomendaciones altas.</div>';
 }
-
-// ─────────────────────────────────────────────────────────────────────────────
-// NAVEGACIÓN
-// ─────────────────────────────────────────────────────────────────────────────
-window.mostrarSeccion = function(seccion, btn) {
-  document.querySelectorAll('.seccion').forEach(s => s.classList.remove('activa'));
-  const target = document.getElementById('seccion-' + seccion);
-  if (target) target.classList.add('activa');
-  document.querySelectorAll('.btn-menu').forEach(b => b.classList.remove('active'));
-  if (btn) btn.classList.add('active');
-  window.scrollTo({ top: 0, behavior: 'smooth' });
-};
-
-
-// ─────────────────────────────────────────────────────────────────────────────
-// CARGAR CHECKLIST REAL DESDE BACKEND
-// ─────────────────────────────────────────────────────────────────────────────
-async function cargarChecklistDesdeBackend(servicioId) {
-  const token = localStorage.getItem('token');
-
-  try {
-    const res = await fetch(`${API_URL}/checklists/servicio/${servicioId}/completo`, {
-      headers: { 'Authorization': `Bearer ${token}` }
-    });
-
-    if (!res.ok) {
-      console.warn('No se pudo cargar checklist desde backend. Se usa fallback local.');
-      return;
-    }
-
-    const data = await res.json();
-    const items = Array.isArray(data.items) ? data.items : [];
-    if (!items.length) return;
-
-    ANEXOS_ISO.length = 0;
-    estadosChecklist = {};
-    if (typeof justificaciones !== 'undefined') justificaciones = {};
-
-    const grupos = new Map();
-
-    items.forEach((item) => {
-      const parsed = parsearControlBackend(item);
-      if (!grupos.has(parsed.codigo)) {
-        grupos.set(parsed.codigo, {
-          codigo: parsed.codigo,
-          titulo: parsed.grupo,
-          icono: parsed.icono,
-          controles: []
-        });
-      }
-
-      grupos.get(parsed.codigo).controles.push({
-        id: String(item.id),
-        titulo: parsed.titulo,
-        pregunta: parsed.pregunta
-      });
-
-      estadosChecklist[String(item.id)] = normalizarEstadoFrontend(item.estado);
-      if (item.observacion && typeof justificaciones !== 'undefined') {
-        justificaciones[String(item.id)] = item.observacion;
-      }
-    });
-
-    ANEXOS_ISO.push(...Array.from(grupos.values()));
-  } catch (error) {
-    console.error('Error cargando checklist desde backend:', error);
-  }
+async function saveContext(e){e.preventDefault();const body={sectorId:+document.getElementById("ctxSector").value,tamano:document.getElementById("ctxSize").value,responsableSgsi:document.getElementById("ctxOwner").value,umbralAceptacion:+document.getElementById("ctxThreshold").value,alcanceSgsi:document.getElementById("ctxScope").value};contextFlags.forEach(([id])=>body[id]=document.getElementById(`ctx_${id}`).checked);try{await App.api(`/contexto/empresa/${companyId}`,{method:"PUT",body:JSON.stringify(body)});await App.api(`/soa/servicio/${serviceId}/inicializar`,{method:"POST"});App.toast("Contexto guardado y relevancia de controles recalculada.");await refreshImplementer();}catch(err){App.toast(err.message,"error");}}
+function populateDynamicSelects(){
+  document.getElementById("associationControl").innerHTML=soa.map(x=>`<option value="${x.control.id}">${App.esc(x.control.codigo)} · ${App.esc(x.control.titulo)}</option>`).join("");
+  document.getElementById("evidenceSoa").innerHTML=soa.map(x=>`<option value="${x.id}">${App.esc(x.control.codigo)} · ${App.esc(x.control.titulo)}</option>`).join("");
 }
-
-function parsearControlBackend(item) {
-  const texto = String(item.pregunta || '').trim();
-  const matchIso = texto.match(/^(A\.\d+(?:\.\d+)?)\s*[—-]\s*([^:]+):\s*(.+)$/i);
-  const matchSector = texto.match(/^([A-ZÁÉÍÓÚÑ]{3,10}-\d+)\s*[—-]\s*([^:]+):\s*(.+)$/i);
-
-  if (matchIso) {
-    const codigoControl = matchIso[1].toUpperCase();
-    const anexo = codigoControl.split('.').slice(0, 2).join('.');
-    return {
-      codigo: anexo,
-      grupo: nombreGrupoIso(anexo),
-      icono: iconoPorGrupo(anexo),
-      titulo: `${codigoControl} — ${matchIso[2].trim()}`,
-      pregunta: matchIso[3].trim()
-    };
-  }
-
-  if (matchSector) {
-    const prefijo = matchSector[1].split('-')[0].toUpperCase();
-    return {
-      codigo: prefijo,
-      grupo: nombreGrupoSector(prefijo),
-      icono: iconoPorGrupo(prefijo),
-      titulo: `${matchSector[1].toUpperCase()} — ${matchSector[2].trim()}`,
-      pregunta: matchSector[3].trim()
-    };
-  }
-
-  return {
-    codigo: 'GENERAL',
-    grupo: 'Controles generales',
-    icono: 'bi-shield-check',
-    titulo: `Control #${item.id}`,
-    pregunta: texto || 'Control sin descripción'
-  };
-}
-
-function normalizarEstadoFrontend(estado) {
-  const valor = String(estado || 'PENDIENTE').trim().toUpperCase();
-  return ['CUMPLE', 'NO_CUMPLE', 'EN_PROCESO', 'PENDIENTE'].includes(valor) ? valor : 'PENDIENTE';
-}
-
-function nombreGrupoIso(codigo) {
-  const nombres = {
-    'A.5': 'Controles organizacionales',
-    'A.6': 'Controles de personas',
-    'A.7': 'Controles físicos',
-    'A.8': 'Controles tecnológicos'
-  };
-  return nombres[codigo] || 'Controles ISO 27001';
-}
-
-function nombreGrupoSector(prefijo) {
-  const nombres = {
-    SALUD: 'Controles específicos del sector salud',
-    EDU: 'Controles específicos del sector educación',
-    FIN: 'Controles específicos del sector financiero',
-    TEC: 'Controles específicos del sector tecnología',
-    MAN: 'Controles específicos del sector manufactura'
-  };
-  return nombres[prefijo] || 'Controles específicos del sector';
-}
-
-function iconoPorGrupo(codigo) {
-  if (codigo === 'A.5') return 'bi-diagram-3-fill';
-  if (codigo === 'A.6') return 'bi-people-fill';
-  if (codigo === 'A.7') return 'bi-building-lock';
-  if (codigo === 'A.8') return 'bi-cpu-fill';
-  if (codigo === 'SALUD') return 'bi-hospital-fill';
-  if (codigo === 'EDU') return 'bi-mortarboard-fill';
-  if (codigo === 'FIN') return 'bi-bank2';
-  if (codigo === 'TEC') return 'bi-cloud-lock-fill';
-  if (codigo === 'MAN') return 'bi-gear-wide-connected';
-  return 'bi-shield-check';
-}
-
-async function guardarEstadoBackend(controlId, estado, observacion) {
-  const token = localStorage.getItem('token');
-  const body = { estado };
-  if (observacion && observacion.trim()) body.observacion = observacion.trim();
-
-  const res = await fetch(`${API_URL}/items-checklist/${controlId}/evaluar`, {
-    method: 'PUT',
-    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-    body: JSON.stringify(body)
-  });
-
-  if (!res.ok) {
-    const texto = await res.text();
-    throw new Error(texto || 'No se pudo guardar el estado del control');
-  }
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// RENDERIZAR CHECKLIST ISO 27001
-// ─────────────────────────────────────────────────────────────────────────────
-function renderizarChecklist() {
-  const box = document.getElementById('checklistContenido');
-  if (!box) return;
-
-  let html = '';
-  ANEXOS_ISO.forEach(anexo => {
-    html += `
-      <div class="anexo-header">
-        <i class="bi ${anexo.icono} me-2"></i>Anexo ${anexo.codigo} — ${anexo.titulo}
-      </div>`;
-
-    anexo.controles.forEach(ctrl => {
-      const estado = estadosChecklist[ctrl.id] || 'PENDIENTE';
-      const justificacion = justificaciones[ctrl.id] || '';
-      const badgeClass = estado === 'CUMPLE' ? 'cumple' : estado === 'NO_CUMPLE' ? 'no-cumple' : 'pendiente';
-      const badgeLabel = estado === 'CUMPLE' ? 'Cumple' : estado === 'NO_CUMPLE' ? 'No Cumple' : 'Pendiente';
-
-      const activeCumple    = estado === 'CUMPLE'    ? 'active' : '';
-      const activeNoCumple  = estado === 'NO_CUMPLE' ? 'active' : '';
-      const activePendiente = estado === 'PENDIENTE' ? 'active' : '';
-
-      // La justificación solo aparece cuando el estado es NO_CUMPLE
-      const justDisplay = estado === 'NO_CUMPLE' ? '' : 'display:none;';
-
-      html += `
-        <div class="checklist-item" data-id="${ctrl.id}" data-estado="${estado}">
-          <div class="row g-3 align-items-start">
-
-            <!-- Título y pregunta -->
-            <div class="col-md-6">
-              <p class="control-title">${ctrl.titulo}</p>
-              <p class="control-desc">${ctrl.pregunta}</p>
-            </div>
-
-            <!-- Badge de estado -->
-            <div class="col-md-2 d-flex align-items-center">
-              <span class="badge-estado ${badgeClass}" id="badge-${ctrl.id}">${badgeLabel}</span>
-            </div>
-
-            <!-- Botones -->
-            <div class="col-md-4 d-flex gap-2 flex-wrap align-items-start">
-              <button class="btn-estado cumple ${activeCumple}"
-                onclick="setEstado(this, '${ctrl.id}', 'CUMPLE')">
-                <i class="bi bi-check-lg me-1"></i>Cumple
-              </button>
-              <button class="btn-estado no-cumple ${activeNoCumple}"
-                onclick="setEstado(this, '${ctrl.id}', 'NO_CUMPLE')">
-                <i class="bi bi-x-lg me-1"></i>No Cumple
-              </button>
-              <button class="btn-estado pendiente ${activePendiente}"
-                onclick="setEstado(this, '${ctrl.id}', 'PENDIENTE')">
-                <i class="bi bi-clock me-1"></i>Pendiente
-              </button>
-            </div>
-          </div>
-
-          <!-- Justificación — solo visible cuando No Cumple -->
-          <div class="justificacion-box" id="just-box-${ctrl.id}" style="${justDisplay}">
-            <label class="justificacion-label">
-              <i class="bi bi-exclamation-circle me-1" style="color:#ef4444"></i>
-              Justificación / Plan de acción (obligatorio cuando No Cumple)
-            </label>
-            <textarea class="justificacion-input" rows="3"
-              id="just-texto-${ctrl.id}"
-              placeholder="Describe por qué no cumple y qué acciones se tomarán para corregirlo..."
-              onchange="guardarJustificacion('${ctrl.id}', this.value)"
-            >${justificacion}</textarea>
-          </div>
-        </div>`;
-    });
-  });
-
-  box.innerHTML = html;
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// SETEAR ESTADO
-// ─────────────────────────────────────────────────────────────────────────────
-window.setEstado = async function(btn, controlId, estado) {
-  const item = btn.closest('.checklist-item');
-  item.dataset.estado = estado;
-  estadosChecklist[controlId] = estado;
-
-  // Actualizar badge
-  const badge = document.getElementById('badge-' + controlId);
-  const badgeClass = estado === 'CUMPLE' ? 'cumple' : estado === 'NO_CUMPLE' ? 'no-cumple' : 'pendiente';
-  const badgeLabel = estado === 'CUMPLE' ? 'Cumple' : estado === 'NO_CUMPLE' ? 'No Cumple' : 'Pendiente';
-  badge.className = 'badge-estado ' + badgeClass;
-  badge.textContent = badgeLabel;
-
-  // Activar botón seleccionado
-  item.querySelectorAll('.btn-estado').forEach(b => b.classList.remove('active'));
-  btn.classList.add('active');
-
-  // Mostrar/ocultar justificación
-  const justBox = document.getElementById('just-box-' + controlId);
-  if (justBox) {
-    justBox.style.display = estado === 'NO_CUMPLE' ? '' : 'none';
-    if (estado !== 'NO_CUMPLE') {
-      justificaciones[controlId] = '';
-      const textarea = document.getElementById('just-texto-' + controlId);
-      if (textarea) textarea.value = '';
-    }
-  }
-
-  actualizarTodo();
-
-  // Guardado real en backend. Si es NO_CUMPLE, se guarda cuando escriba justificación.
-  if (estado !== 'NO_CUMPLE') {
-    try {
-      await guardarEstadoBackend(controlId, estado, null);
-    } catch (error) {
-      console.error(error);
-      alert(error.message || 'No se pudo guardar el estado del control.');
-    }
-  }
-};
-
-// ─────────────────────────────────────────────────────────────────────────────
-// GUARDAR JUSTIFICACIÓN
-// ─────────────────────────────────────────────────────────────────────────────
-window.guardarJustificacion = async function(controlId, valor) {
-  justificaciones[controlId] = valor;
-  if ((estadosChecklist[controlId] || 'PENDIENTE') !== 'NO_CUMPLE') return;
-
-  if (!valor || !valor.trim()) return;
-
-  try {
-    await guardarEstadoBackend(controlId, 'NO_CUMPLE', valor);
-  } catch (error) {
-    console.error(error);
-    alert(error.message || 'No se pudo guardar la justificación del control.');
-  }
-};
-
-// ─────────────────────────────────────────────────────────────────────────────
-// FILTRAR ITEMS
-// ─────────────────────────────────────────────────────────────────────────────
-window.filtrarItems = function(filtro, btn) {
-  document.querySelectorAll('.btn-filtro').forEach(b => b.classList.remove('active'));
-  if (btn) btn.classList.add('active');
-
-  document.querySelectorAll('.checklist-item').forEach(item => {
-    const estado = item.dataset.estado || 'PENDIENTE';
-    const visible = filtro === 'todos'
-      || (filtro === 'cumple'    && estado === 'CUMPLE')
-      || (filtro === 'no-cumple' && estado === 'NO_CUMPLE')
-      || (filtro === 'pendiente' && estado === 'PENDIENTE');
-    item.style.display = visible ? '' : 'none';
-  });
-};
-
-// ─────────────────────────────────────────────────────────────────────────────
-// CONTADORES Y PORCENTAJE
-// ─────────────────────────────────────────────────────────────────────────────
-function actualizarTodo() {
-  let cumple = 0, noCumple = 0, pendiente = 0;
-  const total = ANEXOS_ISO.reduce((s, a) => s + a.controles.length, 0);
-
-  ANEXOS_ISO.forEach(anexo => {
-    anexo.controles.forEach(ctrl => {
-      const est = estadosChecklist[ctrl.id] || 'PENDIENTE';
-      if (est === 'CUMPLE') cumple++;
-      else if (est === 'NO_CUMPLE') noCumple++;
-      else pendiente++;
-    });
-  });
-
-  const respondidos = cumple + noCumple;
-  const porcentaje  = total > 0 ? Math.round((respondidos / total) * 100) : 0;
-
-  // Dashboard
-  setEl('totalCumple',    cumple);
-  setEl('totalNoCumple',  noCumple);
-  setEl('totalPendiente', pendiente);
-  setEl('totalPorcentaje', porcentaje + '%');
-  setEl('barraLabel',     porcentaje + '%');
-  const barra = document.getElementById('barraProgreso');
-  if (barra) barra.style.width = porcentaje + '%';
-
-  // Proceso
-  setEl('procesoCumple',        cumple);
-  setEl('procesoNoCumple',      noCumple);
-  setEl('procesoPendiente',     pendiente);
-  setEl('procesoPorcentaje',    porcentaje + '%');
-  setEl('procesoPorcentajeBarra', porcentaje + '%');
-  const barraProceso = document.getElementById('barraProceso');
-  if (barraProceso) barraProceso.style.width = porcentaje + '%';
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// FIRMAR
-// ─────────────────────────────────────────────────────────────────────────────
-window.firmarChecklist = async function() {
-  if (!empresaActual) {
-    alert('No tienes una empresa asignada.');
-    return;
-  }
-
-  // Validar que los No Cumple tengan justificación
-  const sinJustificacion = Object.entries(estadosChecklist)
-    .filter(([id, est]) => est === 'NO_CUMPLE' && !justificaciones[id]?.trim())
-    .length;
-
-  if (sinJustificacion > 0) {
-    alert(`Hay ${sinJustificacion} control(es) marcados como "No Cumple" sin justificación. Por favor complétalos antes de firmar.`);
-    return;
-  }
-
-  const totalPendiente = Object.values(estadosChecklist).filter(e => e === 'PENDIENTE').length;
-  const totalControles = ANEXOS_ISO.reduce((s, a) => s + a.controles.length, 0);
-  const sinEvaluar = totalControles - Object.keys(estadosChecklist).length;
-  const pendientesTotal = totalPendiente + sinEvaluar;
-
-  if (pendientesTotal > 0) {
-    const ok = confirm(`Aún tienes ${pendientesTotal} control(es) sin evaluar. ¿Deseas firmar de todas formas?`);
-    if (!ok) return;
-  }
-
-  if (!empresaActual.servicioId) {
-    alert('No se encontró un servicio activo para esta empresa. Contacta al administrador.');
-    return;
-  }
-
-  const token  = localStorage.getItem('token');
-  const nombre = localStorage.getItem('nombre') || 'Implementador';
-
-  try {
-    const res = await fetch(`${API_URL}/firmas`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-      body: JSON.stringify({
-        nombreFirmante: nombre,
-        cargo: 'Implementador',
-        estado: 'FIRMADA',
-        servicioId: empresaActual.servicioId
-      })
-    });
-
-    if (res.ok) {
-      alert(`✅ Implementación firmada correctamente para ${empresaActual.nombre}`);
-    } else {
-      alert('Error al firmar. Revisa la consola para más detalles.');
-      console.error(await res.text());
-    }
-  } catch (e) {
-    console.error(e);
-    alert('Error de conexión con el servidor.');
-  }
-};
-
-// ─────────────────────────────────────────────────────────────────────────────
-// UTILIDADES
-// ─────────────────────────────────────────────────────────────────────────────
-function setEl(id, valor) {
-  const el = document.getElementById(id);
-  if (el) el.textContent = valor;
-}
-
-function setVal(id, valor) {
-  const el = document.getElementById(id);
-  if (el) el.value = valor;
-}
+function renderSoa(){const q=document.getElementById("soaSearch").value.toLowerCase(),a=document.getElementById("soaApplicability").value,s=document.getElementById("soaState").value,r=document.getElementById("soaRelevance").value;const data=soa.filter(x=>[x.control.codigo,x.control.titulo,x.responsable,x.observaciones].some(v=>String(v||'').toLowerCase().includes(q))).filter(x=>!a||x.aplicabilidad===a).filter(x=>!s||x.estadoImplementacion===s).filter(x=>!r||x.nivelRelevancia===r);document.getElementById("soaTable").innerHTML=data.map(x=>`<tr><td><strong>${App.esc(x.control.codigo)} · ${App.esc(x.control.titulo)}</strong><br><small class="text-muted-app">${App.esc(x.control.dominio)}</small></td><td>${App.badge(x.aplicabilidad)}<br><small class="text-muted-app">${App.esc(x.justificacionAplicabilidad||'Sin justificar')}</small></td><td>${App.badge(x.estadoImplementacion)}${App.progress(x.porcentajeImplementacion)}${x.vencido?'<span class="badge-app b-high">Fecha vencida</span>':''}</td><td>${App.badge(x.nivelRelevancia)}<br><small class="text-muted-app">${App.esc(x.recomendacionContextual)}</small></td><td>${x.evidencias.total}<br><small class="text-muted-app">${x.evidencias.validadas} validadas</small></td><td>${x.riesgos.length?x.riesgos.map(z=>`${App.esc(z.codigo)} ${App.badge(z.categoria||z.nivel)}`).join('<br>'):'—'}</td><td>${x.hallazgosAbiertos}</td><td class="nowrap"><button class="btn-app" onclick="openSoaModal(${x.id})"><i class="bi bi-pencil"></i></button> <button class="btn-app" onclick="openEvidenceModal(${x.id})"><i class="bi bi-paperclip"></i></button> <button class="btn-app" onclick="analyzeSoa(${x.id})"><i class="bi bi-activity"></i></button></td></tr>`).join("")||'<tr><td colspan="8" class="empty">No hay controles con esos filtros.</td></tr>';}
+function openSoaModal(id){const x=soa.find(v=>v.id===id);if(!x)return;document.getElementById("soaId").value=id;document.getElementById("soaModalTitle").textContent=`${x.control.codigo} · ${x.control.titulo}`;document.getElementById("soaControlInfo").innerHTML=`<h4>${App.esc(x.control.pregunta)}</h4><p>${App.esc(x.control.descripcion)}</p><p><strong>Recomendación contextual:</strong> ${App.esc(x.recomendacionContextual)}</p>`;document.getElementById("soaEditApplicability").value=x.aplicabilidad;document.getElementById("soaEditState").value=x.estadoImplementacion;document.getElementById("soaEditProgress").value=x.porcentajeImplementacion;document.getElementById("soaEditOwner").value=x.responsable||"";document.getElementById("soaEditDate").value=x.fechaObjetivo||"";document.getElementById("soaEditJustification").value=x.justificacionAplicabilidad||"";document.getElementById("soaEditNotes").value=x.observaciones||"";App.modal("soaModal").show();}
+async function saveSoa(e){e.preventDefault();const id=document.getElementById("soaId").value;const body={aplicabilidad:document.getElementById("soaEditApplicability").value,estadoImplementacion:document.getElementById("soaEditState").value,porcentajeImplementacion:+document.getElementById("soaEditProgress").value,responsable:document.getElementById("soaEditOwner").value,fechaObjetivo:document.getElementById("soaEditDate").value||null,justificacionAplicabilidad:document.getElementById("soaEditJustification").value,observaciones:document.getElementById("soaEditNotes").value};try{await App.api(`/soa/${id}`,{method:"PUT",body:JSON.stringify(body)});App.modal("soaModal").hide();App.toast("Control actualizado.");await refreshImplementer();}catch(err){App.toast(err.message,"error");}}
+async function initializeSoa(){try{const x=await App.api(`/soa/servicio/${serviceId}/inicializar`,{method:"POST"});App.toast(`SoA actualizada: ${x.total} controles.`);await refreshImplementer();}catch(e){App.toast(e.message,"error");}}
+function renderRisks(){const q=document.getElementById("riskSearch").value.toLowerCase(),c=document.getElementById("riskCategory").value;const data=risks.filter(x=>[x.codigo,x.nombre,x.activoInformacion,x.amenaza,x.responsable].some(v=>String(v||'').toLowerCase().includes(q))).filter(x=>!c||x.categoria===c);document.getElementById("riskMetrics").innerHTML=["CRITICO","ALTO","MEDIO","BAJO"].map(cat=>metric(App.pretty(cat),risks.filter(x=>x.categoria===cat).length,cat==='CRITICO'?'bi-radioactive':cat==='ALTO'?'bi-exclamation-octagon':cat==='MEDIO'?'bi-exclamation-triangle':'bi-check-circle')).join("");document.getElementById("risksTable").innerHTML=data.map(x=>`<tr><td><strong>${App.esc(x.codigo)} · ${App.esc(x.nombre)}</strong><br>${App.badge(x.estado)}</td><td>${App.esc(x.activoInformacion||'—')}<br><small class="text-muted-app">${App.esc(x.amenaza||'Sin amenaza registrada')}</small></td><td>${x.probabilidad}</td><td>${x.impacto}</td><td><strong>${x.nivelInherente}</strong> ${App.badge(x.categoria)}<br><small class="text-muted-app">Residual ${x.nivelResidual}</small></td><td>${App.esc(App.pretty(x.tratamiento))}<br><small class="text-muted-app">${App.esc(x.responsable||'Sin responsable')}</small></td><td>${x.controles.length?x.controles.map(z=>`<span class="signal">${App.esc(z.codigo)}</span>`).join(' '):'—'}</td><td class="nowrap"><button class="btn-app" onclick="openRiskModal(${x.id})"><i class="bi bi-pencil"></i></button> <button class="btn-app" onclick="openAssociationModal(${x.id})"><i class="bi bi-link-45deg"></i></button> <button class="btn-app btn-danger-app" onclick="deleteRisk(${x.id})"><i class="bi bi-trash"></i></button></td></tr>`).join("")||'<tr><td colspan="8" class="empty">No hay riesgos registrados.</td></tr>';}
+function openRiskModal(id){const x=risks.find(v=>v.id===id);document.getElementById("riskId").value=x?.id||"";document.getElementById("riskModalTitle").textContent=x?'Editar riesgo':'Crear riesgo';const map={riskCode:'codigo',riskName:'nombre',riskAsset:'activoInformacion',riskOwner:'responsable',riskThreat:'amenaza',riskVulnerability:'vulnerabilidad',riskProbability:'probabilidad',riskImpact:'impacto',riskResidual:'nivelResidual',riskTreatment:'tratamiento',riskStatus:'estado',riskReviewDate:'fechaRevision',riskConsequence:'consecuencia',riskDescription:'descripcion'};Object.entries(map).forEach(([id,key])=>document.getElementById(id).value=x?.[key]??({riskProbability:1,riskImpact:1,riskResidual:1,riskTreatment:'MITIGAR',riskStatus:'ABIERTO'}[id]||''));App.modal("riskModal").show();}
+async function saveRisk(e){e.preventDefault();const id=document.getElementById("riskId").value;const body={servicioId:serviceId,codigo:document.getElementById("riskCode").value,nombre:document.getElementById("riskName").value,activoInformacion:document.getElementById("riskAsset").value,amenaza:document.getElementById("riskThreat").value,vulnerabilidad:document.getElementById("riskVulnerability").value,consecuencia:document.getElementById("riskConsequence").value,probabilidad:+document.getElementById("riskProbability").value,impacto:+document.getElementById("riskImpact").value,nivelResidual:+document.getElementById("riskResidual").value,tratamiento:document.getElementById("riskTreatment").value,responsable:document.getElementById("riskOwner").value,estado:document.getElementById("riskStatus").value,fechaRevision:document.getElementById("riskReviewDate").value||null,descripcion:document.getElementById("riskDescription").value};try{await App.api(`/riesgos${id?'/'+id:''}`,{method:id?'PUT':'POST',body:JSON.stringify(body)});App.modal("riskModal").hide();App.toast("Riesgo guardado.");await refreshImplementer();}catch(err){App.toast(err.message,"error");}}
+async function deleteRisk(id){if(!confirm("¿Eliminar el riesgo y sus relaciones con controles?"))return;try{await App.api(`/riesgos/${id}`,{method:"DELETE"});App.toast("Riesgo eliminado.");await refreshImplementer();}catch(e){App.toast(e.message,"error");}}
+function openAssociationModal(id){document.getElementById("associationRiskId").value=id;document.getElementById("associationForm").reset();document.getElementById("associationRiskId").value=id;App.modal("associationModal").show();}
+async function saveAssociation(e){e.preventDefault();const id=+document.getElementById("associationRiskId").value;const body={controlId:+document.getElementById("associationControl").value,tipoRelacion:document.getElementById("associationType").value,eficaciaEsperada:+document.getElementById("associationEffectiveness").value,observacion:document.getElementById("associationNote").value};try{await App.api(`/riesgos/${id}/controles`,{method:"POST",body:JSON.stringify(body)});App.modal("associationModal").hide();App.toast("Control asociado al riesgo.");await refreshImplementer();}catch(err){App.toast(err.message,"error");}}
+function renderEvidences(){const q=document.getElementById("evidenceSearch").value.toLowerCase(),s=document.getElementById("evidenceState").value;const data=evidences.filter(x=>[x.nombreOriginal,x.descripcion,x.soaControl?.control?.codigo,x.soaControl?.control?.titulo].some(v=>String(v||'').toLowerCase().includes(q))).filter(x=>!s||x.estado===s);const today=new Date().toISOString().slice(0,10);document.getElementById("evidenceMetrics").innerHTML=[metric("Total",evidences.length,"bi-paperclip"),metric("Validadas",evidences.filter(x=>x.estado==='VALIDADA').length,"bi-patch-check"),metric("Pendientes",evidences.filter(x=>x.estado==='PENDIENTE').length,"bi-hourglass-split"),metric("Vencidas",evidences.filter(x=>x.fechaVencimiento&&x.fechaVencimiento<today).length,"bi-calendar-x")].join("");document.getElementById("evidenceTable").innerHTML=data.map(x=>`<tr><td><strong>${App.esc(x.nombreOriginal)}</strong><br><small class="text-muted-app">${App.esc(x.descripcion||'Sin descripción')}</small></td><td>${App.esc(x.soaControl?.control?.codigo||'—')}<br><small class="text-muted-app">${App.esc(x.soaControl?.control?.titulo||'')}</small></td><td>${App.badge(x.tipoEvidencia)}</td><td>${App.fmtDate(x.fechaCarga)}<br><small class="text-muted-app">Vence: ${App.fmtDate(x.fechaVencimiento)}</small></td><td>${App.badge(x.estado)}<br><small class="text-muted-app">${App.esc(x.observacionValidacion||'')}</small></td><td><code class="small-app">${App.esc((x.hashSha256||'').slice(0,14))}…</code></td><td class="nowrap"><button class="btn-app" onclick="downloadEvidence(${x.id},'${App.esc(x.nombreOriginal).replaceAll("'","&#39;")}')"><i class="bi bi-download"></i></button> <button class="btn-app btn-danger-app" onclick="deleteEvidence(${x.id})"><i class="bi bi-trash"></i></button></td></tr>`).join("")||'<tr><td colspan="7" class="empty">No hay evidencias.</td></tr>';}
+function openEvidenceModal(soaId){document.getElementById("evidenceForm").reset();if(soaId)document.getElementById("evidenceSoa").value=soaId;App.modal("evidenceModal").show();}
+async function uploadEvidence(e){e.preventDefault();const file=document.getElementById("evidenceFile").files[0];if(!file)return;const form=new FormData();form.append("archivo",file);form.append("descripcion",document.getElementById("evidenceDescription").value);form.append("tipo",document.getElementById("evidenceType").value);const exp=document.getElementById("evidenceExpiry").value;if(exp)form.append("fechaVencimiento",exp);try{await App.api(`/evidencias/soa/${document.getElementById("evidenceSoa").value}`,{method:"POST",body:form});App.modal("evidenceModal").hide();App.toast("Evidencia cargada y pendiente de validación.");await refreshImplementer();}catch(err){App.toast(err.message,"error");}}
+async function downloadEvidence(id,name){try{const blob=await App.api(`/evidencias/${id}/descargar`);App.downloadBlob(blob,name||`evidencia_${id}`);}catch(e){App.toast(e.message,"error");}}
+async function deleteEvidence(id){if(!confirm("¿Eliminar esta evidencia y su archivo físico?"))return;try{await App.api(`/evidencias/${id}`,{method:"DELETE"});App.toast("Evidencia eliminada.");await refreshImplementer();}catch(e){App.toast(e.message,"error");}}
+function latestRpm(){const seen=new Set();return rpm.filter(x=>{const key=x.soaControlId||x.id;if(seen.has(key))return false;seen.add(key);return true;});}
+function renderRpm(){const q=document.getElementById("rpmSearch").value.toLowerCase(),p=document.getElementById("rpmPriority").value;const all=latestRpm(),data=all.filter(x=>[x.controlCodigo,x.controlTitulo,x.resumen,x.explicacion,...x.senales.map(s=>s.codigo),...x.decisiones.map(d=>d.accion)].some(v=>String(v||'').toLowerCase().includes(q))).filter(x=>!p||x.prioridad===p);document.getElementById("rpmMetrics").innerHTML=[metric("Analizados",all.length,"bi-cpu"),metric("Críticos",all.filter(x=>x.prioridad==='CRITICA').length,"bi-radioactive"),metric("Altos",all.filter(x=>x.prioridad==='ALTA').length,"bi-exclamation-octagon"),metric("Pendientes",all.flatMap(x=>x.decisiones).filter(d=>d.estado==='PENDIENTE').length,"bi-person-check")].join("");document.getElementById("rpmList").innerHTML=data.length?data.map(a=>`<article class="card-app mb-3"><div class="d-flex justify-content-between gap-3"><div><h3>${App.esc(a.controlCodigo)} · ${App.esc(a.controlTitulo)}</h3><p class="small-app text-muted-app">${App.esc(a.resumen)}</p></div><div>${App.badge(a.prioridad)} <strong>${a.puntaje}/100</strong></div></div><div class="signal-list">${a.senales.map(s=>`<span class="signal" title="${App.esc(s.descripcion)}">${App.esc(s.categoria)} · ${App.esc(s.codigo)} +${s.peso}</span>`).join('')}</div><p class="small-app">${App.esc(a.explicacion)}</p>${a.memoriaSimilar?.length?`<div class="priority-card"><h4>Memoria similar disponible</h4><p>${a.memoriaSimilar.length} caso(s) previo(s) con resultado registrado.</p></div>`:''}<h3>Respuestas propuestas</h3>${a.decisiones.map(d=>`<div class="priority-card"><div class="d-flex justify-content-between"><h4>${App.esc(App.pretty(d.tipoAccion))}</h4>${App.badge(d.estado)}</div><p>${App.esc(d.accion)}</p>${d.justificacion?`<p><strong>Justificación:</strong> ${App.esc(d.justificacion)}</p>`:''}${d.estado==='PENDIENTE'?`<div class="mt-2"><button class="btn-app btn-success-app" onclick="validateDecision(${d.id},'APROBADA')">Aprobar</button> <button class="btn-app" onclick="validateDecision(${d.id},'MODIFICADA')">Modificar</button> <button class="btn-app btn-danger-app" onclick="validateDecision(${d.id},'RECHAZADA')">Rechazar</button></div>`:''}</div>`).join('')}<div class="mt-3"><button class="btn-app" onclick="registerMemory(${a.id},'${App.esc(a.prioridad)}')"><i class="bi bi-clock-history"></i> Registrar resultado en memoria</button></div></article>`).join(''):'<div class="card-app empty"><i class="bi bi-activity"></i>No hay análisis con estos filtros. Ejecute el motor RPM.</div>';}
+async function runRpm(){const b=document.getElementById("runRpmButton");b.disabled=true;try{const x=await App.api(`/rpm/analizar/servicio/${serviceId}`,{method:"POST"});App.toast(`RPM completado: ${x.analisisNuevos} nuevos, ${x.sinCambios} sin cambios.`);await refreshImplementer();}catch(e){App.toast(e.message,"error");}finally{b.disabled=false;}}
+async function analyzeSoa(id){try{await App.api(`/rpm/analizar/soa/${id}`,{method:"POST"});App.toast("Control analizado con RPM.");await refreshImplementer();goSection('rpm');}catch(e){App.toast(e.message,"error");}}
+async function validateDecision(id,state){let action=null,just="";if(state==='MODIFICADA'){action=prompt("Escriba la acción modificada:");if(!action)return;just=prompt("Justifique el ajuste:")||"";}else if(state==='RECHAZADA'){just=prompt("Justifique el rechazo:")||"";if(!just)return;}else{just=prompt("Justificación o responsable de la aprobación (opcional):")||"";}try{await App.api(`/rpm/decisiones/${id}`,{method:"PUT",body:JSON.stringify({estado:state,justificacion:just,accion:action})});App.toast("Decisión RPM registrada.");await refreshImplementer();}catch(e){App.toast(e.message,"error");}}
+async function registerMemory(id,priority){const result=prompt("Describa el resultado observado después de aplicar la respuesta:");if(!result)return;const effectiveness=Number(prompt("Efectividad estimada de 0 a 100:","70"));try{await App.api(`/rpm/${id}/memoria`,{method:"POST",body:JSON.stringify({prioridadFinal:priority,resultado:result,efectividadPorcentaje:Number.isFinite(effectiveness)?effectiveness:0})});App.toast("Caso almacenado como memoria RPM.");await refreshImplementer();}catch(e){App.toast(e.message,"error");}}
+function renderReport(){document.getElementById("reportSummary").innerHTML=`<div class="grid grid-3">${metric("Controles",report.totalControles,"bi-journal-check")}${metric("Riesgos",report.totalRiesgos,"bi-exclamation-diamond")}${metric("RPM",report.alertasRpm,"bi-activity")}</div><div class="priority-card"><h4>${App.esc(report.empresaNombre||'Organización')}</h4><p>Avance SoA ${report.porcentajeImplementacion}% · ${report.evidenciasValidadas} evidencias validadas · ${report.totalCapacitaciones} capacitaciones.</p></div>`;}
+async function loadReportSummary(){try{report=await App.api(`/reportes/empresa/${companyId}`);renderReport();App.toast("Resumen actualizado.");}catch(e){App.toast(e.message,"error");}}
+async function downloadReport(type){try{const blob=await App.api(`/reportes/empresa/${companyId}/${type}`);App.downloadBlob(blob,`global_iso_${companyId}.${type==='pdf'?'pdf':'xlsx'}`);}catch(e){App.toast(e.message,"error");}}
+function goSection(name){document.querySelector(`[data-section="${name}"]`)?.click();}
+function showFatal(message){document.querySelector(".main").innerHTML=`<div class="card-app empty"><i class="bi bi-exclamation-triangle"></i><h3>No fue posible cargar el servicio</h3><p>${App.esc(message)}</p><button class="btn-app" data-logout>Cerrar sesión</button></div>`;document.querySelector('[data-logout]')?.addEventListener('click',App.logout);}

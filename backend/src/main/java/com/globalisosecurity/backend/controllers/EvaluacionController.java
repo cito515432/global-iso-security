@@ -1,69 +1,25 @@
-/*
- * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
- * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Class.java to edit this template
- */
 package com.globalisosecurity.backend.controllers;
 
 import com.globalisosecurity.backend.models.Evaluacion;
 import com.globalisosecurity.backend.services.EvaluacionService;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
-
 import java.util.List;
 import java.util.Optional;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/evaluaciones")
 public class EvaluacionController {
+    private final EvaluacionService service;
+    public EvaluacionController(EvaluacionService service){this.service=service;}
 
-    @Autowired
-    private EvaluacionService evaluacionService;
-
-    @GetMapping
-    public List<Evaluacion> obtenerTodas() {
-        return evaluacionService.obtenerTodas();
-    }
-
-    @GetMapping("/{id}")
-    public ResponseEntity<?> obtenerPorId(@PathVariable Long id) {
-        Optional<Evaluacion> evaluacion = evaluacionService.obtenerPorId(id);
-        if (evaluacion.isPresent()) {
-            return ResponseEntity.ok(evaluacion.get());
-        }
-        return ResponseEntity.status(404).body("Evaluación no encontrada");
-    }
-
-    @GetMapping("/estado/{estado}")
-    public List<Evaluacion> obtenerPorEstado(@PathVariable String estado) {
-        return evaluacionService.obtenerPorEstado(estado);
-    }
-
-    @GetMapping("/servicio/{servicioId}")
-    public List<Evaluacion> obtenerPorServicio(@PathVariable Long servicioId) {
-        return evaluacionService.obtenerPorServicio(servicioId);
-    }
-
-    @GetMapping("/empresa/{empresaId}")
-    public List<Evaluacion> obtenerPorEmpresa(@PathVariable Long empresaId) {
-        return evaluacionService.obtenerPorEmpresa(empresaId);
-    }
-
-    @PostMapping
-    public ResponseEntity<?> crearEvaluacion(@RequestBody Evaluacion evaluacion) {
-        Evaluacion nueva = evaluacionService.crearEvaluacion(evaluacion);
-        return ResponseEntity.ok(nueva);
-    }
-
-    @PutMapping("/{id}")
-    public ResponseEntity<?> actualizarEvaluacion(@PathVariable Long id, @RequestBody Evaluacion evaluacion) {
-        Evaluacion actualizada = evaluacionService.actualizarEvaluacion(id, evaluacion);
-        return ResponseEntity.ok(actualizada);
-    }
-
-    @DeleteMapping("/{id}")
-    public ResponseEntity<?> eliminarEvaluacion(@PathVariable Long id) {
-        evaluacionService.eliminarEvaluacion(id);
-        return ResponseEntity.ok("Evaluación eliminada correctamente");
-    }
+    @GetMapping @PreAuthorize("hasRole('ADMINISTRADOR')") public List<Evaluacion> todas(){return service.obtenerTodas();}
+    @GetMapping("/{id}") @PreAuthorize("hasAnyRole('ADMINISTRADOR','IMPLEMENTADOR','AUDITOR')") public ResponseEntity<?> una(@PathVariable Long id){Optional<Evaluacion> x=service.obtenerPorId(id);return x.<ResponseEntity<?>>map(ResponseEntity::ok).orElseGet(()->ResponseEntity.notFound().build());}
+    @GetMapping("/estado/{estado}") @PreAuthorize("hasRole('ADMINISTRADOR')") public List<Evaluacion> estado(@PathVariable String estado){return service.obtenerPorEstado(estado);}
+    @GetMapping("/servicio/{servicioId}") @PreAuthorize("hasAnyRole('ADMINISTRADOR','IMPLEMENTADOR','AUDITOR')") public List<Evaluacion> servicio(@PathVariable Long servicioId){return service.obtenerPorServicio(servicioId);}
+    @GetMapping("/empresa/{empresaId}") @PreAuthorize("hasAnyRole('ADMINISTRADOR','IMPLEMENTADOR','AUDITOR')") public List<Evaluacion> empresa(@PathVariable Long empresaId){return service.obtenerPorEmpresa(empresaId);}
+    @PostMapping @PreAuthorize("hasAnyRole('ADMINISTRADOR','IMPLEMENTADOR')") public Evaluacion crear(@RequestBody Evaluacion e){return service.crearEvaluacion(e);}
+    @PutMapping("/{id}") @PreAuthorize("hasAnyRole('ADMINISTRADOR','IMPLEMENTADOR','AUDITOR')") public Evaluacion actualizar(@PathVariable Long id,@RequestBody Evaluacion e){return service.actualizarEvaluacion(id,e);}
+    @DeleteMapping("/{id}") @PreAuthorize("hasRole('ADMINISTRADOR')") public void eliminar(@PathVariable Long id){service.eliminarEvaluacion(id);}
 }

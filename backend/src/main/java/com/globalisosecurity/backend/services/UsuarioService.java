@@ -56,6 +56,9 @@ public class UsuarioService {
 
         Rol rol = rolRepository.findById(request.getRolId())
                 .orElseThrow(() -> new ResourceNotFoundException("Rol no encontrado"));
+        if (Boolean.FALSE.equals(rol.getActivo())) {
+            throw new BadRequestException("No se puede asignar un rol inactivo");
+        }
 
         Empresa empresa = null;
         if (request.getEmpresaId() != null) {
@@ -88,6 +91,9 @@ public class UsuarioService {
 
         Rol rol = rolRepository.findById(request.getRolId())
                 .orElseThrow(() -> new ResourceNotFoundException("Rol no encontrado"));
+        if (Boolean.FALSE.equals(rol.getActivo())) {
+            throw new BadRequestException("No se puede asignar un rol inactivo");
+        }
 
         Empresa empresa = null;
         if (request.getEmpresaId() != null) {
@@ -123,6 +129,10 @@ public UsuarioMeResponse obtenerUsuarioAutenticado() {
     response.setId(usuario.getId());
     response.setNombre(usuario.getNombre());
     response.setEmail(usuario.getEmail());
+    if (usuario.getRol() != null) {
+        response.setRol(usuario.getRol().getNombre());
+        response.setPermisos(usuario.getRol().getPermisos());
+    }
 
     if (usuario.getEmpresa() != null) {
         response.setEmpresa(new UsuarioMeResponse.EmpresaResumen(

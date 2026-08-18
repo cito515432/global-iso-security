@@ -9,6 +9,8 @@ public class UsuarioMeResponse {
     private Long id;
     private String nombre;
     private String email;
+    private String rol;
+    private String permisos;
     private EmpresaResumen empresa;
 
     public static class EmpresaResumen {
@@ -66,6 +68,14 @@ public class UsuarioMeResponse {
     public void setEmail(String email) {
         this.email = email;
     }
+
+    public String getRol() { return rol; }
+
+    public void setRol(String rol) { this.rol = rol; }
+
+    public String getPermisos() { return permisos; }
+
+    public void setPermisos(String permisos) { this.permisos = permisos; }
 
     public EmpresaResumen getEmpresa() {
         return empresa;
