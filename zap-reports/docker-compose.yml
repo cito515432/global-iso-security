@@ -1,0 +1,92 @@
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: globaliso_mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-globalisosecurity}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-123456789}
+    command: --default-authentication-plugin=mysql_native_password
+    ports:
+      - "${MYSQL_PORT:-3307}:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./database/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-p${MYSQL_ROOT_PASSWORD:-123456789}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks:
+      - globaliso_net
+
+  ml-service:
+    build:
+      context: ./ml-service
+      dockerfile: Dockerfile.render
+    container_name: globaliso_ml
+    restart: unless-stopped
+    environment:
+      PORT: 8002
+      ML_API_KEY: ${ML_API_KEY:-local-ml-key-cambiar}
+      RPM_ML_MODEL_VERSION: RPM-ML-RF-HUMANO-V1
+      RPM_ML_HUMAN_REVIEW_THRESHOLD: 0.70
+    expose:
+      - "8002"
+    networks:
+      - globaliso_net
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: globaliso_backend
+    restart: unless-stopped
+    depends_on:
+      mysql:
+        condition: service_healthy
+      ml-service:
+        condition: service_started
+    environment:
+      PORT: 8081
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/${MYSQL_DATABASE:-globalisosecurity}?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: ${MYSQL_ROOT_PASSWORD:-123456789}
+      SPRING_JPA_HIBERNATE_DDL_AUTO: none
+      JWT_SECRET: ${JWT_SECRET:-GlobalIsoSecurity2026ClaveSecretaCambiarEnProduccion}
+      JWT_EXPIRATION: ${JWT_EXPIRATION:-86400000}
+      EVIDENCE_STORAGE_PATH: /app/storage/evidencias
+      SEED_ENABLED: ${SEED_ENABLED:-true}
+      SEED_DEMO_DATA: ${SEED_DEMO_DATA:-true}
+      SEED_ADMIN_EMAIL: ${SEED_ADMIN_EMAIL:-admin@globalisosecurity.com}
+      SEED_ADMIN_PASSWORD: ${SEED_ADMIN_PASSWORD:-Admin123*}
+      RPM_ML_ENABLED: ${RPM_ML_ENABLED:-true}
+      RPM_ML_URL: ${RPM_ML_URL:-http://ml-service:8002}
+      RPM_ML_API_KEY: ${RPM_ML_API_KEY:-local-ml-key-cambiar}
+      RPM_ML_TIMEOUT_SECONDS: ${RPM_ML_TIMEOUT_SECONDS:-120}
+    expose:
+      - "8081"
+    volumes:
+      - evidence_data:/app/storage/evidencias
+    networks:
+      - globaliso_net
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: globaliso_frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      - "${FRONTEND_PORT:-8080}:80"
+    networks:
+      - globaliso_net
+
+volumes:
+  mysql_data:
+  evidence_data:
+
+networks:
+  globaliso_net:

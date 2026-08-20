@@ -1,0 +1,18 @@
+INTEGRACION RPM + MACHINE LEARNING
+==================================
+
+Este ZIP es un PARCHE para copiar encima de la rama actual rpm-integral.
+No borre la carpeta .git.
+
+Orden:
+1. Haga backup de TiDB.
+2. Ejecute database/migrations/2026_08_rpm_ml_hibrido_tidb.sql en TiDB.
+3. Copie todo este parche sobre la raiz de global-iso-security.
+4. git add -A
+5. git commit -m "feat: integra RPM hibrido con Machine Learning"
+6. git push origin rpm-integral
+7. Cree globaliso-ml-cito515432 en Render.
+8. Configure el backend con RPM_ML_ENABLED/URL/API_KEY.
+9. Despliegue backend y frontend con el mismo SHA.
+
+Guia completa: docs/DEPLOY_ML_PASO_A_PASO.md

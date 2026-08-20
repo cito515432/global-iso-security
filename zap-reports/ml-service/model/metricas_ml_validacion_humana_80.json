@@ -1,0 +1,240 @@
+{
+  "best": "ExtraTrees",
+  "models": {
+    "RegresionLogistica": {
+      "accuracy": 0.625,
+      "balanced_accuracy": 0.662610059217703,
+      "f1_macro": 0.6123879711018813,
+      "kappa": 0.49120203519185923,
+      "confusion": [
+        [
+          7,
+          0,
+          1,
+          0
+        ],
+        [
+          7,
+          17,
+          6,
+          1
+        ],
+        [
+          1,
+          4,
+          8,
+          5
+        ],
+        [
+          0,
+          0,
+          5,
+          18
+        ]
+      ],
+      "report": {
+        "BAJA": {
+          "precision": 0.4666666666666667,
+          "recall": 0.875,
+          "f1-score": 0.6086956521739131,
+          "support": 8.0
+        },
+        "MEDIA": {
+          "precision": 0.8095238095238095,
+          "recall": 0.5483870967741935,
+          "f1-score": 0.6538461538461539,
+          "support": 31.0
+        },
+        "ALTA": {
+          "precision": 0.4,
+          "recall": 0.4444444444444444,
+          "f1-score": 0.42105263157894735,
+          "support": 18.0
+        },
+        "CRITICA": {
+          "precision": 0.75,
+          "recall": 0.782608695652174,
+          "f1-score": 0.7659574468085106,
+          "support": 23.0
+        },
+        "accuracy": 0.625,
+        "macro avg": {
+          "precision": 0.606547619047619,
+          "recall": 0.662610059217703,
+          "f1-score": 0.6123879711018811,
+          "support": 80.0
+        },
+        "weighted avg": {
+          "precision": 0.6659821428571429,
+          "recall": 0.625,
+          "f1-score": 0.6291845578954859,
+          "support": 80.0
+        }
+      }
+    },
+    "RandomForest": {
+      "accuracy": 0.725,
+      "balanced_accuracy": 0.6976877824528596,
+      "f1_macro": 0.6829522624039133,
+      "kappa": 0.6054696256444744,
+      "confusion": [
+        [
+          6,
+          2,
+          0,
+          0
+        ],
+        [
+          2,
+          25,
+          3,
+          1
+        ],
+        [
+          0,
+          6,
+          5,
+          7
+        ],
+        [
+          0,
+          0,
+          1,
+          22
+        ]
+      ],
+      "report": {
+        "BAJA": {
+          "precision": 0.75,
+          "recall": 0.75,
+          "f1-score": 0.75,
+          "support": 8.0
+        },
+        "MEDIA": {
+          "precision": 0.7575757575757576,
+          "recall": 0.8064516129032258,
+          "f1-score": 0.78125,
+          "support": 31.0
+        },
+        "ALTA": {
+          "precision": 0.5555555555555556,
+          "recall": 0.2777777777777778,
+          "f1-score": 0.37037037037037035,
+          "support": 18.0
+        },
+        "CRITICA": {
+          "precision": 0.7333333333333333,
+          "recall": 0.9565217391304348,
+          "f1-score": 0.8301886792452831,
+          "support": 23.0
+        },
+        "accuracy": 0.725,
+        "macro avg": {
+          "precision": 0.6991161616161616,
+          "recall": 0.6976877824528596,
+          "f1-score": 0.6829522624039133,
+          "support": 80.0
+        },
+        "weighted avg": {
+          "precision": 0.7043939393939394,
+          "recall": 0.725,
+          "f1-score": 0.6997469536163521,
+          "support": 80.0
+        }
+      }
+    },
+    "ExtraTrees": {
+      "accuracy": 0.7125,
+      "balanced_accuracy": 0.6928568645784634,
+      "f1_macro": 0.6884879032258064,
+      "kappa": 0.5912927587738783,
+      "confusion": [
+        [
+          6,
+          2,
+          0,
+          0
+        ],
+        [
+          2,
+          25,
+          3,
+          1
+        ],
+        [
+          0,
+          4,
+          7,
+          7
+        ],
+        [
+          0,
+          0,
+          4,
+          19
+        ]
+      ],
+      "report": {
+        "BAJA": {
+          "precision": 0.75,
+          "recall": 0.75,
+          "f1-score": 0.75,
+          "support": 8.0
+        },
+        "MEDIA": {
+          "precision": 0.8064516129032258,
+          "recall": 0.8064516129032258,
+          "f1-score": 0.8064516129032258,
+          "support": 31.0
+        },
+        "ALTA": {
+          "precision": 0.5,
+          "recall": 0.3888888888888889,
+          "f1-score": 0.4375,
+          "support": 18.0
+        },
+        "CRITICA": {
+          "precision": 0.7037037037037037,
+          "recall": 0.8260869565217391,
+          "f1-score": 0.76,
+          "support": 23.0
+        },
+        "accuracy": 0.7125,
+        "macro avg": {
+          "precision": 0.6900388291517324,
+          "recall": 0.6928568645784634,
+          "f1-score": 0.6884879032258064,
+          "support": 80.0
+        },
+        "weighted avg": {
+          "precision": 0.7023148148148148,
+          "recall": 0.7125,
+          "f1-score": 0.7044375,
+          "support": 80.0
+        }
+      }
+    }
+  },
+  "features": [
+    "sector",
+    "tamano",
+    "control_dominio",
+    "control_humano",
+    "aplicabilidad",
+    "estado_implementacion",
+    "porcentaje_implementacion",
+    "puntaje_relevancia",
+    "fecha_objetivo_vencida",
+    "probabilidad",
+    "impacto",
+    "nivel_inherente",
+    "riesgo_categoria",
+    "evidencias_total",
+    "evidencias_pendientes",
+    "evidencias_rechazadas",
+    "evidencias_vencidas",
+    "hallazgos_abiertos",
+    "hallazgos_recurrentes",
+    "hallazgo_severidad_ordinal"
+  ]
+}
