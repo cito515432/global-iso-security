@@ -4,7 +4,7 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
 
-echo "[1/4] Verificando catálogo, migración y referencias del frontend..."
+echo "[1/5] Verificando catálogo, migración y referencias del frontend..."
 python3 - <<'PY'
 from pathlib import Path
 import csv
@@ -60,7 +60,7 @@ for script in (root / 'frontend/js').glob('*.js'):
 print('  OK: 93 controles únicos, migración sincronizada y frontend referencialmente consistente')
 PY
 
-echo "[2/4] Verificando sintaxis JavaScript..."
+echo "[2/5] Verificando sintaxis JavaScript..."
 if command -v node >/dev/null 2>&1; then
   for file in frontend/js/*.js; do
     node --check "$file" >/dev/null
@@ -70,7 +70,7 @@ else
   echo "  AVISO: Node.js no está instalado; se omite esta comprobación"
 fi
 
-echo "[3/4] Compilando fuentes Java..."
+echo "[3/5] Compilando fuentes Java..."
 if ! command -v javac >/dev/null 2>&1; then
   echo "  ERROR: se requiere JDK 20 o 21 para validar el backend" >&2
   exit 1
@@ -95,8 +95,25 @@ fi
 
 echo "  OK: fuentes Java compiladas"
 
-echo "[4/4] Resumen..."
+echo "[4/5] Verificando integración ML..."
+python3 - <<'PYML'
+from pathlib import Path
+root=Path('.')
+required=[
+ root/'ml-service/app/main.py',
+ root/'ml-service/model/modelo_rpm_rf_humano_v1.joblib',
+ root/'ml-service/Dockerfile.render',
+ root/'database/migrations/2026_08_rpm_ml_hibrido_tidb.sql',
+ root/'backend/src/main/java/com/globalisosecurity/backend/services/RpmMlPredictionService.java',
+]
+missing=[str(x) for x in required if not x.exists()]
+assert not missing, f'Faltan artefactos ML: {missing}'
+print('  OK: microservicio ML, modelo, migración y cliente Spring presentes')
+PYML
+
+echo "[5/5] Resumen..."
 echo "  Controles: 93"
 echo "  Tablas integrales verificadas: 15"
 echo "  Páginas por rol: administrador, implementador, auditor, capacitador y empresa"
+echo "  Integración híbrida: RPM determinista + Random Forest experimental + validación humana"
 echo "Validación estática completada correctamente. Las pruebas E2E requieren MySQL/Docker."

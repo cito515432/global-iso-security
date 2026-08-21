@@ -1,93 +1,77 @@
-# Global ISO Security — despliegue en Render
+# Global ISO Security — despliegue actual en Render + TiDB Cloud
 
-Este paquete está preparado para subirse a GitHub y desplegarse en Render usando Docker.
-
-## Qué incluye
-
-- `backend/Dockerfile.render`: backend Spring Boot listo para Render.
-- `frontend/Dockerfile.render`: frontend Nginx listo para Render.
-- `render/mysql/Dockerfile`: MySQL 8 como Private Service de Render.
-- `render.yaml`: Blueprint para crear los tres servicios en Render.
-- `database/init/01_globalisosecurity_backup.sql`: respaldo inicial de la base de datos.
-- `docker-compose.yml`: alternativa para probar localmente.
-
-## Antes de subir a GitHub
-
-1. Descomprime el proyecto.
-2. Verifica que NO exista un archivo `.env` con contraseñas reales.
-3. Si el SQL tiene datos sensibles, usa un repositorio privado.
-4. Sube la carpeta completa a GitHub.
-
-Comandos sugeridos:
-
-```bash
-git init
-git branch -M main
-git add .
-git commit -m "chore: prepara despliegue docker en render"
-git remote add origin https://github.com/TU_USUARIO/global-iso-security.git
-git push -u origin main
-```
-
-## Despliegue en Render con Blueprint
-
-1. En Render, entra a **New > Blueprint**.
-2. Conecta el repositorio de GitHub.
-3. Render detectará el archivo `render.yaml`.
-4. Confirma la creación de los servicios:
-   - `globaliso-mysql` como Private Service.
-   - `globaliso-backend` como Web Service.
-   - `globaliso-frontend` como Web Service.
-5. Espera a que los tres servicios terminen el deploy.
-6. Abre la URL pública del frontend:
+La arquitectura desplegada para el proyecto académico es:
 
 ```text
-https://globaliso-frontend.onrender.com
+Navegador
+   |
+   v
+Frontend Nginx — Render
+   |
+   v
+Backend Spring Boot — Render
+   |                 \
+   v                  v
+TiDB Cloud        RPM ML FastAPI — Render
+                      |
+                      v
+              Random Forest V1
 ```
 
-## Cómo funciona la conexión
+## Servicios
 
-El navegador entra al frontend. El frontend llama rutas relativas `/api/...`. Nginx recibe esas llamadas y las redirige internamente al backend usando la red privada de Render.
+- `globaliso-frontend-cito515432`: frontend Nginx.
+- `globaliso-backend-cito515432`: backend Spring Boot.
+- `globaliso-ml-cito515432`: microservicio ML experimental.
+- Base de datos: TiDB Cloud externa, compatible con protocolo MySQL.
+
+## Regla crítica para TiDB
+
+Mantener siempre en el backend:
 
 ```text
-Navegador -> globaliso-frontend -> /api -> globaliso-backend -> globaliso-mysql
+SPRING_JPA_HIBERNATE_DDL_AUTO=none
 ```
 
-## Importante sobre MySQL y el SQL
+Los cambios de esquema se aplican mediante migraciones SQL controladas en `database/migrations/`.
 
-El respaldo `database/init/01_globalisosecurity_backup.sql` se importa automáticamente solo cuando el disco persistente de MySQL está vacío.
+## Variables del backend
 
-Si el servicio MySQL ya fue creado una vez, cambiar el SQL no lo vuelve a importar automáticamente. En ese caso debes importar manualmente o recrear el servicio/disco.
-
-## Probar localmente antes de Render
-
-```bash
-copy .env.example .env
-# en Linux/Mac sería: cp .env.example .env
-
-docker compose up -d --build
-```
-
-Abrir:
+Además de las credenciales de TiDB y JWT:
 
 ```text
-http://localhost:8080
+RPM_ML_ENABLED=true
+RPM_ML_URL=https://globaliso-ml-cito515432.onrender.com
+RPM_ML_API_KEY=<clave privada compartida con ML_API_KEY>
+RPM_ML_TIMEOUT_SECONDS=120
 ```
 
-## Rutas útiles
-
-Backend health:
+## Variables del servicio ML
 
 ```text
-/health
+PORT=10000
+ML_API_KEY=<misma clave privada que RPM_ML_API_KEY>
+RPM_ML_MODEL_VERSION=RPM-ML-RF-HUMANO-V1
+RPM_ML_HUMAN_REVIEW_THRESHOLD=0.70
 ```
 
-Login frontend:
+## Variables del frontend
 
 ```text
-/pages/login.html
+PORT=10000
+BACKEND_URL=https://globaliso-backend-cito515432.onrender.com
 ```
 
-## Nota sobre costos
+## Orden recomendado de despliegue
 
-El Blueprint usa servicios Docker y un disco persistente para MySQL. Revisa el plan en Render antes de confirmar el despliegue, porque MySQL con disco persistente puede requerir un plan de pago.
+1. Ejecutar las migraciones TiDB necesarias.
+2. Desplegar `globaliso-ml-cito515432` y verificar `/health`.
+3. Desplegar backend con el mismo commit y verificar `/health`.
+4. Desplegar frontend con el mismo commit.
+5. Entrar como implementador/auditor y ejecutar `Analizar RPM + ML`.
+
+## Tolerancia a fallos
+
+El motor RPM determinista no depende del ML para funcionar. Si el servicio ML está dormido o temporalmente no responde, la aplicación conserva el análisis determinista y la interfaz muestra la estimación ML como pendiente.
+
+Consulta `docs/INTEGRACION_ML_RPM.md` para el procedimiento detallado.

@@ -31,7 +31,7 @@
       <div class="card-app mt-3"><h3>Avance del proyecto</h3><div class="stage-track" id="projectStages"></div></div>
       <div class="grid grid-2 mt-3">
         <div class="card-app"><div class="d-flex justify-content-between"><h3>Prioridades actuales</h3><button class="btn-app" onclick="goSection('rpm')">Abrir RPM</button></div><div id="prioritySummary"></div></div>
-        <div class="card-app"><h3>Modelo implementado en siete funciones</h3><div class="rpm-flow"><div class="rpm-node"><i class="bi bi-boxes"></i>Representar</div><div class="rpm-node"><i class="bi bi-search"></i>Detectar</div><div class="rpm-node"><i class="bi bi-broadcast"></i>Propagar</div><div class="rpm-node"><i class="bi bi-sort-down"></i>Priorizar</div><div class="rpm-node"><i class="bi bi-person-check"></i>Coordinar</div><div class="rpm-node"><i class="bi bi-clock-history"></i>Recordar</div><div class="rpm-node"><i class="bi bi-graph-up"></i>Evaluar</div></div><p class="small-app text-muted-app mt-3">El motor es determinista y explicable. Cada recomendación debe ser validada por una persona antes de ejecutarse.</p></div>
+        <div class="card-app"><h3>Modelo implementado en siete funciones</h3><div class="rpm-flow"><div class="rpm-node"><i class="bi bi-boxes"></i>Representar</div><div class="rpm-node"><i class="bi bi-search"></i>Detectar</div><div class="rpm-node"><i class="bi bi-broadcast"></i>Propagar</div><div class="rpm-node"><i class="bi bi-sort-down"></i>Priorizar</div><div class="rpm-node"><i class="bi bi-person-check"></i>Coordinar</div><div class="rpm-node"><i class="bi bi-clock-history"></i>Recordar</div><div class="rpm-node"><i class="bi bi-graph-up"></i>Evaluar</div></div><p class="small-app text-muted-app mt-3">El núcleo RPM permanece determinista y explicable; Machine Learning aporta una segunda estimación de prioridad. Si ambos difieren, el sistema resalta el caso para revisión humana. Ninguna respuesta se ejecuta sin validación.</p></div>
       </div>
       <div class="card-app mt-3"><h3>Actividades pendientes</h3><div id="pendingActivities"></div></div>
     </section>
@@ -64,7 +64,7 @@
     </section>
 
     <section class="section" id="section-rpm">
-      <div class="d-flex justify-content-between align-items-center mb-3"><div><h3 class="m-0">Motor bioinspirado RPM</h3><p class="small-app text-muted-app m-0">Analiza controles, riesgos, evidencias, hallazgos, fechas y formación.</p></div><button id="runRpmButton" class="btn-app btn-primary-app" onclick="runRpm()"><i class="bi bi-cpu"></i> Analizar servicio completo</button></div>
+      <div class="d-flex justify-content-between align-items-center mb-3"><div><h3 class="m-0">Motor híbrido bioinspirado RPM + ML</h3><p class="small-app text-muted-app m-0">Combina priorización determinista explicable con una estimación ML experimental aprendida de validaciones humanas. La decisión final sigue siendo humana.</p></div><button id="runRpmButton" class="btn-app btn-primary-app" onclick="runRpm()"><i class="bi bi-cpu"></i> Analizar RPM + ML</button></div>
       <div class="grid grid-4 mb-3" id="rpmMetrics"></div>
       <div class="toolbar"><input id="rpmSearch" class="form-control-app" placeholder="Control, señal o recomendación"><select id="rpmPriority" class="form-select-app"><option value="">Todas las prioridades</option><option>CRITICA</option><option>ALTA</option><option>MEDIA</option><option>BAJA</option></select></div>
       <div id="rpmList"></div>

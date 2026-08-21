@@ -70,5 +70,19 @@ const App = (() => {
   function fmtDate(v) { if (!v) return "—"; const d = new Date(v); return Number.isNaN(d.getTime()) ? esc(v) : d.toLocaleDateString("es-CO"); }
   function modal(id) { const el=document.getElementById(id); return bootstrap.Modal.getOrCreateInstance(el); }
   function downloadBlob(blob, filename) { const u=URL.createObjectURL(blob); const a=document.createElement("a"); a.href=u;a.download=filename;document.body.appendChild(a);a.click();a.remove();URL.revokeObjectURL(u); }
-  return {api,requireAuth,routeByRole,logout,user,bindNavigation,toast,esc,pretty,badge,progress,fmtDate,modal,downloadBlob,role};
+  function mlPanel(a, compact = false) {
+    const ml = a?.ml;
+    if (!ml || !ml.prioridad) {
+      return `<div class="ml-insight pending"><div><strong><i class="bi bi-stars"></i> Machine Learning</strong><span class="ml-kicker">Experimental</span></div><p>Estimación pendiente. El análisis determinista RPM sigue siendo válido y debe ser revisado por una persona.</p></div>`;
+    }
+    const conf = Math.round((Number(ml.confianza) || 0) * 100);
+    const mismatch = ml.coincideConRpm === false;
+    const low = conf < 70;
+    const cls = mismatch ? "disagree" : (low ? "caution" : "agree");
+    const probs = Object.entries(ml.probabilidades || {}).sort((a,b)=>b[1]-a[1]).slice(0,4);
+    const probHtml = compact ? "" : `<div class="ml-probs">${probs.map(([k,v])=>`<span>${esc(pretty(k))}: <strong>${Math.round(Number(v)*100)}%</strong></span>`).join("")}</div>`;
+    const note = mismatch ? "RPM y ML difieren: requiere revisión humana prioritaria." : (low ? "Coincidencia con confianza estimada baja: revisar con cautela." : "RPM y ML coinciden; la validación humana sigue siendo obligatoria.");
+    return `<div class="ml-insight ${cls}"><div class="ml-head"><div><strong><i class="bi bi-stars"></i> Estimación ML</strong><span class="ml-kicker">Experimental · ${esc(ml.versionModelo || "modelo")}</span></div><div>${badge(ml.prioridad)} <strong>${conf}%</strong></div></div><p>${esc(note)}</p>${probHtml}</div>`;
+  }
+  return {api,requireAuth,routeByRole,logout,user,bindNavigation,toast,esc,pretty,badge,progress,fmtDate,modal,downloadBlob,mlPanel,role};
 })();
