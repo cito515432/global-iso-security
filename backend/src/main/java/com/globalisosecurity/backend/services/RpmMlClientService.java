@@ -9,7 +9,9 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.Duration;
-import java.util.*;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -40,31 +42,33 @@ public class RpmMlClientService {
         this.httpClient = HttpClient.newBuilder()
                 .connectTimeout(Duration.ofSeconds(Math.min(20, this.timeoutSeconds)))
                 .build();
+        if (enabled && !configurado()) {
+            log.error("RPM ML fue habilitado pero RPM_ML_URL o RPM_ML_API_KEY no cumplen la configuración segura");
+        }
     }
 
     public boolean configurado() {
-        return enabled && !baseUrl.isBlank();
+        return enabled && !baseUrl.isBlank() && apiKey.length() >= 32 && urlPermitida(baseUrl);
     }
 
     public List<RpmMlPredictionResponse.Prediction> predecirLote(List<RpmMlFeatureRequest> items) {
         if (!configurado() || items == null || items.isEmpty()) return List.of();
         try {
             String body = objectMapper.writeValueAsString(Map.of("items", items));
-            HttpRequest.Builder builder = HttpRequest.newBuilder()
-                    .uri(URI.create(baseUrl + "/predict/batch"))
+            HttpRequest request = authenticatedRequest(baseUrl + "/predict/batch")
                     .timeout(Duration.ofSeconds(timeoutSeconds))
                     .header("Content-Type", "application/json")
-                    .POST(HttpRequest.BodyPublishers.ofString(body));
-            if (!apiKey.isBlank()) builder.header("X-ML-API-Key", apiKey);
-            HttpResponse<String> response = httpClient.send(builder.build(), HttpResponse.BodyHandlers.ofString());
+                    .POST(HttpRequest.BodyPublishers.ofString(body))
+                    .build();
+            HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
             if (response.statusCode() < 200 || response.statusCode() >= 300) {
-                log.warn("RPM ML respondió HTTP {}: {}", response.statusCode(), limitar(response.body(), 400));
+                log.warn("RPM ML respondió HTTP {}", response.statusCode());
                 return List.of();
             }
             RpmMlPredictionResponse parsed = objectMapper.readValue(response.body(), RpmMlPredictionResponse.class);
             return parsed.predictions() == null ? List.of() : parsed.predictions();
         } catch (Exception ex) {
-            log.warn("No fue posible consultar el servicio RPM ML. El motor determinista continúa disponible: {}", ex.getMessage());
+            log.warn("No fue posible consultar el servicio RPM ML. El motor determinista continúa disponible: {}", ex.getClass().getSimpleName());
             return List.of();
         }
     }
@@ -78,10 +82,10 @@ public class RpmMlClientService {
             return out;
         }
         try {
-            HttpRequest request = HttpRequest.newBuilder()
-                    .uri(URI.create(baseUrl + "/metadata"))
+            HttpRequest request = authenticatedRequest(baseUrl + "/metadata")
                     .timeout(Duration.ofSeconds(Math.min(timeoutSeconds, 60)))
-                    .GET().build();
+                    .GET()
+                    .build();
             HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
             out.put("httpStatus", response.statusCode());
             if (response.statusCode() >= 200 && response.statusCode() < 300) {
@@ -93,13 +97,26 @@ public class RpmMlClientService {
             }
         } catch (Exception ex) {
             out.put("status", "UNAVAILABLE");
-            out.put("message", ex.getMessage());
         }
         return out;
     }
 
-    private String limitar(String value, int max) {
-        if (value == null) return "";
-        return value.length() <= max ? value : value.substring(0, max) + "...";
+    private HttpRequest.Builder authenticatedRequest(String url) {
+        return HttpRequest.newBuilder()
+                .uri(URI.create(url))
+                .header("X-ML-API-Key", apiKey);
+    }
+
+    private boolean urlPermitida(String value) {
+        try {
+            URI uri = URI.create(value);
+            String scheme = uri.getScheme() == null ? "" : uri.getScheme().toLowerCase();
+            String host = uri.getHost() == null ? "" : uri.getHost().toLowerCase();
+            if ("https".equals(scheme)) return true;
+            return "http".equals(scheme)
+                    && ("localhost".equals(host) || "127.0.0.1".equals(host) || "ml-service".equals(host));
+        } catch (Exception ex) {
+            return false;
+        }
     }
 }

@@ -1,7 +1,3 @@
-/*
- * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
- * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Class.java to edit this template
- */
 package com.globalisosecurity.backend.services;
 
 import com.globalisosecurity.backend.dto.DashboardResumenDTO;
@@ -11,33 +7,37 @@ import com.globalisosecurity.backend.repositories.EvaluacionRepository;
 import com.globalisosecurity.backend.repositories.FirmaRepository;
 import com.globalisosecurity.backend.repositories.ServicioRepository;
 import com.globalisosecurity.backend.repositories.UsuarioRepository;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 @Service
 public class DashboardService {
 
-    @Autowired
-    private UsuarioRepository usuarioRepository;
+    private final UsuarioRepository usuarioRepository;
+    private final EmpresaRepository empresaRepository;
+    private final ServicioRepository servicioRepository;
+    private final EvaluacionRepository evaluacionRepository;
+    private final FirmaRepository firmaRepository;
+    private final ChecklistRepository checklistRepository;
+    private final AccesoEmpresaService accesoEmpresaService;
 
-    @Autowired
-    private EmpresaRepository empresaRepository;
-
-    @Autowired
-    private ServicioRepository servicioRepository;
-
-    @Autowired
-    private EvaluacionRepository evaluacionRepository;
-
-    @Autowired
-    private FirmaRepository firmaRepository;
-
-    @Autowired
-    private ChecklistRepository checklistRepository;
+    public DashboardService(UsuarioRepository usuarioRepository,
+            EmpresaRepository empresaRepository,
+            ServicioRepository servicioRepository,
+            EvaluacionRepository evaluacionRepository,
+            FirmaRepository firmaRepository,
+            ChecklistRepository checklistRepository,
+            AccesoEmpresaService accesoEmpresaService) {
+        this.usuarioRepository = usuarioRepository;
+        this.empresaRepository = empresaRepository;
+        this.servicioRepository = servicioRepository;
+        this.evaluacionRepository = evaluacionRepository;
+        this.firmaRepository = firmaRepository;
+        this.checklistRepository = checklistRepository;
+        this.accesoEmpresaService = accesoEmpresaService;
+    }
 
     public DashboardResumenDTO obtenerResumen() {
         DashboardResumenDTO resumen = new DashboardResumenDTO();
-
         resumen.setTotalUsuarios(usuarioRepository.count());
         resumen.setTotalEmpresas(empresaRepository.count());
         resumen.setTotalServicios(servicioRepository.count());
@@ -47,13 +47,12 @@ public class DashboardService {
         resumen.setTotalEvaluaciones(evaluacionRepository.count());
         resumen.setTotalFirmas(firmaRepository.count());
         resumen.setTotalChecklists(checklistRepository.count());
-
         return resumen;
     }
 
     public DashboardResumenDTO obtenerResumenPorEmpresa(Long empresaId) {
+        accesoEmpresaService.validarEmpresa(empresaId);
         DashboardResumenDTO resumen = new DashboardResumenDTO();
-
         resumen.setTotalUsuarios(usuarioRepository.findByEmpresaId(empresaId).size());
         resumen.setTotalEmpresas(1);
         resumen.setTotalServicios(servicioRepository.findByEmpresaId(empresaId).size());
@@ -63,7 +62,6 @@ public class DashboardService {
         resumen.setTotalEvaluaciones(evaluacionRepository.findByServicioEmpresaId(empresaId).size());
         resumen.setTotalFirmas(firmaRepository.findByServicioEmpresaId(empresaId).size());
         resumen.setTotalChecklists(checklistRepository.findByServicioEmpresaId(empresaId).size());
-
         return resumen;
     }
 }

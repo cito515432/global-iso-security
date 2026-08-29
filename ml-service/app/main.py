@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hmac
 import json
 import os
 from pathlib import Path
@@ -17,6 +18,9 @@ MODEL_VERSION = os.getenv("RPM_ML_MODEL_VERSION", "RPM-ML-RF-HUMANO-V1")
 API_KEY = os.getenv("ML_API_KEY", "").strip()
 HUMAN_REVIEW_THRESHOLD = float(os.getenv("RPM_ML_HUMAN_REVIEW_THRESHOLD", "0.70"))
 
+if len(API_KEY) < 32:
+    raise RuntimeError("ML_API_KEY debe estar configurada y contener al menos 32 caracteres")
+
 MODEL = joblib.load(MODEL_PATH)
 MODEL_FEATURES = list(getattr(MODEL, "feature_names_in_", []))
 MODEL_CLASSES = list(MODEL.named_steps["model"].classes_)
@@ -33,41 +37,46 @@ app = FastAPI(
         "Servicio experimental de aprendizaje supervisado para apoyar la priorización RPM. "
         "La predicción no sustituye la validación humana del SGSI."
     ),
+    docs_url=None,
+    redoc_url=None,
+    openapi_url=None,
 )
 
 
 def require_api_key(x_ml_api_key: Optional[str] = Header(default=None)) -> None:
-    if API_KEY and x_ml_api_key != API_KEY:
-        raise HTTPException(status_code=401, detail="API key inválida")
+    supplied = (x_ml_api_key or "").strip()
+    if not supplied or not hmac.compare_digest(supplied, API_KEY):
+        raise HTTPException(status_code=401, detail="No autorizado")
 
 
 class FeatureInput(BaseModel):
-    model_config = ConfigDict(extra="ignore")
+    model_config = ConfigDict(extra="forbid")
 
     analysis_id: Optional[int] = None
-    sector: Optional[str] = None
-    tamano: Optional[str] = None
-    control_dominio: Optional[str] = None
+    sector: Optional[str] = Field(default=None, max_length=120)
+    tamano: Optional[str] = Field(default=None, max_length=80)
+    control_dominio: Optional[str] = Field(default=None, max_length=120)
     control_humano: Optional[int] = Field(default=None, ge=0, le=1)
-    aplicabilidad: Optional[str] = None
-    estado_implementacion: Optional[str] = None
-    porcentaje_implementacion: Optional[float] = None
-    puntaje_relevancia: Optional[float] = None
+    aplicabilidad: Optional[str] = Field(default=None, max_length=80)
+    estado_implementacion: Optional[str] = Field(default=None, max_length=80)
+    porcentaje_implementacion: Optional[float] = Field(default=None, ge=0, le=100)
+    puntaje_relevancia: Optional[float] = Field(default=None, ge=0, le=100)
     fecha_objetivo_vencida: Optional[int] = Field(default=None, ge=0, le=1)
-    probabilidad: Optional[float] = None
-    impacto: Optional[float] = None
-    nivel_inherente: Optional[float] = None
-    riesgo_categoria: Optional[str] = None
-    evidencias_total: Optional[int] = None
-    evidencias_pendientes: Optional[int] = None
-    evidencias_rechazadas: Optional[int] = None
-    evidencias_vencidas: Optional[int] = None
-    hallazgos_abiertos: Optional[int] = None
-    hallazgos_recurrentes: Optional[int] = None
-    hallazgo_severidad_ordinal: Optional[int] = None
+    probabilidad: Optional[float] = Field(default=None, ge=0)
+    impacto: Optional[float] = Field(default=None, ge=0)
+    nivel_inherente: Optional[float] = Field(default=None, ge=0)
+    riesgo_categoria: Optional[str] = Field(default=None, max_length=120)
+    evidencias_total: Optional[int] = Field(default=None, ge=0)
+    evidencias_pendientes: Optional[int] = Field(default=None, ge=0)
+    evidencias_rechazadas: Optional[int] = Field(default=None, ge=0)
+    evidencias_vencidas: Optional[int] = Field(default=None, ge=0)
+    hallazgos_abiertos: Optional[int] = Field(default=None, ge=0)
+    hallazgos_recurrentes: Optional[int] = Field(default=None, ge=0)
+    hallazgo_severidad_ordinal: Optional[int] = Field(default=None, ge=0)
 
 
 class BatchRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
     items: List[FeatureInput]
 
 
@@ -116,7 +125,7 @@ def health() -> dict:
     }
 
 
-@app.get("/metadata")
+@app.get("/metadata", dependencies=[Depends(require_api_key)])
 def metadata() -> dict:
     rf = (METRICS.get("models") or {}).get("RandomForest", {})
     return {
@@ -141,6 +150,8 @@ def predict(item: FeatureInput) -> dict:
 
 @app.post("/predict/batch", dependencies=[Depends(require_api_key)])
 def predict_batch(payload: BatchRequest) -> dict:
+    if not payload.items:
+        raise HTTPException(status_code=400, detail="El lote no puede estar vacío")
     if len(payload.items) > 500:
         raise HTTPException(status_code=400, detail="Máximo 500 elementos por lote")
     return {
