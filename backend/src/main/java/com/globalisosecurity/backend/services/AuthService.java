@@ -1,54 +1,78 @@
-/*
- * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
- * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Class.java to edit this template
- */
-
 package com.globalisosecurity.backend.services;
 
 import com.globalisosecurity.backend.models.Usuario;
 import com.globalisosecurity.backend.repositories.UsuarioRepository;
 import com.globalisosecurity.backend.utils.JwtUtil;
-import org.springframework.beans.factory.annotation.Autowired;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Optional;
+import java.util.UUID;
+import org.springframework.http.CacheControl;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Optional;
-
 @Service
 public class AuthService {
 
-    @Autowired
-    private UsuarioRepository usuarioRepository;
+    private final UsuarioRepository usuarioRepository;
+    private final JwtUtil jwtUtil;
+    private final PasswordEncoder passwordEncoder;
+    private final LoginAttemptService loginAttempts;
+    private final String dummyPasswordHash;
 
-    @Autowired
-    private JwtUtil jwtUtil;
-
-    @Autowired
-    private PasswordEncoder passwordEncoder;
+    public AuthService(UsuarioRepository usuarioRepository,
+            JwtUtil jwtUtil,
+            PasswordEncoder passwordEncoder,
+            LoginAttemptService loginAttempts) {
+        this.usuarioRepository = usuarioRepository;
+        this.jwtUtil = jwtUtil;
+        this.passwordEncoder = passwordEncoder;
+        this.loginAttempts = loginAttempts;
+        // Se calcula una sola vez para reducir diferencias temporales entre un correo
+        // inexistente y una contraseña incorrecta.
+        this.dummyPasswordHash = passwordEncoder.encode(UUID.randomUUID().toString());
+    }
 
     public ResponseEntity<?> login(String email, String password) {
-        Optional<Usuario> usuarioOpt = usuarioRepository.findByEmail(email == null ? "" : email.trim().toLowerCase());
+        String normalizedEmail = email == null ? "" : email.trim().toLowerCase();
+        String safePassword = password == null ? "" : password;
+        String attemptKey = loginAttempts.keyFor(normalizedEmail);
 
+        if (loginAttempts.isBlocked(attemptKey)) {
+            return response(HttpStatus.TOO_MANY_REQUESTS,
+                    "Demasiados intentos fallidos. Intente nuevamente más tarde");
+        }
+
+        if (normalizedEmail.isBlank() || normalizedEmail.length() > 254
+                || safePassword.isEmpty() || safePassword.length() > 128) {
+            loginAttempts.recordFailure(attemptKey);
+            passwordEncoder.matches(safePassword, dummyPasswordHash);
+            return response(HttpStatus.UNAUTHORIZED, "Credenciales incorrectas");
+        }
+
+        Optional<Usuario> usuarioOpt = usuarioRepository.findByEmail(normalizedEmail);
         if (usuarioOpt.isEmpty()) {
-            return ResponseEntity.status(401).body("Credenciales incorrectas");
+            passwordEncoder.matches(safePassword, dummyPasswordHash);
+            loginAttempts.recordFailure(attemptKey);
+            return response(HttpStatus.UNAUTHORIZED, "Credenciales incorrectas");
         }
 
         Usuario usuario = usuarioOpt.get();
-
-        if (!passwordEncoder.matches(password, usuario.getPassword())) {
-            return ResponseEntity.status(401).body("Credenciales incorrectas");
+        if (!passwordEncoder.matches(safePassword, usuario.getPassword())) {
+            loginAttempts.recordFailure(attemptKey);
+            return response(HttpStatus.UNAUTHORIZED, "Credenciales incorrectas");
         }
 
         if (usuario.getRol() == null) {
-            return ResponseEntity.status(403).body("El usuario no tiene un rol asignado");
+            return response(HttpStatus.FORBIDDEN, "El usuario no tiene un rol asignado");
         }
         if (Boolean.FALSE.equals(usuario.getRol().getActivo())) {
-            return ResponseEntity.status(403).body("El rol del usuario está inactivo");
+            return response(HttpStatus.FORBIDDEN, "El rol del usuario está inactivo");
         }
 
+        loginAttempts.recordSuccess(attemptKey);
         String token = jwtUtil.generarToken(usuario.getEmail(), usuario.getRol().getNombre());
 
         Map<String, Object> respuesta = new HashMap<>();
@@ -67,6 +91,12 @@ public class AuthService {
             respuesta.put("empresaNombre", null);
         }
 
-        return ResponseEntity.ok(respuesta);
+        return response(HttpStatus.OK, respuesta);
+    }
+
+    private ResponseEntity<?> response(HttpStatus status, Object body) {
+        return ResponseEntity.status(status)
+                .cacheControl(CacheControl.noStore())
+                .body(body);
     }
 }
