@@ -31,27 +31,17 @@
         <h2>Iniciar sesión</h2>
         <p class="subtitle">Ingrese con la cuenta correspondiente a su rol.</p>
         <label for="email">Correo electrónico</label>
-        <div class="input-wrap"><i class="bi bi-envelope"></i><input id="email" type="email" autocomplete="username" placeholder="correo@empresa.com" required></div>
+        <div class="input-wrap"><i class="bi bi-envelope"></i><input id="email" type="email" autocomplete="username" maxlength="254" placeholder="correo@empresa.com" required></div>
         <label for="password">Contraseña</label>
-        <div class="input-wrap"><i class="bi bi-lock"></i><input id="password" type="password" autocomplete="current-password" placeholder="••••••••" required><button type="button" id="togglePassword" aria-label="Mostrar contraseña"><i class="bi bi-eye"></i></button></div>
+        <div class="input-wrap"><i class="bi bi-lock"></i><input id="password" type="password" autocomplete="current-password" maxlength="128" placeholder="••••••••" required><button type="button" id="togglePassword" aria-label="Mostrar contraseña"><i class="bi bi-eye"></i></button></div>
         <div id="mensajeError" class="login-error" role="alert"></div>
         <button id="loginButton" class="login-button" type="submit"><span>Ingresar</span><i class="bi bi-arrow-right"></i></button>
-        <details class="demo-access">
-          <summary>Cuentas de demostración</summary>
-          <div class="demo-grid">
-            <button type="button" data-demo="admin@globalisosecurity.com|Admin123*">Administrador</button>
-            <button type="button" data-demo="implementador@demo.com|Demo123*">Implementador</button>
-            <button type="button" data-demo="auditor@demo.com|Demo123*">Auditor</button>
-            <button type="button" data-demo="capacitador@demo.com|Demo123*">Capacitador</button>
-            <button type="button" data-demo="empresa@demo.com|Demo123*">Empresa</button>
-          </div>
-          <small>Estas cuentas se crean únicamente cuando <code>SEED_DEMO_DATA=true</code>.</small>
-        </details>
+        <p class="verify-help mt-3">Las cuentas de demostración, cuando existan, se administran mediante variables de entorno y no se publican en el código fuente.</p>
         <details class="demo-access certificate-check">
           <summary>Verificar una constancia</summary>
           <p class="verify-help">Consulte la validez de una constancia sin iniciar sesión. No se muestran documentos de identidad.</p>
           <div class="verify-row">
-            <input id="verifyCode" type="text" autocomplete="off" placeholder="Código GIS-...">
+            <input id="verifyCode" type="text" autocomplete="off" maxlength="64" placeholder="Código GIS-...">
             <button id="verifyButton" type="button">Verificar</button>
           </div>
           <div id="verifyResult" class="verify-result" aria-live="polite"></div>
