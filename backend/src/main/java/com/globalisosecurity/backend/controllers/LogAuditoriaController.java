@@ -1,25 +1,30 @@
-/*
- * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
- * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Class.java to edit this template
- */
 package com.globalisosecurity.backend.controllers;
 
 import com.globalisosecurity.backend.models.LogAuditoria;
 import com.globalisosecurity.backend.services.LogAuditoriaService;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
-
 import java.util.List;
 import java.util.Optional;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 
+/**
+ * Los logs son append-only desde la API pública: solo el backend puede escribirlos.
+ * El administrador puede consultarlos, pero no crearlos ni eliminarlos mediante HTTP.
+ */
 @RestController
 @RequestMapping("/api/logs-auditoria")
-@CrossOrigin(origins = "*")
+@PreAuthorize("hasRole('ADMINISTRADOR')")
 public class LogAuditoriaController {
 
-    @Autowired
-    private LogAuditoriaService logAuditoriaService;
+    private final LogAuditoriaService logAuditoriaService;
+
+    public LogAuditoriaController(LogAuditoriaService logAuditoriaService) {
+        this.logAuditoriaService = logAuditoriaService;
+    }
 
     @GetMapping
     public List<LogAuditoria> obtenerTodos() {
@@ -29,10 +34,8 @@ public class LogAuditoriaController {
     @GetMapping("/{id}")
     public ResponseEntity<?> obtenerPorId(@PathVariable Long id) {
         Optional<LogAuditoria> log = logAuditoriaService.obtenerPorId(id);
-        if (log.isPresent()) {
-            return ResponseEntity.ok(log.get());
-        }
-        return ResponseEntity.status(404).body("Log de auditoría no encontrado");
+        return log.<ResponseEntity<?>>map(ResponseEntity::ok)
+                .orElseGet(() -> ResponseEntity.status(404).body("Log de auditoría no encontrado"));
     }
 
     @GetMapping("/modulo/{modulo}")
@@ -48,17 +51,5 @@ public class LogAuditoriaController {
     @GetMapping("/accion/{accion}")
     public List<LogAuditoria> obtenerPorAccion(@PathVariable String accion) {
         return logAuditoriaService.obtenerPorAccion(accion);
-    }
-
-    @PostMapping
-    public ResponseEntity<?> crearLog(@RequestBody LogAuditoria log) {
-        LogAuditoria nuevo = logAuditoriaService.crearLog(log);
-        return ResponseEntity.ok(nuevo);
-    }
-
-    @DeleteMapping("/{id}")
-    public ResponseEntity<?> eliminarLog(@PathVariable Long id) {
-        logAuditoriaService.eliminarLog(id);
-        return ResponseEntity.ok("Log de auditoría eliminado correctamente");
     }
 }
