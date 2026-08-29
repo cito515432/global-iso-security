@@ -1,182 +1,75 @@
-# Global ISO Security — SoA, riesgos y modelo bioinspirado RPM
+# Global ISO Security
 
-Aplicación web para apoyar la construcción y seguimiento de la **Declaración de Aplicabilidad (SoA)** de un Sistema de Gestión de Seguridad de la Información, integrando gestión de riesgos, evidencias, auditoría, formación y un motor bioinspirado RPM explicable.
+Role-based web application for ISO/IEC 27001 Statement of Applicability (SoA), risks, evidence, audits, training and an explainable RPM decision model.
 
-Esta versión evoluciona el prototipo original hacia un flujo multiempresa funcional. La aplicación web es el medio tecnológico; el aporte investigativo está en la representación, detección, priorización, coordinación humana, evaluación y memoria del modelo RPM.
+[![Java](https://img.shields.io/badge/Java-20-ED8B00?logo=openjdk&logoColor=white)](https://www.java.com/) [![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.2-6DB33F?logo=springboot&logoColor=white)](https://spring.io/projects/spring-boot) [![MySQL](https://img.shields.io/badge/MySQL-8-4479A1?logo=mysql&logoColor=white)](https://www.mysql.com/) [![Docker](https://img.shields.io/badge/Docker-Compose-2496ED?logo=docker&logoColor=white)](https://www.docker.com/)
 
-## Funcionalidades principales
+> A multi-company security-management prototype connecting controls, risks, evidence and human review in one workflow.
 
-- Catálogo maestro de **93 controles de referencia** de ISO/IEC 27001:2022, con textos de trabajo parafraseados.
-- SoA independiente por servicio/organización: aplicabilidad, justificación, estado, porcentaje, responsable y fecha objetivo.
-- Perfil organizacional persistente: sector, tamaño, nube, teletrabajo, datos sensibles, pagos, proveedores, servicio 24x7, menores y OT/IoT.
-- Recomendación contextual de controles sin excluirlos automáticamente por sector.
-- Registro de riesgos y relación riesgo–control.
-- Carga, descarga, hash SHA-256, vigencia y validación de evidencias.
-- Hallazgos de auditoría, recurrencia y cierre.
-- Motor RPM determinista y explicable con antígenos, señales de peligro, prioridad, respuesta, validación y memoria.
-- Portal ejecutivo para la organización.
-- Formación completa: programas, módulos, participantes, preguntas, intentos, calificación y constancias verificables mediante código público sin exponer documentos de identidad.
-- Recomendaciones RPM que pueden convertirse en acciones formativas.
-- Reportes PDF y Excel con SoA, riesgos y resultados RPM.
-- Autenticación JWT, BCrypt, autorización por rol y aislamiento por empresa.
-- Persistencia real en MySQL; las evidencias se conservan en un volumen de Docker.
+## What it demonstrates
 
-## Arquitectura tecnológica
+- **93** ISO/IEC 27001:2022 reference controls and service-level SoA.
+- Risk registration, risk–control relationships and follow-up.
+- Evidence upload/download, SHA-256 hashing, validity and verification.
+- Audit findings, recurrence and closure.
+- Deterministic, explainable RPM with priority, response, validation and memory.
+- Training, assessments, verifiable certificates and executive reporting.
+- JWT authentication, BCrypt hashing, role authorization and company isolation.
 
-- **Backend:** Java 20, Spring Boot 3.2, Spring Security, JWT, JPA/Hibernate, MySQL.
-- **Frontend:** HTML5, CSS3 y JavaScript sin framework.
-- **Despliegue local:** Docker Compose con MySQL, backend y Nginx.
-- **Archivos:** volumen persistente `evidence_data`.
+## Architecture
 
-```text
-frontend por rol
-      │
-      ▼
-API REST Spring Boot
-      │
-      ├── SoA ── Riesgos ── Evidencias ── Hallazgos
-      ├── Formación ── Evaluaciones ── Constancias
-      └── Motor RPM ── Decisiones humanas ── Memoria
-      │
-      ▼
-MySQL + almacenamiento persistente de evidencias
-```
+~~~mermaid
+flowchart TB
+ A[Role-based HTML CSS JS frontend] --> B[Spring Boot REST API]
+ B --> C[SoA risks evidence audits training RPM]
+ C --> D[MySQL]
+ C --> E[Docker evidence volume]
+~~~
 
 ## Roles
 
-| Rol | Responsabilidad principal |
+| Role | Responsibility |
 |---|---|
-| `ADMINISTRADOR` | Empresas, usuarios, servicios, catálogo, roles y reportes. |
-| `IMPLEMENTADOR` | Contexto, SoA, riesgos, evidencias y ejecución del análisis RPM. |
-| `AUDITOR` | Validación de evidencias, hallazgos, firmas y decisiones RPM. |
-| `CAPACITADOR` | Programas, módulos, participantes, evaluaciones, constancias y respuestas formativas RPM. |
-| `USUARIO_EMPRESA` | Portal ejecutivo, progreso, riesgos, decisiones, formación y reportes de su organización. |
+| ADMINISTRADOR | Companies, users, services, catalog, roles and reports |
+| IMPLEMENTADOR | Context, SoA, risks, evidence and RPM analysis |
+| AUDITOR | Evidence validation, findings, signatures and RPM decisions |
+| CAPACITADOR | Training, assessments, certificates and formative actions |
+| USUARIO_EMPRESA | Executive portal, progress, risks, training and reports |
 
-La matriz completa se encuentra en [`docs/MATRIZ_ROLES_PERMISOS.md`](docs/MATRIZ_ROLES_PERMISOS.md).
+See the complete [permission matrix](docs/MATRIZ_ROLES_PERMISOS.md).
 
-## Ejecución rápida con Docker
+## Stack and evidence map
 
-### 1. Preparar variables
+Java 20 · Spring Boot 3.2 · Spring Security · JWT · JPA/Hibernate · MySQL · HTML5 · CSS3 · JavaScript · Docker Compose · Nginx.
 
-```bash
+| Area | Current scope |
+|---|---|
+| Compliance | 93-control catalog, SoA and applicability rationale |
+| Risk and audit | Risks, findings, recurrence and closure |
+| Evidence | Persistent files, SHA-256 and verification |
+| RPM | Detection, response, coordination, evaluation and memory |
+| Reporting | PDF and Excel outputs |
+
+## Run locally
+
+~~~bash
 cp .env.example .env
-```
-
-Cambie, como mínimo, `MYSQL_ROOT_PASSWORD`, `JWT_SECRET` y `SEED_ADMIN_PASSWORD`. Use `SEED_ENABLED=false` para impedir cualquier carga automática en un entorno controlado y `SEED_DEMO_DATA=false` fuera de demostraciones.
-
-### 2. Iniciar
-
-```bash
+# Set local passwords and a strong JWT_SECRET; never commit .env.
 docker compose up --build
-```
+~~~
 
-Abra:
+Open http://localhost:8080/pages/login.html. Demo seed data is controlled by environment variables; never publish passwords in documentation or commit .env.
 
-```text
-http://localhost:8080/pages/login.html
-```
+Useful documentation: [README_DOCKER.md](README_DOCKER.md), [README_RENDER.md](README_RENDER.md), [docs/ARQUITECTURA_RPM.md](docs/ARQUITECTURA_RPM.md), [docs/GUIA_PRUEBAS.md](docs/GUIA_PRUEBAS.md), [ENTREGA_RPM.md](ENTREGA_RPM.md), [IMPLEMENTACION_RPM_INTEGRAL.md](IMPLEMENTACION_RPM_INTEGRAL.md).
 
-La base inicial se importa desde `database/init/01_globalisosecurity_backup.sql` únicamente al crear por primera vez el volumen MySQL. Las tablas nuevas también pueden crearse mediante Hibernate (`ddl-auto=update`). Para una migración controlada sobre una base existente use:
+## Limitations
 
-```text
-database/migrations/2026_08_rpm_soa_formacion_integral.sql
-```
+This is an academic and demonstration system. Production use would require threat modeling, deployment hardening, managed secrets, security testing, backup/recovery and formal compliance review.
 
-### Reinicio limpio de base de datos
+## Related case study
 
-> Este comando elimina los datos locales del volumen MySQL.
+[Read the technical case study](https://andres-obando-portfolio-static.onrender.com/case-studies/global-iso-security/)
 
-```bash
-docker compose down -v
-docker compose up --build
-```
+## Author
 
-## Cuentas académicas de demostración
-
-Se crean de forma idempotente cuando `SEED_DEMO_DATA=true`:
-
-| Rol | Usuario | Contraseña |
-|---|---|---|
-| Administrador | `admin@globalisosecurity.com` | valor de `SEED_ADMIN_PASSWORD` |
-| Implementador | `implementador@demo.com` | `Demo123*` |
-| Auditor | `auditor@demo.com` | `Demo123*` |
-| Capacitador | `capacitador@demo.com` | `Demo123*` |
-| Empresa | `empresa@demo.com` | `Demo123*` |
-
-Desactive las semillas y cambie todas las credenciales antes de un despliegue real.
-
-## Motor bioinspirado RPM
-
-La adaptación toma como referencia principal el marco inmunoinspirado de Darmoul, Pierreval y Hajri-Gabouj para gestionar disrupciones. El proyecto traslada sus funciones de **detectar, reaccionar, coordinar y evaluar** al análisis de condiciones relacionadas con la SoA.
-
-```text
-Controles, riesgos y evidencias ──► células y tejido artificial
-Desviaciones observadas          ──► antígenos
-Situación de riesgo              ──► patógeno
-Consecuencias/contexto           ──► señales de peligro
-Alternativas de respuesta        ──► células B / anticuerpos
-Validación por especialistas     ──► células Th
-Casos y resultados históricos   ──► memoria inmunológica
-```
-
-El motor actual es **determinista, trazable y explicable**. No se incorporó de forma arbitraria un algoritmo de Machine Learning. La tabla `rpm_memoria` conserva las variables, decisiones y resultados que permitirán construir posteriormente un conjunto de datos y aplicar CRISP-DM con una función de ML justificada.
-
-Véase [`docs/ARQUITECTURA_RPM.md`](docs/ARQUITECTURA_RPM.md).
-
-## Catálogo de controles y derechos de uso
-
-El archivo `backend/src/main/resources/data/iso27001_controls.csv` contiene códigos, títulos cortos, descripciones y preguntas **parafraseadas para fines académicos y operativos**. No es una copia ni reemplaza el texto oficial de ISO/IEC 27001 o ISO/IEC 27002. Para una implementación comercial o certificable debe cargarse contenido autorizado/licenciado y ser revisado por un profesional competente.
-
-## Estructura relevante
-
-```text
-global-iso-security/
-├── backend/
-│   ├── src/main/java/.../controllers
-│   ├── src/main/java/.../models
-│   ├── src/main/java/.../services
-│   └── src/main/resources/data/iso27001_controls.csv
-├── frontend/
-│   ├── pages/admin.html
-│   ├── pages/implementador.html
-│   ├── pages/auditor.html
-│   ├── pages/capacitador.html
-│   ├── pages/empresa.html
-│   └── js/
-├── database/
-│   ├── init/
-│   └── migrations/2026_08_rpm_soa_formacion_integral.sql
-├── docs/
-└── docker-compose.yml
-```
-
-## Documentación
-
-- [`IMPLEMENTACION_RPM_INTEGRAL.md`](IMPLEMENTACION_RPM_INTEGRAL.md): inventario funcional y decisiones de implementación.
-- [`docs/ARQUITECTURA_RPM.md`](docs/ARQUITECTURA_RPM.md): capas, entradas, salidas y trazabilidad del modelo.
-- [`docs/GUIA_PRUEBAS.md`](docs/GUIA_PRUEBAS.md): pruebas funcionales y demostración integral por roles.
-- [`docs/MATRIZ_ROLES_PERMISOS.md`](docs/MATRIZ_ROLES_PERMISOS.md): permisos y responsabilidades.
-- [`docs/CAMBIOS_VERSION_RPM.md`](docs/CAMBIOS_VERSION_RPM.md): cambios frente al prototipo original.
-
-## Estado de validación de esta entrega
-
-- Compilación estática de las **140 fuentes Java**: realizada.
-- Arranque del contexto Spring y análisis de consultas derivadas de repositorios: realizado con una base embebida solo para validación estructural.
-- Validación de sintaxis de todos los archivos JavaScript: realizada.
-- Verificación cruzada del catálogo CSV y la migración: **93 códigos únicos y coincidentes**.
-- Verificación de IDs y controladores de eventos entre las páginas HTML y sus archivos JavaScript: realizada.
-- Pruebas de integración completas contra MySQL/Docker: deben ejecutarse en un equipo con Docker o MySQL disponible siguiendo `docs/GUIA_PRUEBAS.md`.
-
-La validación estática puede repetirse con:
-
-```bash
-./scripts/validate-project.sh
-```
-
-## Equipo académico
-
-- Andrés Felipe Obando Barriga
-- María Camila Sarmiento
-- Juan Esteban Pardo Bedoya
-
-Universidad de San Buenaventura, sede Bogotá — Ingeniería de Sistemas.
+**Andrés Obando** · [GitHub](https://github.com/cito515432) · [LinkedIn](https://www.linkedin.com/in/andres-obando-08095b203) · [Portfolio](https://andres-obando-portfolio-static.onrender.com/)
