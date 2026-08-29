@@ -78,6 +78,12 @@ BACKEND_URL=https://globaliso-backend-cito515432.onrender.com
 
 El frontend publica cabeceras de seguridad (CSP, anti-clickjacking, no-sniff, HSTS y políticas de permisos) y el navegador consume el backend a través del proxy `/api`.
 
+## Almacenamiento de evidencias en el plan Free
+
+El backend usa `EVIDENCE_STORAGE_PATH` y valida las rutas fuera del repositorio, pero el servicio Render actual no tiene Persistent Disk porque los discos no están disponibles en el plan Free. Por tanto, los archivos subidos a `./storage/evidencias` son efímeros y pueden perderse después de un redeploy o reinicio.
+
+La base de datos conserva la referencia y el hash, pero no reemplaza el archivo físico. Para preservar evidencias de forma permanente se necesitaría almacenamiento externo compatible o un plan con disco persistente; esto queda documentado como limitación operativa y no se habilita dentro del despliegue gratuito.
+
 ## Orden recomendado de despliegue
 
 1. Hacer backup de TiDB.
