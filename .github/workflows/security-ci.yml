@@ -12,6 +12,16 @@ permissions:
 jobs:
   backend-build:
     runs-on: ubuntu-latest
+    env:
+      SPRING_DATASOURCE_URL: jdbc:h2:mem:globaliso_ci;MODE=MySQL;DB_CLOSE_DELAY=-1
+      SPRING_DATASOURCE_USERNAME: sa
+      SPRING_DATASOURCE_PASSWORD: ""
+      SPRING_JPA_HIBERNATE_DDL_AUTO: none
+      SPRING_JPA_SHOW_SQL: "false"
+      JWT_SECRET: ci-only-random-secret-not-for-production-2026
+      SEED_ENABLED: "false"
+      SEED_DEMO_DATA: "false"
+      RPM_ML_ENABLED: "false"
     defaults:
       run:
         working-directory: backend
