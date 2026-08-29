@@ -1,7 +1,20 @@
 const API_BASE_URL = "/api";
+const SESSION_KEYS = ["token", "nombre", "email", "rol", "rolId", "permisosRol", "empresaId", "empresaNombre"];
+
+function migrateLegacySession() {
+  if (!sessionStorage.getItem("token") && localStorage.getItem("token")) {
+    SESSION_KEYS.forEach(key => {
+      const value = localStorage.getItem(key);
+      if (value != null) sessionStorage.setItem(key, value);
+      localStorage.removeItem(key);
+    });
+  }
+}
+
+migrateLegacySession();
 
 document.addEventListener("DOMContentLoaded", () => {
-  if (localStorage.getItem("token")) return routeByRole(localStorage.getItem("rol"));
+  if (sessionStorage.getItem("token")) return routeByRole(sessionStorage.getItem("rol"));
   const form = document.getElementById("loginForm");
   const errorBox = document.getElementById("mensajeError");
   const button = document.getElementById("loginButton");
@@ -11,12 +24,6 @@ document.addEventListener("DOMContentLoaded", () => {
     password.type = password.type === "password" ? "text" : "password";
     e.currentTarget.innerHTML = `<i class="bi bi-${password.type === "password" ? "eye" : "eye-slash"}"></i>`;
   });
-
-  document.querySelectorAll("[data-demo]").forEach(item => item.addEventListener("click", () => {
-    const [email, pass] = item.dataset.demo.split("|");
-    document.getElementById("email").value = email;
-    password.value = pass;
-  }));
 
   document.getElementById("verifyButton").addEventListener("click", verifyCertificate);
   document.getElementById("verifyCode").addEventListener("keydown", event => {
@@ -33,20 +40,24 @@ document.addEventListener("DOMContentLoaded", () => {
     button.innerHTML = '<span class="spinner-border spinner-border-sm"></span><span>Validando...</span>';
     try {
       const response = await fetch(`${API_BASE_URL}/auth/login`, {
-        method: "POST", headers: {"Content-Type":"application/json"},
+        method: "POST",
+        headers: {"Content-Type":"application/json", "Accept":"application/json"},
+        cache: "no-store",
         body: JSON.stringify({email, password:pass})
       });
       const raw = await response.text();
       let data; try { data = JSON.parse(raw); } catch { data = {message:raw}; }
       if (!response.ok) throw new Error(data.message || data.error || raw || "Credenciales inválidas");
-      localStorage.setItem("token", data.token);
-      localStorage.setItem("nombre", data.nombre || "");
-      localStorage.setItem("email", data.email || email);
-      localStorage.setItem("rol", data.rol || "");
-      localStorage.setItem("rolId", String(data.rolId || ""));
-      localStorage.setItem("permisosRol", data.permisos || "{}");
-      if (data.empresaId != null) localStorage.setItem("empresaId", String(data.empresaId));
-      if (data.empresaNombre) localStorage.setItem("empresaNombre", data.empresaNombre);
+
+      SESSION_KEYS.forEach(key => localStorage.removeItem(key));
+      sessionStorage.setItem("token", data.token);
+      sessionStorage.setItem("nombre", data.nombre || "");
+      sessionStorage.setItem("email", data.email || email);
+      sessionStorage.setItem("rol", data.rol || "");
+      sessionStorage.setItem("rolId", String(data.rolId || ""));
+      sessionStorage.setItem("permisosRol", data.permisos || "{}");
+      if (data.empresaId != null) sessionStorage.setItem("empresaId", String(data.empresaId));
+      if (data.empresaNombre) sessionStorage.setItem("empresaNombre", data.empresaNombre);
       routeByRole(data.rol);
     } catch (error) {
       showError(error.message || "No fue posible conectarse con el servidor.");
@@ -58,7 +69,6 @@ document.addEventListener("DOMContentLoaded", () => {
   function showError(message) { errorBox.textContent = message; errorBox.style.display = "block"; }
   function hideError() { errorBox.style.display = "none"; }
 });
-
 
 async function verifyCertificate() {
   const input = document.getElementById("verifyCode");
@@ -74,7 +84,7 @@ async function verifyCertificate() {
   result.className = "verify-result";
   result.textContent = "Consultando...";
   try {
-    const response = await fetch(`${API_BASE_URL}/constancias-capacitacion/verificar/${encodeURIComponent(code)}`);
+    const response = await fetch(`${API_BASE_URL}/constancias-capacitacion/verificar/${encodeURIComponent(code)}`, {cache:"no-store"});
     const raw = await response.text();
     let data; try { data = JSON.parse(raw); } catch { data = {message:raw}; }
     if (!response.ok) throw new Error(data.message || "No se encontró la constancia");
