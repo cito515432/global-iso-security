@@ -9,11 +9,10 @@ import com.globalisosecurity.backend.repositories.EvidenciaRepository;
 import com.globalisosecurity.backend.repositories.SoaControlRepository;
 import com.globalisosecurity.backend.utils.SecurityUtils;
 import java.io.BufferedInputStream;
-import java.io.DigestInputStream;
-import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.security.DigestInputStream;
 import java.security.MessageDigest;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -215,7 +214,7 @@ public class EvidenciaService {
 
     private void validateSignature(String extension, byte[] header) {
         boolean valid = switch (extension) {
-            case "pdf" -> startsWith(header, new byte[]{0x25, 0x50, 0x44, 0x46, 0x2D}); // %PDF-
+            case "pdf" -> startsWith(header, new byte[]{0x25, 0x50, 0x44, 0x46, 0x2D});
             case "png" -> startsWith(header, new byte[]{(byte)0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A});
             case "jpg", "jpeg" -> startsWith(header, new byte[]{(byte)0xFF, (byte)0xD8, (byte)0xFF});
             case "docx", "xlsx" -> startsWith(header, new byte[]{0x50, 0x4B});
