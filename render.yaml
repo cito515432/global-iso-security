@@ -45,7 +45,7 @@ services:
       - key: SEED_ENABLED
         value: true
       - key: SEED_DEMO_DATA
-        value: false
+        value: "false"
       - key: LOGIN_MAX_ATTEMPTS
         value: 5
       - key: LOGIN_WINDOW_MINUTES
