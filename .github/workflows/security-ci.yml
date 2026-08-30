@@ -60,6 +60,7 @@ jobs:
       SEED_ENABLED: "false"
       SEED_DEMO_DATA: "false"
       RPM_ML_ENABLED: "false"
+      STARTUP_DIAGNOSTICS_ENABLED: "true"
       SMOKE_PORT: "18081"
     defaults:
       run:
