@@ -4,7 +4,7 @@ on:
   pull_request:
     branches: [main, rpm-integral]
   push:
-    branches: [security-hardening-rpm-2026]
+    branches: [security-hardening-rpm-2026, fix/remove-seed-from-production-startup]
 
 permissions:
   contents: read
@@ -34,6 +34,73 @@ jobs:
           cache: maven
       - name: Compile and test backend
         run: mvn -B test
+
+  backend-packaged-smoke:
+    runs-on: ubuntu-latest
+    env:
+      SPRING_DATASOURCE_URL: jdbc:h2:mem:globaliso_smoke;MODE=MySQL;DB_CLOSE_DELAY=-1
+      SPRING_DATASOURCE_USERNAME: sa
+      SPRING_DATASOURCE_PASSWORD: ""
+      SPRING_JPA_HIBERNATE_DDL_AUTO: none
+      SPRING_JPA_SHOW_SQL: "false"
+      JWT_SECRET: ci-only-packaged-smoke-secret-2026-at-least-32-chars
+      SEED_ENABLED: "false"
+      SEED_DEMO_DATA: "false"
+      RPM_ML_ENABLED: "false"
+      SMOKE_PORT: "18081"
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "20"
+          cache: maven
+      - name: Package backend
+        run: mvn -B package -DskipTests
+      - name: Start packaged JAR and check liveness/readiness
+        shell: bash
+        run: |
+          set -uo pipefail
+          LOG_FILE="$RUNNER_TEMP/backend-smoke.log"
+          JAR_FILE=$(find target -maxdepth 1 -type f -name '*.jar' ! -name '*-plain.jar' -print -quit)
+          test -n "$JAR_FILE"
+          START_NS=$(date +%s%N)
+          PORT="$SMOKE_PORT" java -jar "$JAR_FILE" >"$LOG_FILE" 2>&1 &
+          JAVA_PID=$!
+          echo "packaged jar pid=$JAVA_PID"
+          cleanup() {
+            kill "$JAVA_PID" 2>/dev/null || true
+            wait "$JAVA_PID" 2>/dev/null || true
+          }
+          trap cleanup EXIT
+          HEALTH_STATUS=""
+          for attempt in $(seq 1 90); do
+            if ! kill -0 "$JAVA_PID" 2>/dev/null; then
+              echo "JVM exited before readiness"
+              cat "$LOG_FILE"
+              exit 1
+            fi
+            HEALTH_STATUS=$(curl -sS -o /dev/null -w '%{http_code}' "http://127.0.0.1:${SMOKE_PORT}/health" || true)
+            if [ "$HEALTH_STATUS" = "200" ]; then
+              break
+            fi
+            sleep 1
+          done
+          END_NS=$(date +%s%N)
+          ELAPSED_MS=$(( (END_NS - START_NS) / 1000000 ))
+          echo "health status=$HEALTH_STATUS elapsed_ms=$ELAPSED_MS"
+          if [ "$HEALTH_STATUS" != "200" ]; then
+            kill -3 "$JAVA_PID" 2>/dev/null || true
+            sleep 2
+            cat "$LOG_FILE"
+            exit 1
+          fi
+          READY_STATUS=$(curl -sS -o /dev/null -w '%{http_code}' "http://127.0.0.1:${SMOKE_PORT}/readiness")
+          test "$READY_STATUS" = "200"
+          echo "readiness status=$READY_STATUS"
 
   ml-validation:
     runs-on: ubuntu-latest

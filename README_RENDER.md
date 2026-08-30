@@ -56,7 +56,9 @@ RPM_ML_API_KEY=<clave aleatoria de 32+ caracteres compartida con ML_API_KEY>
 RPM_ML_TIMEOUT_SECONDS=120
 ```
 
-`SEED_ENABLED=true` conserva la carga estructural idempotente de roles, sectores y catálogo. Una cuenta administrativa solo se crea si se proporcionan explícitamente `SEED_ADMIN_EMAIL` y `SEED_ADMIN_PASSWORD`. No existe contraseña administrativa por defecto.
+En producción, `SEED_ENABLED=false` evita ejecutar la reconciliación masiva de servicios y SoA durante cada arranque. La base productiva auditada ya contiene roles, sectores, catálogo, perfiles y cobertura SoA completa; además, la creación de un servicio inicializa su SoA mediante el flujo normal de negocio. `SEED_ENABLED=true` queda reservado para desarrollo, CI, bootstrap explícito o recuperación controlada.
+
+`SEED_DEMO_DATA=false` debe mantenerse siempre en producción. Una cuenta administrativa solo se crea si se proporcionan explícitamente `SEED_ADMIN_EMAIL` y `SEED_ADMIN_PASSWORD`. No existe contraseña administrativa por defecto.
 
 ## Variables del servicio ML
 
