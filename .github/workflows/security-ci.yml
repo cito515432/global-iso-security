@@ -38,11 +38,26 @@ jobs:
   backend-packaged-smoke:
     needs: backend-build
     runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_DATABASE: globalisosecurity
+          MYSQL_USER: ci_user
+          MYSQL_PASSWORD: ci_password_only
+          MYSQL_ROOT_PASSWORD: ci_root_password_only
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -u root -pci_root_password_only"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=12
     env:
       PORT: "18080"
-      SPRING_DATASOURCE_URL: jdbc:h2:mem:globaliso_jar_ci;MODE=MySQL;DB_CLOSE_DELAY=-1
-      SPRING_DATASOURCE_USERNAME: sa
-      SPRING_DATASOURCE_PASSWORD: ""
+      SPRING_DATASOURCE_URL: jdbc:mysql://127.0.0.1:3306/globalisosecurity?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+      SPRING_DATASOURCE_USERNAME: ci_user
+      SPRING_DATASOURCE_PASSWORD: ci_password_only
       SPRING_JPA_HIBERNATE_DDL_AUTO: none
       SPRING_JPA_SHOW_SQL: "false"
       JWT_SECRET: ci-only-packaged-jar-secret-with-at-least-32-characters
@@ -63,6 +78,19 @@ jobs:
           distribution: temurin
           java-version: "20"
           cache: maven
+      - name: Wait for MySQL
+        working-directory: .
+        run: |
+          for attempt in $(seq 1 30); do
+            if mysqladmin ping -h 127.0.0.1 -P 3306 -u root -pci_root_password_only --silent; then exit 0; fi
+            sleep 2
+          done
+          exit 1
+      - name: Prepare CI schema without production access
+        working-directory: .
+        run: |
+          mysql -h 127.0.0.1 -P 3306 -u root -pci_root_password_only globalisosecurity \
+            < database/init/01_globalisosecurity_backup.sql
       - name: Package backend
         run: mvn -B package -DskipTests
       - name: Start packaged JAR and probe health
