@@ -1,7 +1,7 @@
 # Alternativa rápida: usa un .jar ya compilado dentro de backend/target/.
 # Úsalo solo si no quieres que Docker compile con Maven.
 
-FROM eclipse-temurin:21-jre
+FROM eclipse-temurin:25-jre
 WORKDIR /app
 
 ENV PORT=8081
