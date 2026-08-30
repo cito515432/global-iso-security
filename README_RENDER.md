@@ -47,7 +47,7 @@ JWT_SECRET=<secreto aleatorio de 32+ caracteres>
 JWT_EXPIRATION=3600000
 SPRING_JPA_HIBERNATE_DDL_AUTO=none
 SPRING_JPA_SHOW_SQL=false
-SEED_ENABLED=true
+SEED_ENABLED=false
 SEED_DEMO_DATA=false
 CORS_ALLOWED_ORIGINS=https://globaliso-frontend-cito515432.onrender.com
 RPM_ML_ENABLED=true
@@ -56,7 +56,9 @@ RPM_ML_API_KEY=<clave aleatoria de 32+ caracteres compartida con ML_API_KEY>
 RPM_ML_TIMEOUT_SECONDS=120
 ```
 
-`SEED_ENABLED=true` conserva la carga estructural idempotente de roles, sectores y catálogo. Una cuenta administrativa solo se crea si se proporcionan explícitamente `SEED_ADMIN_EMAIL` y `SEED_ADMIN_PASSWORD`. No existe contraseña administrativa por defecto.
+En producción, `SEED_ENABLED=false` evita ejecutar la reconciliación masiva de servicios y SoA durante cada arranque. La base productiva auditada ya contiene roles, sectores, catálogo, perfiles y cobertura SoA completa; además, la creación de un servicio inicializa su SoA mediante el flujo normal de negocio. `SEED_ENABLED=true` queda reservado para desarrollo, CI, bootstrap explícito o recuperación controlada.
+
+`SEED_DEMO_DATA=false` debe mantenerse siempre en producción. Para desarrollo, CI o bootstrap explícito, `SEED_ENABLED=true` debe activarse únicamente en el entorno correspondiente y de forma intencional. Una cuenta administrativa solo se crea si se proporcionan explícitamente `SEED_ADMIN_EMAIL` y `SEED_ADMIN_PASSWORD`. No existe contraseña administrativa por defecto.
 
 ## Variables del servicio ML
 
