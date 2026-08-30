@@ -33,9 +33,12 @@ public class AccesoEmpresaService {
         return rolActual().contains("ADMIN");
     }
 
+    /**
+     * Compatibilidad con servicios existentes. Tras el hardening, solo el
+     * administrador puede actuar sin una empresa asignada.
+     */
     public boolean esRolInternoGlobal() {
-        String rol = rolActual();
-        return rol.contains("ADMIN") || rol.contains("IMPLEMENTADOR") || rol.contains("AUDITOR") || rol.contains("CAPACITADOR");
+        return esAdministrador();
     }
 
     public void validarEmpresa(Long empresaId) {
@@ -43,7 +46,6 @@ public class AccesoEmpresaService {
         Usuario u = usuarioActual();
         if (esAdministrador()) return;
         if (u.getEmpresa() == null) {
-            if (esRolInternoGlobal()) return;
             throw new BadRequestException("El usuario no tiene empresa asignada");
         }
         if (!u.getEmpresa().getId().equals(empresaId)) {

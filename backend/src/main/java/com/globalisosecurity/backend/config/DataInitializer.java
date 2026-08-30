@@ -18,27 +18,31 @@ import com.globalisosecurity.backend.repositories.SoaControlRepository;
 import com.globalisosecurity.backend.repositories.UsuarioRepository;
 import com.globalisosecurity.backend.services.CatalogoControlesService;
 import com.globalisosecurity.backend.services.ControlRelevanciaService;
+import com.globalisosecurity.backend.services.PasswordPolicy;
 import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.CommandLineRunner;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * Inicializa únicamente datos estructurales e idempotentes. La carga puede
- * ejecutarse varias veces sin duplicar controles, roles, perfiles o usuarios.
+ * Inicializa datos estructurales e idempotentes cuando SEED_ENABLED=true.
+ * Las credenciales administrativas y demo son opcionales y nunca tienen valores
+ * secretos por defecto en el código fuente.
  */
 @Component
-@ConditionalOnProperty(prefix = "app.seed", name = "enabled", havingValue = "true", matchIfMissing = true)
+@ConditionalOnProperty(prefix = "app.seed", name = "enabled", havingValue = "true", matchIfMissing = false)
 public class DataInitializer implements CommandLineRunner {
 
+    private static final Logger log = LoggerFactory.getLogger(DataInitializer.class);
     private static final String DEMO_COMPANY = "Organización Demo RPM";
-    private static final String DEMO_PASSWORD = "Demo123*";
 
     private final RolRepository roles;
     private final SectorRepository sectores;
@@ -51,15 +55,19 @@ public class DataInitializer implements CommandLineRunner {
     private final CatalogoControlesService catalogo;
     private final ControlRelevanciaService relevancia;
     private final PasswordEncoder encoder;
+    private final PasswordPolicy passwordPolicy;
 
-    @Value("${app.seed.admin-email:admin@globalisosecurity.com}")
+    @Value("${app.seed.admin-email:}")
     private String adminEmail;
 
-    @Value("${app.seed.admin-password:Admin123*}")
+    @Value("${app.seed.admin-password:}")
     private String adminPassword;
 
     @Value("${app.seed.demo-data:false}")
     private boolean demoData;
+
+    @Value("${app.seed.demo-password:}")
+    private String demoPassword;
 
     public DataInitializer(
             RolRepository roles,
@@ -72,7 +80,8 @@ public class DataInitializer implements CommandLineRunner {
             SoaControlRepository soa,
             CatalogoControlesService catalogo,
             ControlRelevanciaService relevancia,
-            PasswordEncoder encoder) {
+            PasswordEncoder encoder,
+            PasswordPolicy passwordPolicy) {
         this.roles = roles;
         this.sectores = sectores;
         this.usuarios = usuarios;
@@ -84,6 +93,7 @@ public class DataInitializer implements CommandLineRunner {
         this.catalogo = catalogo;
         this.relevancia = relevancia;
         this.encoder = encoder;
+        this.passwordPolicy = passwordPolicy;
     }
 
     @Override
@@ -95,6 +105,10 @@ public class DataInitializer implements CommandLineRunner {
         ensureAdministrator(seededRoles.get("ADMINISTRADOR"));
 
         if (demoData) {
+            if (demoPassword == null || demoPassword.isBlank()) {
+                throw new IllegalStateException("SEED_DEMO_PASSWORD es obligatorio cuando SEED_DEMO_DATA=true");
+            }
+            passwordPolicy.validate(demoPassword);
             seedDemo(seededRoles, seededSectors);
         }
 
@@ -107,8 +121,6 @@ public class DataInitializer implements CommandLineRunner {
     private Map<String, Rol> seedRoles() {
         Map<String, Rol> result = new HashMap<>();
 
-        // Conserva los usuarios asociados al rol legado y convierte el rol en el
-        // perfil de organización que sí tiene una experiencia propia en frontend.
         if (roles.findByNombreIgnoreCase("USUARIO_EMPRESA").isEmpty()) {
             roles.findByNombreIgnoreCase("USUARIO").ifPresent(legacy -> {
                 legacy.setNombre("USUARIO_EMPRESA");
@@ -163,10 +175,15 @@ public class DataInitializer implements CommandLineRunner {
     }
 
     private void ensureAdministrator(Rol adminRole) {
+        if (adminEmail == null || adminEmail.isBlank() || adminPassword == null || adminPassword.isBlank()) {
+            log.info("Semilla administrativa omitida: SEED_ADMIN_EMAIL/SEED_ADMIN_PASSWORD no fueron configurados");
+            return;
+        }
         String normalizedEmail = adminEmail.trim().toLowerCase();
         if (usuarios.findByEmail(normalizedEmail).isPresent()) {
             return;
         }
+        passwordPolicy.validate(adminPassword);
         Usuario admin = new Usuario();
         admin.setNombre("Administrador Global ISO");
         admin.setEmail(normalizedEmail);
@@ -227,7 +244,7 @@ public class DataInitializer implements CommandLineRunner {
         Usuario user = new Usuario();
         user.setEmail(email);
         user.setNombre(name);
-        user.setPassword(encoder.encode(DEMO_PASSWORD));
+        user.setPassword(encoder.encode(demoPassword));
         user.setRol(role);
         user.setEmpresa(company);
         usuarios.save(user);

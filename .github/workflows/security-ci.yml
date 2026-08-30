@@ -1,0 +1,188 @@
+name: Security CI
+
+on:
+  pull_request:
+    branches: [main, rpm-integral]
+  push:
+    branches: [security-hardening-rpm-2026, fix/remove-seed-from-production-startup]
+
+permissions:
+  contents: read
+
+jobs:
+  backend-build:
+    runs-on: ubuntu-latest
+    env:
+      SPRING_DATASOURCE_URL: jdbc:h2:mem:globaliso_ci;MODE=MySQL;DB_CLOSE_DELAY=-1
+      SPRING_DATASOURCE_USERNAME: sa
+      SPRING_DATASOURCE_PASSWORD: ""
+      SPRING_JPA_HIBERNATE_DDL_AUTO: none
+      SPRING_JPA_SHOW_SQL: "false"
+      JWT_SECRET: ci-only-random-secret-not-for-production-2026
+      SEED_ENABLED: "false"
+      SEED_DEMO_DATA: "false"
+      RPM_ML_ENABLED: "false"
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "20"
+          cache: maven
+      - name: Compile and test backend
+        run: mvn -B test
+
+  backend-packaged-smoke:
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: ci-root-password
+          MYSQL_DATABASE: globalisosecurity
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -uroot -pci-root-password"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=12
+    env:
+      SPRING_DATASOURCE_URL: jdbc:mysql://127.0.0.1:3306/globalisosecurity?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: ci-root-password
+      SPRING_JPA_HIBERNATE_DDL_AUTO: none
+      SPRING_JPA_SHOW_SQL: "false"
+      JWT_SECRET: ci-only-packaged-smoke-secret-2026-at-least-32-chars
+      SEED_ENABLED: "false"
+      SEED_DEMO_DATA: "false"
+      RPM_ML_ENABLED: "false"
+      SMOKE_PORT: "18081"
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "20"
+          cache: maven
+      - name: Package backend
+        run: mvn -B package -DskipTests
+      - name: Start packaged JAR and check liveness/readiness
+        shell: bash
+        run: |
+          set -uo pipefail
+          LOG_FILE="$RUNNER_TEMP/backend-smoke.log"
+          JAR_FILE=$(find target -maxdepth 1 -type f -name '*.jar' ! -name '*-plain.jar' -print -quit)
+          test -n "$JAR_FILE"
+          START_NS=$(date +%s%N)
+          PORT="$SMOKE_PORT" java -jar "$JAR_FILE" >"$LOG_FILE" 2>&1 &
+          JAVA_PID=$!
+          echo "packaged jar pid=$JAVA_PID"
+          cleanup() {
+            kill "$JAVA_PID" 2>/dev/null || true
+            wait "$JAVA_PID" 2>/dev/null || true
+          }
+          trap cleanup EXIT
+          HEALTH_STATUS=""
+          for attempt in $(seq 1 90); do
+            if ! kill -0 "$JAVA_PID" 2>/dev/null; then
+              echo "JVM exited before readiness"
+              cat "$LOG_FILE"
+              exit 1
+            fi
+            HEALTH_STATUS=$(curl -sS -o /dev/null -w '%{http_code}' "http://127.0.0.1:${SMOKE_PORT}/health" || true)
+            if [ "$HEALTH_STATUS" = "200" ]; then
+              break
+            fi
+            sleep 1
+          done
+          END_NS=$(date +%s%N)
+          ELAPSED_MS=$(( (END_NS - START_NS) / 1000000 ))
+          echo "health status=$HEALTH_STATUS elapsed_ms=$ELAPSED_MS"
+          if [ "$HEALTH_STATUS" != "200" ]; then
+            kill -3 "$JAVA_PID" 2>/dev/null || true
+            sleep 2
+            cat "$LOG_FILE"
+            exit 1
+          fi
+          READY_STATUS=$(curl -sS -o /dev/null -w '%{http_code}' "http://127.0.0.1:${SMOKE_PORT}/readiness")
+          test "$READY_STATUS" = "200"
+          echo "readiness status=$READY_STATUS"
+
+  backend-mysql-integration:
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: ci-root-password
+          MYSQL_DATABASE: globalisosecurity
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -uroot -pci-root-password"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=12
+    env:
+      SPRING_DATASOURCE_URL: jdbc:mysql://127.0.0.1:3306/globalisosecurity?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: ci-root-password
+      SPRING_JPA_HIBERNATE_DDL_AUTO: none
+      SPRING_JPA_SHOW_SQL: "false"
+      JWT_SECRET: ci-only-mysql-integration-secret-2026-at-least-32-chars
+      SEED_ENABLED: "false"
+      SEED_DEMO_DATA: "false"
+      RPM_ML_ENABLED: "false"
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "20"
+          cache: maven
+      - name: Verify service creation and SoA repair
+        run: mvn -B -Dtest=ServicioServiceMySqlIT test
+
+  ml-validation:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: ml-service/requirements.txt
+      - name: Install ML dependencies
+        run: python -m pip install -r ml-service/requirements.txt
+      - name: Compile Python sources
+        run: python -m compileall -q ml-service/app
+      - name: Audit Python dependencies
+        continue-on-error: true
+        run: |
+          python -m pip install pip-audit
+          python -m pip_audit -r ml-service/requirements.txt
+
+  dependency-review:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    permissions:
+      contents: read
+      pull-requests: read
+    steps:
+      - uses: actions/checkout@v4
+      - name: Review dependency changes
+        uses: actions/dependency-review-action@v4
+        continue-on-error: true
+        with:
+          fail-on-severity: high

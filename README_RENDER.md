@@ -1,93 +1,104 @@
-# Global ISO Security — despliegue en Render
+# Global ISO Security — despliegue actual en Render + TiDB Cloud
 
-Este paquete está preparado para subirse a GitHub y desplegarse en Render usando Docker.
-
-## Qué incluye
-
-- `backend/Dockerfile.render`: backend Spring Boot listo para Render.
-- `frontend/Dockerfile.render`: frontend Nginx listo para Render.
-- `render/mysql/Dockerfile`: MySQL 8 como Private Service de Render.
-- `render.yaml`: Blueprint para crear los tres servicios en Render.
-- `database/init/01_globalisosecurity_backup.sql`: respaldo inicial de la base de datos.
-- `docker-compose.yml`: alternativa para probar localmente.
-
-## Antes de subir a GitHub
-
-1. Descomprime el proyecto.
-2. Verifica que NO exista un archivo `.env` con contraseñas reales.
-3. Si el SQL tiene datos sensibles, usa un repositorio privado.
-4. Sube la carpeta completa a GitHub.
-
-Comandos sugeridos:
-
-```bash
-git init
-git branch -M main
-git add .
-git commit -m "chore: prepara despliegue docker en render"
-git remote add origin https://github.com/TU_USUARIO/global-iso-security.git
-git push -u origin main
-```
-
-## Despliegue en Render con Blueprint
-
-1. En Render, entra a **New > Blueprint**.
-2. Conecta el repositorio de GitHub.
-3. Render detectará el archivo `render.yaml`.
-4. Confirma la creación de los servicios:
-   - `globaliso-mysql` como Private Service.
-   - `globaliso-backend` como Web Service.
-   - `globaliso-frontend` como Web Service.
-5. Espera a que los tres servicios terminen el deploy.
-6. Abre la URL pública del frontend:
+La arquitectura desplegada para el proyecto académico es:
 
 ```text
-https://globaliso-frontend.onrender.com
+Navegador
+   |
+   v
+Frontend Nginx — Render
+   |
+   v
+Backend Spring Boot — Render
+   |                 \
+   v                  v
+TiDB Cloud        RPM ML FastAPI — Render
+                      |
+                      v
+              Random Forest V1
 ```
 
-## Cómo funciona la conexión
+## Servicios
 
-El navegador entra al frontend. El frontend llama rutas relativas `/api/...`. Nginx recibe esas llamadas y las redirige internamente al backend usando la red privada de Render.
+- `globaliso-frontend-cito515432`: frontend Nginx.
+- `globaliso-backend-cito515432`: backend Spring Boot.
+- `globaliso-ml-cito515432`: microservicio ML experimental.
+- Base de datos: TiDB Cloud externa, compatible con protocolo MySQL.
+
+## Reglas críticas de seguridad
+
+Mantener siempre en el backend:
 
 ```text
-Navegador -> globaliso-frontend -> /api -> globaliso-backend -> globaliso-mysql
+SPRING_JPA_HIBERNATE_DDL_AUTO=none
+SPRING_JPA_SHOW_SQL=false
+SEED_DEMO_DATA=false
 ```
 
-## Importante sobre MySQL y el SQL
+Los cambios de esquema se aplican mediante migraciones SQL controladas en `database/migrations/`. No publique contraseñas de administradores, credenciales de TiDB, JWT ni claves ML en el repositorio, HTML, capturas o documentación.
 
-El respaldo `database/init/01_globalisosecurity_backup.sql` se importa automáticamente solo cuando el disco persistente de MySQL está vacío.
-
-Si el servicio MySQL ya fue creado una vez, cambiar el SQL no lo vuelve a importar automáticamente. En ese caso debes importar manualmente o recrear el servicio/disco.
-
-## Probar localmente antes de Render
-
-```bash
-copy .env.example .env
-# en Linux/Mac sería: cp .env.example .env
-
-docker compose up -d --build
-```
-
-Abrir:
+## Variables del backend
 
 ```text
-http://localhost:8080
+SPRING_DATASOURCE_URL=<JDBC TiDB con TLS>
+SPRING_DATASOURCE_USERNAME=<usuario TiDB>
+SPRING_DATASOURCE_PASSWORD=<secreto TiDB>
+JWT_SECRET=<secreto aleatorio de 32+ caracteres>
+JWT_EXPIRATION=3600000
+SPRING_JPA_HIBERNATE_DDL_AUTO=none
+SPRING_JPA_SHOW_SQL=false
+SEED_ENABLED=false
+SEED_DEMO_DATA=false
+CORS_ALLOWED_ORIGINS=https://globaliso-frontend-cito515432.onrender.com
+RPM_ML_ENABLED=true
+RPM_ML_URL=https://globaliso-ml-cito515432.onrender.com
+RPM_ML_API_KEY=<clave aleatoria de 32+ caracteres compartida con ML_API_KEY>
+RPM_ML_TIMEOUT_SECONDS=120
 ```
 
-## Rutas útiles
+En producción, `SEED_ENABLED=false` evita ejecutar la reconciliación masiva de servicios y SoA durante cada arranque. La base productiva auditada ya contiene roles, sectores, catálogo, perfiles y cobertura SoA completa; además, la creación de un servicio inicializa su SoA mediante el flujo normal de negocio. `SEED_ENABLED=true` queda reservado para desarrollo, CI, bootstrap explícito o recuperación controlada.
 
-Backend health:
+`SEED_DEMO_DATA=false` debe mantenerse siempre en producción. Para desarrollo, CI o bootstrap explícito, `SEED_ENABLED=true` debe activarse únicamente en el entorno correspondiente y de forma intencional. Una cuenta administrativa solo se crea si se proporcionan explícitamente `SEED_ADMIN_EMAIL` y `SEED_ADMIN_PASSWORD`. No existe contraseña administrativa por defecto.
+
+## Variables del servicio ML
 
 ```text
-/health
+PORT=10000
+ML_API_KEY=<misma clave privada de 32+ caracteres que RPM_ML_API_KEY>
+RPM_ML_MODEL_VERSION=RPM-ML-RF-HUMANO-V1
+RPM_ML_HUMAN_REVIEW_THRESHOLD=0.70
 ```
 
-Login frontend:
+El servicio ML falla de forma segura al arrancar si `ML_API_KEY` falta o tiene menos de 32 caracteres. `/health` permanece público para Render; `/metadata`, `/predict` y `/predict/batch` requieren la clave privada.
+
+## Variables del frontend
 
 ```text
-/pages/login.html
+PORT=10000
+BACKEND_URL=https://globaliso-backend-cito515432.onrender.com
 ```
 
-## Nota sobre costos
+El frontend publica cabeceras de seguridad (CSP, anti-clickjacking, no-sniff, HSTS y políticas de permisos) y el navegador consume el backend a través del proxy `/api`.
 
-El Blueprint usa servicios Docker y un disco persistente para MySQL. Revisa el plan en Render antes de confirmar el despliegue, porque MySQL con disco persistente puede requerir un plan de pago.
+## Almacenamiento de evidencias en el plan Free
+
+El backend usa `EVIDENCE_STORAGE_PATH` y valida las rutas fuera del repositorio, pero el servicio Render actual no tiene Persistent Disk porque los discos no están disponibles en el plan Free. Por tanto, los archivos subidos a `./storage/evidencias` son efímeros y pueden perderse después de un redeploy o reinicio.
+
+La base de datos conserva la referencia y el hash, pero no reemplaza el archivo físico. Para preservar evidencias de forma permanente se necesitaría almacenamiento externo compatible o un plan con disco persistente; esto queda documentado como limitación operativa y no se habilita dentro del despliegue gratuito.
+
+## Orden recomendado de despliegue
+
+1. Hacer backup de TiDB.
+2. Confirmar/rotar `JWT_SECRET`, `ML_API_KEY` y `RPM_ML_API_KEY`.
+3. Mantener el mismo valor en `ML_API_KEY` y `RPM_ML_API_KEY`.
+4. Desplegar `globaliso-ml-cito515432` y verificar `/health`.
+5. Desplegar backend con el mismo commit y verificar `/health`.
+6. Desplegar frontend con el mismo commit.
+7. Probar login, aislamiento por empresa, carga/descarga de evidencia y `Analizar RPM + ML`.
+8. Confirmar que los logs de auditoría solo son consultables por ADMINISTRADOR y que no existe DELETE/POST público para logs.
+
+## Tolerancia a fallos
+
+El motor RPM determinista no depende del ML para funcionar. Si el servicio ML está dormido o temporalmente no responde, la aplicación conserva el análisis determinista y la interfaz muestra la estimación ML como pendiente.
+
+Consulta `SECURITY.md`, `docs/SECURITY_HARDENING_2026.md` y `docs/INTEGRACION_ML_RPM.md` para el detalle.

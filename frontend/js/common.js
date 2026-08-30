@@ -1,12 +1,27 @@
 const API_BASE = "/api";
 const App = (() => {
-  const token = () => localStorage.getItem("token");
-  const role = () => (localStorage.getItem("rol") || "").toUpperCase();
+  const sessionKeys = ["token", "nombre", "email", "rol", "rolId", "permisosRol", "empresaId", "empresaNombre"];
+
+  function migrateLegacyStorage() {
+    if (!sessionStorage.getItem("token") && localStorage.getItem("token")) {
+      sessionKeys.forEach(key => {
+        const value = localStorage.getItem(key);
+        if (value != null) sessionStorage.setItem(key, value);
+        localStorage.removeItem(key);
+      });
+    }
+  }
+
+  migrateLegacyStorage();
+  const token = () => sessionStorage.getItem("token");
+  const role = () => (sessionStorage.getItem("rol") || "").toUpperCase();
+
   async function api(path, options = {}) {
     const headers = new Headers(options.headers || {});
     if (token()) headers.set("Authorization", `Bearer ${token()}`);
     if (!(options.body instanceof FormData) && options.body != null && !headers.has("Content-Type")) headers.set("Content-Type", "application/json");
-    const res = await fetch(`${API_BASE}${path}`, { ...options, headers });
+    if (!headers.has("Accept")) headers.set("Accept", "application/json, application/pdf, application/octet-stream");
+    const res = await fetch(`${API_BASE}${path}`, { ...options, headers, cache: options.cache || "no-store" });
     const type = res.headers.get("content-type") || "";
     let body;
     if (type.includes("application/json")) body = await res.json();
@@ -19,11 +34,13 @@ const App = (() => {
     }
     return body;
   }
+
   function requireAuth(allowed = []) {
     if (!token()) { window.location.href = "login.html"; return false; }
     if (allowed.length && !allowed.some(r => role().includes(r.toUpperCase()))) { routeByRole(); return false; }
     return true;
   }
+
   function routeByRole() {
     const r = role();
     if (r.includes("ADMIN")) return location.replace("admin.html");
@@ -32,16 +49,33 @@ const App = (() => {
     if (r.includes("CAPACITADOR")) return location.replace("capacitador.html");
     return location.replace("empresa.html");
   }
-  function logout() { localStorage.clear(); window.location.href = "login.html"; }
+
+  function logout() {
+    sessionKeys.forEach(key => {
+      sessionStorage.removeItem(key);
+      localStorage.removeItem(key);
+    });
+    window.location.href = "login.html";
+  }
+
   async function user() {
     const u = await api("/usuarios/me");
-    localStorage.setItem("nombre", u.nombre || ""); localStorage.setItem("email", u.email || ""); localStorage.setItem("rol", u.rol || role());
-    if (u.empresa) { localStorage.setItem("empresaId", u.empresa.id); localStorage.setItem("empresaNombre", u.empresa.nombre); }
+    sessionStorage.setItem("nombre", u.nombre || "");
+    sessionStorage.setItem("email", u.email || "");
+    sessionStorage.setItem("rol", u.rol || role());
+    if (u.empresa) {
+      sessionStorage.setItem("empresaId", u.empresa.id);
+      sessionStorage.setItem("empresaNombre", u.empresa.nombre);
+    } else {
+      sessionStorage.removeItem("empresaId");
+      sessionStorage.removeItem("empresaNombre");
+    }
     document.querySelectorAll("[data-user-name]").forEach(e => e.textContent = u.nombre || "Usuario");
     document.querySelectorAll("[data-user-role]").forEach(e => e.textContent = pretty(u.rol || role()));
     document.querySelectorAll("[data-company-name]").forEach(e => e.textContent = u.empresa?.nombre || "Sin empresa asignada");
     return u;
   }
+
   function bindNavigation() {
     document.querySelectorAll("[data-section]").forEach(btn => btn.addEventListener("click", () => {
       document.querySelectorAll(".section").forEach(s => s.classList.remove("active"));
@@ -52,10 +86,12 @@ const App = (() => {
     document.querySelectorAll("[data-logout]").forEach(b => b.addEventListener("click", logout));
     document.querySelector("[data-mobile-menu]")?.addEventListener("click",()=>document.querySelector(".sidebar")?.classList.toggle("open"));
   }
+
   function toast(message, type = "success") {
     let area = document.querySelector(".toast-area"); if (!area) { area = document.createElement("div"); area.className = "toast-area"; document.body.appendChild(area); }
     const el = document.createElement("div"); el.className = `toast-app ${type}`; el.textContent = message; area.appendChild(el); setTimeout(() => el.remove(), 4200);
   }
+
   function esc(v) { return String(v ?? "").replace(/[&<>'"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;","'":"&#39;",'"':"&quot;"}[c])); }
   function pretty(v) { return String(v ?? "").replaceAll("_", " ").toLowerCase().replace(/\b\w/g, x => x.toUpperCase()); }
   function badge(v) {
@@ -70,5 +106,20 @@ const App = (() => {
   function fmtDate(v) { if (!v) return "—"; const d = new Date(v); return Number.isNaN(d.getTime()) ? esc(v) : d.toLocaleDateString("es-CO"); }
   function modal(id) { const el=document.getElementById(id); return bootstrap.Modal.getOrCreateInstance(el); }
   function downloadBlob(blob, filename) { const u=URL.createObjectURL(blob); const a=document.createElement("a"); a.href=u;a.download=filename;document.body.appendChild(a);a.click();a.remove();URL.revokeObjectURL(u); }
-  return {api,requireAuth,routeByRole,logout,user,bindNavigation,toast,esc,pretty,badge,progress,fmtDate,modal,downloadBlob,role};
+  function mlPanel(a, compact = false) {
+    const ml = a?.ml;
+    if (!ml || !ml.prioridad) {
+      return `<div class="ml-insight pending"><div><strong><i class="bi bi-stars"></i> Machine Learning</strong><span class="ml-kicker">Experimental</span></div><p>Estimación pendiente. El análisis determinista RPM sigue siendo válido y debe ser revisado por una persona.</p></div>`;
+    }
+    const conf = Math.round((Number(ml.confianza) || 0) * 100);
+    const mismatch = ml.coincideConRpm === false;
+    const low = conf < 70;
+    const cls = mismatch ? "disagree" : (low ? "caution" : "agree");
+    const probs = Object.entries(ml.probabilidades || {}).sort((a,b)=>b[1]-a[1]).slice(0,4);
+    const probHtml = compact ? "" : `<div class="ml-probs">${probs.map(([k,v])=>`<span>${esc(pretty(k))}: <strong>${Math.round(Number(v)*100)}%</strong></span>`).join("")}</div>`;
+    const note = mismatch ? "RPM y ML difieren: requiere revisión humana prioritaria." : (low ? "Coincidencia con confianza estimada baja: revisar con cautela." : "RPM y ML coinciden; la validación humana sigue siendo obligatoria.");
+    return `<div class="ml-insight ${cls}"><div class="ml-head"><div><strong><i class="bi bi-stars"></i> Estimación ML</strong><span class="ml-kicker">Experimental · ${esc(ml.versionModelo || "modelo")}</span></div><div>${badge(ml.prioridad)} <strong>${conf}%</strong></div></div><p>${esc(note)}</p>${probHtml}</div>`;
+  }
+
+  return {api,requireAuth,routeByRole,logout,user,bindNavigation,toast,esc,pretty,badge,progress,fmtDate,modal,downloadBlob,mlPanel,role};
 })();

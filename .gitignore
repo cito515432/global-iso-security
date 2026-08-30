@@ -7,6 +7,10 @@
 .env
 .env.*
 !.env.example
+*.pem
+*.key
+*.p12
+*.pfx
 
 # Java build output
 backend/target/
@@ -14,10 +18,22 @@ target/
 *.class
 *.jar.original
 
+# Python / ML generated files
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+venv/
+
 # IDE / OS
 .idea/
 .vscode/
 .DS_Store
+Thumbs.db
 
 # Evidencias locales
 storage/evidencias/
+
+# Security scanners / local reports
+zap-reports/*.html
+security-reports/
