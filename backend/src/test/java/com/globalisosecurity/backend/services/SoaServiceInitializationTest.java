@@ -68,7 +68,7 @@ class SoaServiceInitializationTest {
 
         assertThat(resultado).containsEntry("creados", 93).containsEntry("actualizados", 0)
                 .containsEntry("total", 93L);
-        verify(soaRepository, times(93)).findByServicioIdAndControlId(42L, anyLong());
+        verify(soaRepository, times(93)).findByServicioIdAndControlId(eq(42L), anyLong());
         verify(soaRepository, times(93)).save(any());
     }
 
