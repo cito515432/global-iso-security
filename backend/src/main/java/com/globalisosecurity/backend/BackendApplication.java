@@ -63,10 +63,8 @@ public class BackendApplication {
 		}
 
 		private void writeReadyMarker() {
-			String readyFile = System.getenv("STARTUP_DIAGNOSTIC_READY_FILE");
-			if (readyFile == null || readyFile.isBlank()) {
-				return;
-			}
+			String readyFile = System.getenv().getOrDefault(
+					"STARTUP_DIAGNOSTIC_READY_FILE", "/tmp/backend-startup-ready");
 
 			try {
 				Files.writeString(Path.of(readyFile), Instant.now().toString() + System.lineSeparator(),

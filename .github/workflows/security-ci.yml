@@ -65,6 +65,8 @@ jobs:
       SEED_DEMO_DATA: "false"
       RPM_ML_ENABLED: "false"
       STARTUP_DIAGNOSTICS: "true"
+      STARTUP_DIAGNOSTIC_READY_FILE: /tmp/backend-startup-ready
+      STARTUP_DIAG_REQUIRE_HEALTH: "true"
       SPRING_PROFILES_ACTIVE: diagnostic
       STARTUP_DIAG_TIMEOUT_SECONDS: "150"
       STARTUP_SMOKE_ONLY: "true"
@@ -180,6 +182,8 @@ jobs:
       SEED_DEMO_DATA: "false"
       RPM_ML_ENABLED: "false"
       STARTUP_DIAGNOSTICS: "true"
+      STARTUP_DIAGNOSTIC_READY_FILE: /tmp/backend-startup-ready
+      STARTUP_DIAG_REQUIRE_HEALTH: "true"
       SPRING_PROFILES_ACTIVE: diagnostic
       STARTUP_DIAG_TIMEOUT_SECONDS: "150"
       STARTUP_SMOKE_ONLY: "true"
