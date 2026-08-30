@@ -1,7 +1,7 @@
 # Dockerfile optimizado para Render: backend Spring Boot.
 # Render normalmente expone el puerto 10000 por la variable PORT.
 
-FROM maven:3.9.9-eclipse-temurin-21 AS build
+FROM maven:3.9.15-eclipse-temurin-26 AS build
 WORKDIR /app
 
 COPY pom.xml .

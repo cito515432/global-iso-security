@@ -1,7 +1,7 @@
 # Dockerfile para compilar y ejecutar el backend Spring Boot
 # El proyecto usa Java 20, pero JDK 21 puede compilar source/target 20 y ejecutar el .jar.
 
-FROM maven:3.9.9-eclipse-temurin-21 AS build
+FROM maven:3.9.15-eclipse-temurin-26 AS build
 WORKDIR /app
 
 COPY pom.xml .
