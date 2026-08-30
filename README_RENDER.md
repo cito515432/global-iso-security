@@ -25,6 +25,10 @@ TiDB Cloud        RPM ML FastAPI — Render
 - `globaliso-ml-cito515432`: microservicio ML experimental.
 - Base de datos: TiDB Cloud externa, compatible con protocolo MySQL.
 
+## Estado operativo validado
+
+El Blueprint `globaliso` apunta a `main`, pero la sincronización automática permanece pausada. Los tres servicios mantienen el auto-deploy desactivado. Los despliegues productivos deben ejecutarse de forma controlada y exclusivamente sobre el commit revisado.
+
 ## Reglas críticas de seguridad
 
 Mantener siempre en el backend:
@@ -33,6 +37,7 @@ Mantener siempre en el backend:
 SPRING_JPA_HIBERNATE_DDL_AUTO=none
 SPRING_JPA_SHOW_SQL=false
 SEED_DEMO_DATA=false
+SEED_ENABLED=false
 ```
 
 Los cambios de esquema se aplican mediante migraciones SQL controladas en `database/migrations/`. No publique contraseñas de administradores, credenciales de TiDB, JWT ni claves ML en el repositorio, HTML, capturas o documentación.
@@ -102,3 +107,13 @@ La base de datos conserva la referencia y el hash, pero no reemplaza el archivo 
 El motor RPM determinista no depende del ML para funcionar. Si el servicio ML está dormido o temporalmente no responde, la aplicación conserva el análisis determinista y la interfaz muestra la estimación ML como pendiente.
 
 Consulta `SECURITY.md`, `docs/SECURITY_HARDENING_2026.md` y `docs/INTEGRACION_ML_RPM.md` para el detalle.
+
+## Readiness y bootstrap
+
+`/health` y `/api/health` son endpoints de liveness. `/readiness` y `/api/readiness` son endpoints de readiness y deben responder correctamente solo cuando Spring haya completado el ciclo de aplicación.
+
+`DataInitializer` se conserva para desarrollo, CI, bootstrap explícito y recuperación controlada. La producción normal utiliza `SEED_ENABLED=false` porque la base ya está inicializada; no debe activarse como reconciliación automática en cada arranque.
+
+## Cuentas de demostración
+
+Las cuentas académicas documentadas son `implementador@demo.com` (IMPLEMENTADOR), `auditor@demo.com` (AUDITOR), `capacitador@demo.com` (CAPACITADOR) y `empresa@demo.com` (USUARIO_EMPRESA). La contraseña se gestiona fuera de GitHub y nunca se almacena en este archivo.
