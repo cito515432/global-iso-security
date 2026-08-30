@@ -41,6 +41,14 @@ Before deploying a commit outside a local lab:
 - Nginx security headers and CSP on the web frontend.
 - Browser-session token storage rather than persistent local storage.
 
+## Operational configuration
+
+Production keeps `SEED_ENABLED=false`, `SEED_DEMO_DATA=false`, `SPRING_JPA_HIBERNATE_DDL_AUTO=none` and `SPRING_JPA_SHOW_SQL=false`. `DataInitializer` remains available only for controlled bootstrap, development, CI or recovery; it is not the normal production startup path.
+
+The application exposes separate liveness (`/health`, `/api/health`) and readiness (`/readiness`, `/api/readiness`) checks. Readiness represents completion of the Spring application lifecycle, while liveness only indicates that the web process is responding.
+
+Demo account identifiers and roles may be documented, but their password is managed out of band and must never be committed, logged or included in screenshots.
+
 ## Known limitations
 
 This hardening does not make the prototype equivalent to a professionally certified product. Future production work should include MFA, centralized/distributed rate limiting, managed secrets, antivirus/content-disarm scanning for evidence files, immutable external audit storage, formal backup/restore testing, independent penetration testing, SAST/DAST gates and periodic key rotation.
