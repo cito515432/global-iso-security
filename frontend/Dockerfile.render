@@ -1,7 +1,7 @@
 # Dockerfile para frontend en Render Free con Nginx.
 # Usa PORT y BACKEND_URL para generar la configuración en tiempo de arranque.
 
-FROM nginx:1.27-alpine
+FROM nginx:1.31-alpine
 
 RUN apk add --no-cache gettext
 
