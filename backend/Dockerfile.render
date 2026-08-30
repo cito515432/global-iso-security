@@ -16,7 +16,9 @@ WORKDIR /app
 ENV PORT=10000
 
 COPY --from=build /app/target/*.jar app.jar
+COPY scripts/start-backend-diagnostic.sh /app/start-backend-diagnostic.sh
+RUN chmod 0555 /app/start-backend-diagnostic.sh
 
 EXPOSE 10000
 
-CMD ["sh", "-c", "if [ -z \"$SPRING_DATASOURCE_URL\" ] && [ -n \"$MYSQL_HOSTPORT\" ]; then export SPRING_DATASOURCE_URL=\"jdbc:mysql://${MYSQL_HOSTPORT}/${MYSQL_DATABASE:-globalisosecurity}?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC\"; fi; java -jar /app/app.jar"]
+CMD ["sh", "-c", "if [ -z \"$SPRING_DATASOURCE_URL\" ] && [ -n \"$MYSQL_HOSTPORT\" ]; then export SPRING_DATASOURCE_URL=\"jdbc:mysql://${MYSQL_HOSTPORT}/${MYSQL_DATABASE:-globalisosecurity}?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC\"; fi; if [ \"${STARTUP_DIAGNOSTICS:-false}\" = \"true\" ]; then exec /app/start-backend-diagnostic.sh; else exec java -jar /app/app.jar; fi"]
