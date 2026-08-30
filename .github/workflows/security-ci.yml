@@ -115,6 +115,44 @@ jobs:
           test "$READY_STATUS" = "200"
           echo "readiness status=$READY_STATUS"
 
+  backend-mysql-integration:
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: ci-root-password
+          MYSQL_DATABASE: globalisosecurity
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -uroot -pci-root-password"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=12
+    env:
+      SPRING_DATASOURCE_URL: jdbc:mysql://127.0.0.1:3306/globalisosecurity?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: ci-root-password
+      SPRING_JPA_HIBERNATE_DDL_AUTO: none
+      SPRING_JPA_SHOW_SQL: "false"
+      JWT_SECRET: ci-only-mysql-integration-secret-2026-at-least-32-chars
+      SEED_ENABLED: "false"
+      SEED_DEMO_DATA: "false"
+      RPM_ML_ENABLED: "false"
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "20"
+          cache: maven
+      - name: Verify service creation and SoA repair
+        run: mvn -B -Dtest=ServicioServiceMySqlIT test
+
   ml-validation:
     runs-on: ubuntu-latest
     steps:
