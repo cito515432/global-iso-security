@@ -50,6 +50,7 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                 .requestMatchers("/health", "/api/health", "/readiness", "/api/readiness",
                         "/api/auth/login", "/api/auth/mfa/verify",
+                        "/api/auth/recovery/start", "/api/auth/recovery/verify",
                         "/api/constancias-capacitacion/verificar/**").permitAll()
                 .requestMatchers("/api/auth/mfa/admin-reset/**").hasRole("ADMINISTRADOR")
                 .requestMatchers("/api/usuarios/me").authenticated()
