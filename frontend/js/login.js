@@ -30,6 +30,14 @@ document.addEventListener("DOMContentLoaded", async () => {
   const mfaSetup = document.getElementById("mfaSetup");
   const mfaCode = document.getElementById("mfaCode");
   const recoveryPanel = document.getElementById("recoveryPanel");
+  const accountRecoveryPanel = document.getElementById("accountRecoveryPanel");
+  const recoveryEmail = document.getElementById("recoveryEmail");
+  const recoveryCode = document.getElementById("recoveryCode");
+  const recoveryLink = document.getElementById("recoveryLink");
+  const cancelRecoveryButton = document.getElementById("cancelRecoveryButton");
+  const startRecoveryButton = document.getElementById("startRecoveryButton");
+  const verifyRecoveryButton = document.getElementById("verifyRecoveryButton");
+  const recoveryStatus = document.getElementById("recoveryStatus");
   let challengeToken = null;
   let pendingEmail = "";
   let pendingAuthentication = null;
@@ -53,6 +61,24 @@ document.addEventListener("DOMContentLoaded", async () => {
   document.getElementById("verifyCode").addEventListener("keydown", event => {
     if (event.key === "Enter") { event.preventDefault(); verifyCertificate(); }
   });
+
+  recoveryLink.addEventListener("click", () => {
+    accountRecoveryPanel.hidden = false;
+    credentialsPanel.hidden = true;
+    mfaPanel.hidden = true;
+    recoveryPanel.hidden = true;
+    button.hidden = true;
+    recoveryEmail.value = document.getElementById("email").value.trim();
+    recoveryCode.value = "";
+    recoveryStatus.textContent = "Ingrese el correo de la cuenta y solicite un reto MFA.";
+    showError("");
+    recoveryEmail.focus();
+  });
+
+  cancelRecoveryButton.addEventListener("click", resetRecovery);
+  startRecoveryButton.addEventListener("click", startAccountRecovery);
+  verifyRecoveryButton.addEventListener("click", verifyAccountRecovery);
+
   document.getElementById("restartMfaButton").addEventListener("click", () => {
     challengeToken = null;
     pendingAuthentication = null;
@@ -65,6 +91,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     button.innerHTML = '<span>Ingresar</span><i class="bi bi-arrow-right"></i>';
     showError("");
   });
+
   document.getElementById("finishLoginButton").addEventListener("click", () => {
     if (pendingAuthentication) finalizeAuthentication(pendingAuthentication, pendingEmail);
   });
@@ -75,67 +102,108 @@ document.addEventListener("DOMContentLoaded", async () => {
     button.disabled = true;
     button.innerHTML = '<span class="spinner-border spinner-border-sm"></span><span>Validando...</span>';
     try {
-      if (challengeToken) {
-        const code = mfaCode.value.trim();
-        if (!code) throw new Error("Ingrese el código de su autenticador o un código de recuperación.");
-        const data = await requestJson(`${API_BASE_URL}/auth/mfa/verify`, {
-          method: "POST",
-          headers: {"Content-Type": "application/json", "Accept": "application/json"},
-          cache: "no-store",
-          body: JSON.stringify({challengeToken, code})
-        });
-        if (data.mfaConfigured !== true || !data.token) {
-          throw new Error("El backend no confirmó MFA; el acceso permanece bloqueado.");
-        }
-        mfaCode.value = "";
-        if (Array.isArray(data.recoveryCodes) && data.recoveryCodes.length > 0) {
-          pendingAuthentication = data;
-          document.getElementById("recoveryCodesDisplay").textContent = data.recoveryCodes.join("\n");
-          mfaPanel.hidden = true;
-          recoveryPanel.hidden = false;
-          button.hidden = true;
-          return;
-        }
-        finalizeAuthentication(data, pendingEmail);
-        return;
-      }
-
       const email = document.getElementById("email").value.trim();
       const pass = password.value;
       if (!email || !pass) throw new Error("Ingrese el correo y la contraseña.");
+
       const data = await requestJson(`${API_BASE_URL}/auth/login`, {
         method: "POST",
         headers: {"Content-Type": "application/json", "Accept": "application/json"},
         cache: "no-store",
         body: JSON.stringify({email, password: pass})
       });
+
       password.value = "";
-      if (data.mfaRequired !== true || !data.challengeToken) {
-        throw new Error("El backend no exige MFA; el inicio de sesión fue bloqueado.");
+      if (!data.token) {
+        throw new Error("El backend no entregó una sesión válida.");
       }
-      challengeToken = data.challengeToken;
-      pendingEmail = email;
-      credentialsPanel.hidden = true;
-      mfaPanel.hidden = false;
-      document.getElementById("mfaMessage").textContent = data.mfaSetupRequired
-        ? "Activa tu segundo factor con una aplicación compatible con TOTP. Luego ingresa el código de seis dígitos."
-        : "Abre tu aplicación autenticadora e ingresa el código actual.";
-      mfaSetup.hidden = !data.mfaSetupRequired;
-      if (data.mfaSetupRequired) {
-        if (!data.setupSecret) throw new Error("El backend no entregó la clave para configurar MFA.");
-        document.getElementById("mfaSetupSecret").textContent = data.setupSecret;
-      }
-      button.innerHTML = '<span>Verificar y entrar</span><i class="bi bi-shield-check"></i>';
-      mfaCode.focus();
+      finalizeAuthentication(data, email);
     } catch (error) {
       showError(error.message || "No fue posible conectarse con el servidor.");
-      button.innerHTML = challengeToken
-        ? '<span>Verificar y entrar</span><i class="bi bi-shield-check"></i>'
-        : '<span>Ingresar</span><i class="bi bi-arrow-right"></i>';
+      button.innerHTML = '<span>Ingresar</span><i class="bi bi-arrow-right"></i>';
     } finally {
       button.disabled = false;
     }
   });
+
+  async function startAccountRecovery() {
+    const email = recoveryEmail.value.trim();
+    if (!email) {
+      showError("Ingrese el correo de la cuenta que desea recuperar.");
+      return;
+    }
+
+    startRecoveryButton.disabled = true;
+    verifyRecoveryButton.disabled = true;
+    showError("");
+    recoveryStatus.textContent = "Solicitando el reto MFA...";
+    try {
+      const data = await requestJson(`${API_BASE_URL}/auth/recovery/start`, {
+        method: "POST",
+        headers: {"Content-Type": "application/json", "Accept": "application/json"},
+        cache: "no-store",
+        body: JSON.stringify({email})
+      });
+      if (data.recoveryAvailable !== true || !data.challengeToken) {
+        throw new Error("La recuperación con MFA no está disponible para esta cuenta. Contacte al administrador.");
+      }
+      challengeToken = data.challengeToken;
+      pendingEmail = email;
+      recoveryCode.disabled = false;
+      verifyRecoveryButton.disabled = false;
+      startRecoveryButton.disabled = true;
+      recoveryStatus.textContent = "Reto generado. Ingrese el código TOTP o un código de recuperación.";
+      recoveryCode.focus();
+    } catch (error) {
+      recoveryStatus.textContent = "";
+      showError(error.message || "No fue posible iniciar la recuperación.");
+      startRecoveryButton.disabled = false;
+    }
+  }
+
+  async function verifyAccountRecovery() {
+    const code = recoveryCode.value.trim();
+    if (!challengeToken) {
+      showError("Primero solicite el reto de recuperación.");
+      return;
+    }
+    if (!code) {
+      showError("Ingrese el código de su autenticador o un código de recuperación.");
+      return;
+    }
+
+    verifyRecoveryButton.disabled = true;
+    showError("");
+    recoveryStatus.textContent = "Validando el segundo factor...";
+    try {
+      const data = await requestJson(`${API_BASE_URL}/auth/recovery/verify`, {
+        method: "POST",
+        headers: {"Content-Type": "application/json", "Accept": "application/json"},
+        cache: "no-store",
+        body: JSON.stringify({challengeToken, code})
+      });
+      if (!data.token) throw new Error("La recuperación no entregó una sesión válida.");
+      finalizeAuthentication(data, pendingEmail);
+    } catch (error) {
+      showError(error.message || "El código MFA no es válido o el reto expiró.");
+      verifyRecoveryButton.disabled = false;
+    }
+  }
+
+  function resetRecovery() {
+    challengeToken = null;
+    pendingEmail = "";
+    recoveryCode.value = "";
+    recoveryCode.disabled = true;
+    startRecoveryButton.disabled = false;
+    verifyRecoveryButton.disabled = true;
+    accountRecoveryPanel.hidden = true;
+    credentialsPanel.hidden = false;
+    button.hidden = false;
+    button.innerHTML = '<span>Ingresar</span><i class="bi bi-arrow-right"></i>';
+    recoveryStatus.textContent = "";
+    showError("");
+  }
 
   async function requestJson(url, options) {
     const response = await fetch(url, options);
@@ -147,8 +215,8 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
   function finalizeAuthentication(data, email) {
-    if (data.mfaConfigured !== true || !data.token) {
-      throw new Error("El backend no confirmó MFA; el acceso permanece bloqueado.");
+    if (!data.token) {
+      throw new Error("El backend no entregó un token de sesión.");
     }
     clearSession();
     sessionStorage.setItem("token", data.token);
