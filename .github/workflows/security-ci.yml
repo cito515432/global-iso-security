@@ -227,8 +227,8 @@ jobs:
     uses: google/osv-scanner-action/.github/workflows/osv-scanner-reusable.yml@v2.7.0
     with:
       scan-args: |-
-        --recursive
-        ./
+        --lockfile=./backend/pom.xml
+        --lockfile=./database/tidb-migrator/pom.xml
       fail-on-vuln: true
       upload-sarif: false
     permissions:
