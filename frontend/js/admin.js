@@ -16,15 +16,24 @@ document.addEventListener("DOMContentLoaded", async()=>{
 });
 
 async function refreshAll(){
-  try{
-    [companies,services,users,roles,sectors,controls]=await Promise.all([
-      App.api("/empresas"),App.api("/servicios"),App.api("/usuarios"),App.api("/roles"),App.api("/sectores"),App.api("/catalogo-controles")
-    ]);
-    services.sort((a,b)=>new Date(b.fechaCreacion||0)-new Date(a.fechaCreacion||0));
-    await loadOrganizationSummaries();
-    populateSelects(); renderDashboard(); renderOrganizations(); renderUsers(); renderRoles(); renderControls();
-    await loadContext();
-  }catch(error){App.toast(error.message,"error");}
+  const loaders=[
+    App.api("/empresas"),App.api("/servicios"),App.api("/usuarios"),
+    App.api("/roles"),App.api("/sectores"),App.api("/catalogo-controles")
+  ];
+  const results=await Promise.allSettled(loaders);
+  const names=["organizaciones","servicios","usuarios","roles","sectores","catálogo de controles"];
+  const values=[companies,services,users,roles,sectors,controls];
+  const failed=[];
+  results.forEach((result,index)=>{
+    if(result.status==="fulfilled" && Array.isArray(result.value)) values[index]=result.value;
+    else { values[index]=[]; failed.push(names[index]); }
+  });
+  [companies,services,users,roles,sectors,controls]=values;
+  if(failed.length) App.toast(`No se pudieron cargar: ${failed.join(", ")}. Se muestran los módulos disponibles.`,"error");
+  services.sort((a,b)=>new Date(b.fechaCreacion||0)-new Date(a.fechaCreacion||0));
+  await loadOrganizationSummaries();
+  populateSelects(); renderDashboard(); renderOrganizations(); renderUsers(); renderRoles(); renderControls();
+  await loadContext();
 }
 
 function metric(label,value,icon,hint=""){
