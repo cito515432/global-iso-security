@@ -35,9 +35,10 @@ async function refreshAll(){
   // Pintar primero los datos base; los resúmenes por organización pueden tardar
   // porque agregan SoA, riesgos, evidencias, auditoría y RPM.
   populateSelects(); renderDashboard(); renderOrganizations(); renderUsers(); renderRoles(); renderControls();
-  await loadOrganizationSummaries();
-  // Actualizar los indicadores enriquecidos sin bloquear la vista inicial.
-  renderDashboard(); renderOrganizations();
+  // Los resúmenes enriquecidos se cargan en segundo plano para no bloquear el panel.
+  loadOrganizationSummaries().then(()=>{
+    renderDashboard(); renderOrganizations();
+  }).catch(()=>App.toast("Los resúmenes organizacionales se cargarán cuando el backend esté disponible.","error"));
   await loadContext();
 }
 
@@ -65,10 +66,14 @@ function bindForms(){
 }
 async function loadOrganizationSummaries(){
   organizationSummaries=new Map();
-  await Promise.all(companies.map(async company=>{
-    try{organizationSummaries.set(company.id,await App.api(`/portal-empresa/empresa/${company.id}`));}
-    catch{organizationSummaries.set(company.id,null);}
-  }));
+  const batchSize=4;
+  for(let i=0;i<companies.length;i+=batchSize){
+    const batch=companies.slice(i,i+batchSize);
+    await Promise.all(batch.map(async company=>{
+      try{organizationSummaries.set(company.id,await App.api(`/portal-empresa/empresa/${company.id}`));}
+      catch{organizationSummaries.set(company.id,null);}
+    }));
+  }
 }
 function populateSelects(){
   const companyOptions=companies.map(c=>`<option value="${c.id}">${App.esc(c.nombre)}</option>`).join("");
