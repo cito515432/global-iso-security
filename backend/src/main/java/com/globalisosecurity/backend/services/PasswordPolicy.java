@@ -1,6 +1,8 @@
 package com.globalisosecurity.backend.services;
 
 import com.globalisosecurity.backend.exceptions.BadRequestException;
+import java.util.List;
+import java.util.Locale;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
@@ -11,34 +13,50 @@ import org.springframework.stereotype.Component;
 @Component
 public class PasswordPolicy {
 
+    private static final int MINIMUM_LENGTH = 15;
+    private static final int MAXIMUM_LENGTH = 128;
+    private static final List<String> COMMON_FRAGMENTS = List.of(
+            "password", "qwerty", "letmein", "welcome", "admin");
     private final int minLength;
 
-    public PasswordPolicy(@Value("${app.security.password.min-length:12}") int minLength) {
-        this.minLength = Math.max(12, minLength);
+    public PasswordPolicy(@Value("${app.security.password.min-length:15}") int minLength) {
+        this.minLength = Math.max(MINIMUM_LENGTH, minLength);
     }
 
     public void validate(String password) {
         if (password == null || password.isEmpty()) {
             throw new BadRequestException("La contraseña es obligatoria");
         }
-        if (password.length() < minLength) {
+        int length = password.codePointCount(0, password.length());
+        if (length < minLength) {
             throw new BadRequestException("La contraseña debe tener al menos " + minLength + " caracteres");
         }
-        if (password.length() > 128) {
-            throw new BadRequestException("La contraseña no puede superar 128 caracteres");
+        if (length > MAXIMUM_LENGTH) {
+            throw new BadRequestException("La contraseña no puede superar " + MAXIMUM_LENGTH + " caracteres");
         }
         if (password.chars().anyMatch(Character::isISOControl)) {
             throw new BadRequestException("La contraseña contiene caracteres de control no permitidos");
         }
-
-        int groups = 0;
-        if (password.chars().anyMatch(Character::isUpperCase)) groups++;
-        if (password.chars().anyMatch(Character::isLowerCase)) groups++;
-        if (password.chars().anyMatch(Character::isDigit)) groups++;
-        if (password.chars().anyMatch(c -> !Character.isLetterOrDigit(c) && !Character.isWhitespace(c))) groups++;
-
-        if (groups < 3) {
-            throw new BadRequestException("La contraseña debe combinar al menos tres grupos: mayúsculas, minúsculas, números o símbolos");
+        if (password.isBlank()) {
+            throw new BadRequestException("La contraseña no puede contener solo espacios");
+        }
+        String normalized = password.toLowerCase(Locale.ROOT);
+        if (COMMON_FRAGMENTS.stream().anyMatch(normalized::contains)) {
+            throw new BadRequestException("Evite palabras de contraseña comunes; use una frase única");
+        }
+        int[] codePoints = password.codePoints().toArray();
+        for (int period = 1; period <= 4; period++) {
+            if (codePoints.length <= period || codePoints.length % period != 0) continue;
+            boolean repeated = true;
+            for (int index = period; index < codePoints.length; index++) {
+                if (codePoints[index] != codePoints[index % period]) {
+                    repeated = false;
+                    break;
+                }
+            }
+            if (repeated) {
+                throw new BadRequestException("Evite repetir un carácter o patrón para completar la longitud");
+            }
         }
     }
 }

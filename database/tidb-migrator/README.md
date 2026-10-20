@@ -1,0 +1,40 @@
+# Ejecutor controlado de migraciones TiDB
+
+Este módulo reutiliza las migraciones Flyway del backend desde `backend/src/main/resources/db/migration`; no mantiene otra copia SQL. Está destinado a una ejecución puntual desde un entorno controlado con acceso a TiDB. No se conecta desde Android y no forma parte del proceso normal de arranque de Render.
+
+## Modos
+
+- `info` (predeterminado): conexión de solo lectura; muestra historial y migraciones pendientes.
+- `validate`: valida checksums de migraciones aplicadas.
+- `migrate`: aplica hasta la versión 1 y exige confirmaciones explícitas, TLS con verificación de identidad y esquema esperado.
+
+La ejecución aborta si encuentra una o más tablas MFA existentes; así no intenta “reparar” un estado parcial a ciegas. No ejecuta `clean`, no cambia tablas de negocio, servicios, controles, ni relaciones SoA.
+
+## Configuración segura
+
+Proporciona las variables desde el gestor de secretos del entorno, nunca desde un `.env` versionado ni en argumentos de línea de comandos:
+
+- `TIDB_JDBC_URL`: URL JDBC del clúster TiDB Cloud con `sslMode=VERIFY_IDENTITY`.
+- `TIDB_USERNAME` y `TIDB_PASSWORD`.
+- `TIDB_ALLOWED_HOST_SUFFIX`: opcional; predeterminado `tidbcloud.com`, úsalo solo si tu endpoint TiDB válido tiene otro sufijo.
+- Para `migrate`, además: `TIDB_MIGRATION_CONFIRM=APPLY_MFA_V1`, `TIDB_BACKUP_VERIFIED=true`, `TIDB_BACKUP_REFERENCE=<identificador>` y `TIDB_EXPECTED_DATABASE=globalisosecurity`.
+
+`TIDB_BACKUP_VERIFIED` es una barrera de confirmación operativa, no una verificación automática del proveedor. Antes de habilitarla, valida en TiDB Cloud que el backup existe y que es restaurable.
+
+## Ejecución
+
+Desde la raíz del repositorio:
+
+```bash
+mvn -f database/tidb-migrator/pom.xml -DskipTests package
+java -jar database/tidb-migrator/target/globaliso-tidb-migrator-1.0.0.jar info
+java -jar database/tidb-migrator/target/globaliso-tidb-migrator-1.0.0.jar validate
+```
+
+El modo de escritura requiere preparar los secretos en el entorno protegido y solo se debe ejecutar después de verificar el backup, revisar el estado `info`, validar el endpoint/BD de destino y autorizar la ventana de cambio:
+
+```bash
+java -jar database/tidb-migrator/target/globaliso-tidb-migrator-1.0.0.jar migrate
+```
+
+No ejecutes simultáneamente `migrate` desde este módulo y desde el arranque del backend. El backend mantiene `DB_MIGRATIONS_ENABLED=false`; el migrador es el único camino de escritura controlado para esta tarea.

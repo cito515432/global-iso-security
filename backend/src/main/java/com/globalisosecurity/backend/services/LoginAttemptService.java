@@ -20,14 +20,18 @@ public class LoginAttemptService {
 
     private final ConcurrentHashMap<String, AttemptState> attempts = new ConcurrentHashMap<>();
     private final int maxAttempts;
+    private final int maxTrackedKeys;
     private final Duration window;
     private final Duration blockDuration;
+    private long lastCapacitySweepMillis;
 
     public LoginAttemptService(
             @Value("${app.security.login.max-attempts:5}") int maxAttempts,
             @Value("${app.security.login.window-minutes:15}") long windowMinutes,
-            @Value("${app.security.login.block-minutes:15}") long blockMinutes) {
+            @Value("${app.security.login.block-minutes:15}") long blockMinutes,
+            @Value("${app.security.login.max-tracked-keys:10000}") int maxTrackedKeys) {
         this.maxAttempts = Math.max(3, maxAttempts);
+        this.maxTrackedKeys = Math.max(1, maxTrackedKeys);
         this.window = Duration.ofMinutes(Math.max(1, windowMinutes));
         this.blockDuration = Duration.ofMinutes(Math.max(1, blockMinutes));
     }
@@ -51,8 +55,17 @@ public class LoginAttemptService {
         return Math.max(0L, Duration.between(Instant.now(), state.blockedUntil()).toSeconds());
     }
 
-    public void recordFailure(String key) {
+    /** Returns false when the bounded in-memory store is full and this key cannot be tracked. */
+    public synchronized boolean recordFailure(String key) {
         Instant now = Instant.now();
+        if (!attempts.containsKey(key) && attempts.size() >= maxTrackedKeys) {
+            long nowMillis = now.toEpochMilli();
+            if (nowMillis - lastCapacitySweepMillis >= 60_000L) {
+                attempts.entrySet().removeIf(entry -> isExpired(entry.getValue(), now));
+                lastCapacitySweepMillis = nowMillis;
+            }
+            if (attempts.size() >= maxTrackedKeys) return false;
+        }
         attempts.compute(key, (ignored, old) -> {
             if (old == null || old.windowStartedAt().plus(window).isBefore(now)) {
                 return new AttemptState(1, now, null);
@@ -64,9 +77,17 @@ public class LoginAttemptService {
             Instant blockedUntil = failures >= maxAttempts ? now.plus(blockDuration) : null;
             return new AttemptState(failures, old.windowStartedAt(), blockedUntil);
         });
+        return true;
     }
 
     public void recordSuccess(String key) {
         attempts.remove(key);
+    }
+
+    private boolean isExpired(AttemptState state, Instant now) {
+        Instant expiry = state.blockedUntil() == null
+                ? state.windowStartedAt().plus(window)
+                : state.blockedUntil();
+        return !expiry.isAfter(now);
     }
 }

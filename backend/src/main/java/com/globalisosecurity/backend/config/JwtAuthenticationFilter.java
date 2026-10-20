@@ -1,6 +1,7 @@
 package com.globalisosecurity.backend.config;
 
 import com.globalisosecurity.backend.services.CustomUserDetailsService;
+import com.globalisosecurity.backend.services.MfaService;
 import com.globalisosecurity.backend.utils.JwtUtil;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -19,10 +20,14 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtUtil jwtUtil;
     private final CustomUserDetailsService customUserDetailsService;
+    private final MfaService mfaService;
 
-    public JwtAuthenticationFilter(JwtUtil jwtUtil, CustomUserDetailsService customUserDetailsService) {
+    public JwtAuthenticationFilter(JwtUtil jwtUtil,
+            CustomUserDetailsService customUserDetailsService,
+            MfaService mfaService) {
         this.jwtUtil = jwtUtil;
         this.customUserDetailsService = customUserDetailsService;
+        this.mfaService = mfaService;
     }
 
     @Override
@@ -38,8 +43,10 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             try {
                 if (jwtUtil.validarToken(jwt)) {
                     String email = jwtUtil.obtenerEmail(jwt);
+                    Long sessionVersion = jwtUtil.obtenerVersionMfa(jwt);
                     UserDetails userDetails = customUserDetailsService.loadUserByUsername(email);
-                    if (userDetails.isEnabled() && userDetails.isAccountNonLocked()
+                    if (sessionVersion != null && mfaService.isSessionCurrent(email, sessionVersion)
+                            && userDetails.isEnabled() && userDetails.isAccountNonLocked()
                             && userDetails.isAccountNonExpired() && userDetails.isCredentialsNonExpired()) {
                         UsernamePasswordAuthenticationToken authToken =
                                 new UsernamePasswordAuthenticationToken(

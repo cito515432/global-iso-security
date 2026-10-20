@@ -12,8 +12,8 @@ import org.springframework.security.config.annotation.method.configuration.Enabl
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import com.globalisosecurity.backend.security.BcryptSha256PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.web.cors.CorsConfiguration;
@@ -48,7 +48,10 @@ public class SecurityConfig {
             )
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
-                .requestMatchers("/health", "/api/health", "/readiness", "/api/readiness", "/api/auth/login", "/api/constancias-capacitacion/verificar/**").permitAll()
+                .requestMatchers("/health", "/api/health", "/readiness", "/api/readiness",
+                        "/api/auth/login", "/api/auth/mfa/verify",
+                        "/api/constancias-capacitacion/verificar/**").permitAll()
+                .requestMatchers("/api/auth/mfa/admin-reset/**").hasRole("ADMINISTRADOR")
                 .requestMatchers("/api/usuarios/me").authenticated()
                 .requestMatchers("/api/usuarios/**", "/api/roles/**", "/api/logs-auditoria/**").hasRole("ADMINISTRADOR")
                 .anyRequest().authenticated()
@@ -91,6 +94,6 @@ public class SecurityConfig {
 
     @Bean
     public PasswordEncoder passwordEncoder() {
-        return new BCryptPasswordEncoder(12);
+        return new BcryptSha256PasswordEncoder();
     }
 }

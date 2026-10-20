@@ -12,17 +12,22 @@ class PasswordPolicyTest {
 
     @Test
     void acceptsStrongPassword() {
-        assertDoesNotThrow(() -> policy.validate("GlobalISO-2026-Segura"));
+        assertDoesNotThrow(() -> policy.validate("Luna azul sobre montañas, viento y café"));
     }
 
     @Test
     void rejectsShortPassword() {
-        assertThrows(BadRequestException.class, () -> policy.validate("Aa1!short"));
+        assertThrows(BadRequestException.class, () -> policy.validate("ab"));
     }
 
     @Test
-    void rejectsLowDiversityPassword() {
-        assertThrows(BadRequestException.class, () -> policy.validate("solominusculaslargas"));
+    void rejectsCommonPasswordFragment() {
+        assertThrows(BadRequestException.class, () -> policy.validate("passwordpassword"));
+    }
+
+    @Test
+    void rejectsRepeatedShortPattern() {
+        assertThrows(BadRequestException.class, () -> policy.validate("abcabcabcabcabc"));
     }
 
     @Test
