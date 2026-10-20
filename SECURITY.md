@@ -30,7 +30,7 @@ Before deploying a commit outside a local lab:
 ## Current security controls
 
 - Spring Security with stateless JWT authentication.
-- BCrypt password hashing (cost 12 for newly encoded passwords).
+- New passwords use SHA-256 pre-hashing followed by BCrypt (cost 12); historical BCrypt hashes remain verifiable within their original input limit.
 - Backend RBAC with method security.
 - Tenant/service authorization checks.
 - Login throttling after repeated failures.
@@ -40,7 +40,9 @@ Before deploying a commit outside a local lab:
 - Authenticated backend-to-ML inference API.
 - Nginx security headers and CSP on the web frontend.
 - Browser-session token storage rather than persistent local storage.
+- No access JWT is issued until password + TOTP/recovery verification succeeds; challenges expire and are single-use, TOTP replay is rejected, recovery codes are single-use hashes, and TOTP seeds are AES-256-GCM encrypted.
+- MFA reset restricted to ADMINISTRADOR, invalidates existing sessions and records an audit event.
 
 ## Known limitations
 
-This hardening does not make the prototype equivalent to a professionally certified product. Future production work should include MFA, centralized/distributed rate limiting, managed secrets, antivirus/content-disarm scanning for evidence files, immutable external audit storage, formal backup/restore testing, independent penetration testing, SAST/DAST gates and periodic key rotation.
+This hardening does not make the prototype equivalent to a professionally certified product and cannot guarantee prevention of every attack. TOTP is not phishing-resistant. Password-attempt throttling is bounded but process-local and resets on restart. The database migration and Render deployment have not been applied until a production backup is verified. Remaining work includes centralized/distributed rate limiting, antivirus/content-disarm scanning for evidence files, immutable external audit storage, formal backup/restore testing, independent penetration testing, SAST/DAST gates and key-rotation procedures.

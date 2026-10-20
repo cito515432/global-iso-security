@@ -49,6 +49,9 @@ SPRING_JPA_HIBERNATE_DDL_AUTO=none
 SPRING_JPA_SHOW_SQL=false
 SEED_ENABLED=false
 SEED_DEMO_DATA=false
+MFA_ENCRYPTION_KEY=<Base64 aleatorio que codifique exactamente 32 bytes>
+DB_MIGRATIONS_ENABLED=false
+PASSWORD_MIN_LENGTH=15
 CORS_ALLOWED_ORIGINS=https://globaliso-frontend-cito515432.onrender.com
 RPM_ML_ENABLED=true
 RPM_ML_URL=https://globaliso-ml-cito515432.onrender.com
@@ -59,6 +62,12 @@ RPM_ML_TIMEOUT_SECONDS=120
 En producción, `SEED_ENABLED=false` evita ejecutar la reconciliación masiva de servicios y SoA durante cada arranque. La base productiva auditada ya contiene roles, sectores, catálogo, perfiles y cobertura SoA completa; además, la creación de un servicio inicializa su SoA mediante el flujo normal de negocio. `SEED_ENABLED=true` queda reservado para desarrollo, CI, bootstrap explícito o recuperación controlada.
 
 `SEED_DEMO_DATA=false` debe mantenerse siempre en producción. Para desarrollo, CI o bootstrap explícito, `SEED_ENABLED=true` debe activarse únicamente en el entorno correspondiente y de forma intencional. Una cuenta administrativa solo se crea si se proporcionan explícitamente `SEED_ADMIN_EMAIL` y `SEED_ADMIN_PASSWORD`. No existe contraseña administrativa por defecto.
+
+El login productivo exige contraseña más TOTP para todos los roles. Las semillas TOTP se guardan cifradas con AES-256-GCM; la llave se configura únicamente como secreto de Render y debe preservarse/respaldarse de forma separada a TiDB. No rote ni elimine esa llave sin un procedimiento de recifrado, porque impediría descifrar las semillas existentes. El primer acceso de cada cuenta requiere activar TOTP; los diez códigos de recuperación se muestran una sola vez y deben guardarse fuera del dispositivo. El administrador puede restablecer el MFA de una cuenta; esta acción invalida sus sesiones y se registra en auditoría.
+
+La limitación de intentos de contraseña es local al proceso y tiene un máximo de 10.000 claves en memoria; si el proceso se reinicia, ese estado se pierde. Antes de escalar a varias instancias, debe reemplazarse por un limitador compartido y distribuido.
+
+La migración `V1__mfa_authentication.sql` crea únicamente tablas aditivas de autenticación (`usuario_mfa`, `mfa_login_challenges`, `mfa_recovery_codes`). `DB_MIGRATIONS_ENABLED=false` es el valor normal. Para una versión que requiere migración, primero debe existir y verificarse un respaldo restaurable de TiDB; luego se habilita para un despliegue controlado y se vuelve a deshabilitar tras confirmar el resultado. `ddl-auto=none` permanece. No reescribe usuarios, contraseñas, catálogo, empresas ni relaciones SoA.
 
 ## Variables del servicio ML
 

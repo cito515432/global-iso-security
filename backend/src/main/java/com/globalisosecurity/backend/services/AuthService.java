@@ -4,6 +4,7 @@ import com.globalisosecurity.backend.models.Usuario;
 import com.globalisosecurity.backend.repositories.UsuarioRepository;
 import com.globalisosecurity.backend.utils.JwtUtil;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
@@ -12,6 +13,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class AuthService {
@@ -20,18 +22,23 @@ public class AuthService {
     private final JwtUtil jwtUtil;
     private final PasswordEncoder passwordEncoder;
     private final LoginAttemptService loginAttempts;
+    private final MfaService mfaService;
+    private final LogAuditoriaService logAuditoriaService;
     private final String dummyPasswordHash;
 
     public AuthService(UsuarioRepository usuarioRepository,
             JwtUtil jwtUtil,
             PasswordEncoder passwordEncoder,
-            LoginAttemptService loginAttempts) {
+            LoginAttemptService loginAttempts,
+            MfaService mfaService,
+            LogAuditoriaService logAuditoriaService) {
         this.usuarioRepository = usuarioRepository;
         this.jwtUtil = jwtUtil;
         this.passwordEncoder = passwordEncoder;
         this.loginAttempts = loginAttempts;
-        // Se calcula una sola vez para reducir diferencias temporales entre un correo
-        // inexistente y una contraseña incorrecta.
+        this.mfaService = mfaService;
+        this.logAuditoriaService = logAuditoriaService;
+        // Reduce diferencias temporales entre correo inexistente y clave incorrecta.
         this.dummyPasswordHash = passwordEncoder.encode(UUID.randomUUID().toString());
     }
 
@@ -47,51 +54,104 @@ public class AuthService {
 
         if (normalizedEmail.isBlank() || normalizedEmail.length() > 254
                 || safePassword.isEmpty() || safePassword.length() > 128) {
-            loginAttempts.recordFailure(attemptKey);
+            boolean tracked = loginAttempts.recordFailure(attemptKey);
             passwordEncoder.matches(safePassword, dummyPasswordHash);
+            if (!tracked) return response(HttpStatus.TOO_MANY_REQUESTS, "Autenticación temporalmente limitada");
             return response(HttpStatus.UNAUTHORIZED, "Credenciales incorrectas");
         }
 
         Optional<Usuario> usuarioOpt = usuarioRepository.findByEmail(normalizedEmail);
         if (usuarioOpt.isEmpty()) {
             passwordEncoder.matches(safePassword, dummyPasswordHash);
-            loginAttempts.recordFailure(attemptKey);
+            if (!loginAttempts.recordFailure(attemptKey)) {
+                return response(HttpStatus.TOO_MANY_REQUESTS, "Autenticación temporalmente limitada");
+            }
             return response(HttpStatus.UNAUTHORIZED, "Credenciales incorrectas");
         }
 
         Usuario usuario = usuarioOpt.get();
         if (!passwordEncoder.matches(safePassword, usuario.getPassword())) {
-            loginAttempts.recordFailure(attemptKey);
+            if (!loginAttempts.recordFailure(attemptKey)) {
+                return response(HttpStatus.TOO_MANY_REQUESTS, "Autenticación temporalmente limitada");
+            }
             return response(HttpStatus.UNAUTHORIZED, "Credenciales incorrectas");
         }
 
         if (usuario.getRol() == null) {
-            return response(HttpStatus.FORBIDDEN, "El usuario no tiene un rol asignado");
+            if (!loginAttempts.recordFailure(attemptKey)) {
+                return response(HttpStatus.TOO_MANY_REQUESTS, "Autenticación temporalmente limitada");
+            }
+            return response(HttpStatus.UNAUTHORIZED, "Credenciales incorrectas");
         }
         if (Boolean.FALSE.equals(usuario.getRol().getActivo())) {
-            return response(HttpStatus.FORBIDDEN, "El rol del usuario está inactivo");
+            if (!loginAttempts.recordFailure(attemptKey)) {
+                return response(HttpStatus.TOO_MANY_REQUESTS, "Autenticación temporalmente limitada");
+            }
+            return response(HttpStatus.UNAUTHORIZED, "Credenciales incorrectas");
         }
 
         loginAttempts.recordSuccess(attemptKey);
-        String token = jwtUtil.generarToken(usuario.getEmail(), usuario.getRol().getNombre());
+        MfaService.StartResult challenge = mfaService.start(usuario);
+        if (challenge.rateLimited()) {
+            return response(HttpStatus.TOO_MANY_REQUESTS,
+                    "Autenticación temporalmente bloqueada. Intente nuevamente más tarde");
+        }
+        return response(HttpStatus.OK, challenge.body());
+    }
 
-        Map<String, Object> respuesta = new HashMap<>();
-        respuesta.put("token", token);
-        respuesta.put("email", usuario.getEmail());
-        respuesta.put("nombre", usuario.getNombre());
-        respuesta.put("rol", usuario.getRol().getNombre());
-        respuesta.put("rolId", usuario.getRol().getId());
-        respuesta.put("rolActivo", usuario.getRol().getActivo());
-        respuesta.put("permisos", usuario.getRol().getPermisos());
-        if (usuario.getEmpresa() != null) {
-            respuesta.put("empresaId", usuario.getEmpresa().getId());
-            respuesta.put("empresaNombre", usuario.getEmpresa().getNombre());
-        } else {
-            respuesta.put("empresaId", null);
-            respuesta.put("empresaNombre", null);
+    public ResponseEntity<?> verifyMfa(String challengeToken, String code) {
+        MfaService.VerificationResult result = mfaService.verify(challengeToken, code);
+        if (!result.success()) {
+            HttpStatus status = result.rateLimited() ? HttpStatus.TOO_MANY_REQUESTS : HttpStatus.UNAUTHORIZED;
+            return response(status, "El código MFA no es válido o el reto expiró");
         }
 
-        return response(HttpStatus.OK, respuesta);
+        Optional<Usuario> usuarioOpt = usuarioRepository.findById(result.userId());
+        if (usuarioOpt.isEmpty()) {
+            return response(HttpStatus.UNAUTHORIZED, "No fue posible completar la autenticación");
+        }
+        Usuario usuario = usuarioOpt.get();
+        if (usuario.getRol() == null || Boolean.FALSE.equals(usuario.getRol().getActivo())) {
+            return response(HttpStatus.FORBIDDEN, "La cuenta o el rol no están activos");
+        }
+        return authenticatedResponse(usuario, result.recoveryCodes());
+    }
+
+    @Transactional
+    public ResponseEntity<?> resetMfaByAdministrator(Long userId) {
+        Optional<Usuario> usuario = usuarioRepository.findById(userId);
+        if (usuario.isEmpty()) {
+            return response(HttpStatus.NOT_FOUND, "Usuario no encontrado");
+        }
+        mfaService.reset(userId);
+        logAuditoriaService.registrarLog("MFA_RESET", "SEGURIDAD",
+                "Se restableció el segundo factor del usuario id=" + userId);
+        return response(HttpStatus.OK,
+                Map.of("message", "MFA restablecido; el usuario deberá configurarlo al iniciar sesión"));
+    }
+
+    private ResponseEntity<?> authenticatedResponse(Usuario usuario, List<String> recoveryCodes) {
+        long sessionVersion = mfaService.sessionVersionForUserId(usuario.getId());
+        String token = jwtUtil.generarToken(usuario.getEmail(), usuario.getRol().getNombre(), sessionVersion);
+
+        Map<String, Object> response = new HashMap<>();
+        response.put("token", token);
+        response.put("email", usuario.getEmail());
+        response.put("nombre", usuario.getNombre());
+        response.put("rol", usuario.getRol().getNombre());
+        response.put("rolId", usuario.getRol().getId());
+        response.put("rolActivo", usuario.getRol().getActivo());
+        response.put("permisos", usuario.getRol().getPermisos());
+        response.put("mfaConfigured", true);
+        if (!recoveryCodes.isEmpty()) response.put("recoveryCodes", recoveryCodes);
+        if (usuario.getEmpresa() != null) {
+            response.put("empresaId", usuario.getEmpresa().getId());
+            response.put("empresaNombre", usuario.getEmpresa().getNombre());
+        } else {
+            response.put("empresaId", null);
+            response.put("empresaNombre", null);
+        }
+        return response(HttpStatus.OK, response);
     }
 
     private ResponseEntity<?> response(HttpStatus status, Object body) {

@@ -1,0 +1,6 @@
+.mfa-panel{margin-top:16px;padding:14px;border:1px solid var(--line);border-radius:12px;background:#091528}
+.mfa-panel[hidden]{display:none}
+.mfa-secret{display:block;overflow-wrap:anywhere;margin-top:6px;padding:10px;border-radius:8px;background:#07111f;color:#a9d6ff;font-size:14px;user-select:all}
+.mfa-panel input{width:100%;background:#07111f;border:1px solid #29415f;border-radius:8px;color:#fff;padding:12px;font:inherit;letter-spacing:1.5px}
+.mfa-restart{display:block;border:0;background:transparent;color:#9bb9dc;margin:12px auto 0;font-size:12px;text-decoration:underline}
+.recovery-codes{white-space:pre-wrap;user-select:all;padding:12px;background:#07111f;border:1px solid #29415f;border-radius:8px;color:#a9d6ff;font-size:14px;line-height:1.7}
