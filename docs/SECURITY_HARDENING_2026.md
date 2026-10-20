@@ -15,7 +15,7 @@ This document records the focused security review performed against the RPM + ML
 | Evidence upload | File validation relied mainly on size/name and trusted the browser MIME type; files were read fully into heap memory. | Allow-list for PDF/PNG/JPG/TXT/CSV/DOCX/XLSX, MIME and magic-signature checks, Office container checks, UUID filenames and streaming SHA-256 persistence. |
 | ML API | Prediction endpoints became unauthenticated when `ML_API_KEY` was missing. | ML service now fails closed if the key is missing/short, uses constant-time comparison and protects metadata; backend requires the key too. |
 | Browser session | JWT and role metadata persisted in `localStorage`. | Auth data moved to `sessionStorage` with one-time migration/cleanup of legacy values. |
-| MFA | Password-only login issued access JWTs immediately. | Required TOTP second factor for all roles, expiring single-use challenges, replay prevention, hashed recovery codes, AES-256-GCM-encrypted seeds, admin-reset session revocation, and updated web/mobile login flows. |
+| MFA | El segundo factor se exigía en cada inicio de sesión, incluso cuando no se estaba recuperando una cuenta. | El inicio de sesión cotidiano usa correo + contraseña; MFA se reserva al flujo explícito de recuperación, con retos de un solo uso, prevención de repetición, códigos de recuperación con hash, semillas cifradas con AES-256-GCM y revocación de sesiones al restablecer MFA. |
 | Password storage | BCrypt truncates inputs beyond 72 UTF-8 bytes. | New passwords are SHA-256 pre-hashed then BCrypt-encoded; historical BCrypt hashes remain verifiable for inputs within the old limit. |
 | Web headers | Nginx had no explicit CSP/security headers. | Added CSP, clickjacking protection, MIME sniffing protection, referrer/permissions policies and HSTS on Render. |
 | Local deployment | Docker Compose shipped weak fallback credentials and published MySQL on all interfaces. | Required secrets in `.env`, disabled demo data by default, bound local ports to loopback and aligned upload limits. |
@@ -53,3 +53,7 @@ Because the JWT expiration default is reduced to one hour, existing browser sess
 4. Configure GitHub branch protection/rulesets and enforce successful security checks before merge.
 5. Perform independent penetration testing and recurring SAST/DAST/dependency scanning; automated tests do not prove the absence of vulnerabilities.
 6. Consider phishing-resistant authenticators (such as WebAuthn/passkeys) if the required assurance justifies the additional implementation and recovery workflow.
+
+## Authentication behavior after this change
+
+The regular login endpoint issues a JWT after valid credentials and does not start an MFA challenge. The web client therefore routes directly to the dashboard instead of waiting for a TOTP code. Users who select account recovery must complete the dedicated MFA challenge through `/api/auth/recovery/start` and `/api/auth/recovery/verify`. This is a product decision for the current prototype: it removes MFA from routine sign-in while preserving an additional factor for recovery. The trade-off should be reconsidered before a production rollout that requires phishing-resistant, multi-factor assurance on every session.
