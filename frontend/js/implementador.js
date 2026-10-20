@@ -35,10 +35,9 @@ function renderContextChecks(){document.getElementById("contextChecks").innerHTM
 function populateStaticSelects(){document.getElementById("ctxSector").innerHTML=sectors.map(s=>`<option value="${s.id}">${App.esc(s.nombre)}</option>`).join("");}
 async function refreshImplementer(){
   try{
-    [portal,profile,soa,risks,evidences,rpm,report]=await Promise.all([
+    const results=await Promise.allSettled([
       App.api(`/portal-empresa/empresa/${companyId}`),App.api(`/contexto/empresa/${companyId}`),App.api(`/soa/servicio/${serviceId}`),App.api(`/riesgos/servicio/${serviceId}`),App.api(`/evidencias/servicio/${serviceId}`),App.api(`/rpm/servicio/${serviceId}`),App.api(`/reportes/empresa/${companyId}`)
-    ]);
-    populateDynamicSelects();renderContext();renderDashboard();renderSoa();renderRisks();renderEvidences();renderRpm();renderReport();
+    ]);const value=(i,f)=>results[i].status==='fulfilled'?results[i].value:f;portal=value(0,{progresoGeneral:0,soa:{porcentaje:0,aplicables:0},riesgos:{abiertos:0,criticos:0},evidencias:{pendientes:0,validadas:0},rpm:{alertasActivas:0,pendientesValidacion:0},hallazgos:{abiertos:0,recurrentes:0},etapas:{contexto:0,riesgos:0,soa:0,implementacion:0,auditoria:0,cierre:0},prioridades:[],actividadesPendientes:[]});profile=value(1,{});soa=value(2,[]);risks=value(3,[]);evidences=value(4,[]);rpm=value(5,[]);report=value(6,{porcentajeImplementacion:0,totalRiesgos:0,riesgosCriticos:0,alertasRpm:0});const failed=results.filter(r=>r.status==='rejected').length;if(failed)App.toast(`Se muestran los datos disponibles; ${failed} módulo(s) no respondieron.`,'error');populateDynamicSelects();renderContext();renderDashboard();renderSoa();renderRisks();renderEvidences();renderRpm();renderReport();
   }catch(e){App.toast(e.message,"error");}
 }
 function metric(label,value,icon,hint=""){return `<div class="card-app metric"><i class="bi ${icon} icon"></i><div class="label">${App.esc(label)}</div><div class="value">${App.esc(value)}</div><div class="hint">${App.esc(hint)}</div></div>`;}
