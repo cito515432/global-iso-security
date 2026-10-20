@@ -31,8 +31,12 @@ async function refreshAll(){
   [companies,services,users,roles,sectors,controls]=values;
   if(failed.length) App.toast(`No se pudieron cargar: ${failed.join(", ")}. Se muestran los módulos disponibles.`,"error");
   services.sort((a,b)=>new Date(b.fechaCreacion||0)-new Date(a.fechaCreacion||0));
-  await loadOrganizationSummaries();
+  // Pintar primero los datos base; los resúmenes por organización pueden tardar
+  // porque agregan SoA, riesgos, evidencias, auditoría y RPM.
   populateSelects(); renderDashboard(); renderOrganizations(); renderUsers(); renderRoles(); renderControls();
+  await loadOrganizationSummaries();
+  // Actualizar los indicadores enriquecidos sin bloquear la vista inicial.
+  renderDashboard(); renderOrganizations();
   await loadContext();
 }
 
