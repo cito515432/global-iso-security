@@ -92,7 +92,22 @@ public class PortalEmpresaService {
     public PortalEmpresaDTO resumen(Long empresaId) {
         acceso.validarEmpresa(empresaId);
         Servicio servicio = servicioRepository.findFirstByEmpresaIdOrderByFechaCreacionDesc(empresaId)
-                .orElseThrow(() -> new ResourceNotFoundException("La empresa no tiene un servicio activo"));
+                .orElse(null);
+        if (servicio == null) {
+            return new PortalEmpresaDTO(
+                    empresaId, "", null, "", "SIN_SERVICIO", 0,
+                    new PortalEmpresaDTO.Etapas(0, 0, 0, 0, 0, 0),
+                    new PortalEmpresaDTO.SoaResumen(0, 0, 0, 0, 0, 0, 0, 0),
+                    new PortalEmpresaDTO.RiesgosResumen(0, 0, 0, 0, 0, 0),
+                    new PortalEmpresaDTO.EvidenciasResumen(0, 0, 0, 0, 0),
+                    new PortalEmpresaDTO.HallazgosResumen(0, 0, 0),
+                    new PortalEmpresaDTO.RpmResumen(0, 0, 0),
+                    new PortalEmpresaDTO.CapacitacionResumen(0, 0, 0, 0),
+                    List.of(),
+                    List.of(new PortalEmpresaDTO.Actividad(
+                            "SERVICIO", "Crear servicio SGSI",
+                            "La organización todavía no tiene un servicio SGSI asociado.", "MEDIA")));
+        }
         if (soaRepository.countByServicioId(servicio.getId()) == 0) {
             soaService.inicializar(servicio.getId());
         }
