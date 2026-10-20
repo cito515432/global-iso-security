@@ -25,6 +25,21 @@ public class AuthController {
                 request == null ? null : request.getPassword());
     }
 
+    @PostMapping("/recovery/start")
+    public ResponseEntity<?> startRecovery(@RequestBody RecoveryStartRequest request) {
+        return authService.startRecovery(request == null ? null : request.getEmail());
+    }
+
+    @PostMapping("/recovery/verify")
+    public ResponseEntity<?> verifyRecovery(@RequestBody MfaVerifyRequest request) {
+        return authService.verifyRecovery(request == null ? null : request.getChallengeToken(),
+                request == null ? null : request.getCode());
+    }
+
+    /**
+     * Se conserva para compatibilidad con retos MFA emitidos antes de la
+     * separación del flujo de recuperación.
+     */
     @PostMapping("/mfa/verify")
     public ResponseEntity<?> verifyMfa(@RequestBody MfaVerifyRequest request) {
         return authService.verifyMfa(request == null ? null : request.getChallengeToken(),
@@ -35,6 +50,13 @@ public class AuthController {
     @PreAuthorize("hasRole('ADMINISTRADOR')")
     public ResponseEntity<?> resetMfa(@PathVariable Long userId) {
         return authService.resetMfaByAdministrator(userId);
+    }
+
+    static class RecoveryStartRequest {
+        private String email;
+
+        public String getEmail() { return email; }
+        public void setEmail(String email) { this.email = email; }
     }
 
     static class LoginRequest {

@@ -91,16 +91,55 @@ public class AuthService {
         }
 
         loginAttempts.recordSuccess(attemptKey);
-        MfaService.StartResult challenge = mfaService.start(usuario);
+        // El acceso cotidiano usa el primer factor (correo + contraseña).
+        // MFA se reserva para el flujo explícito de recuperación de cuenta.
+        return authenticatedResponse(usuario, List.of());
+    }
+
+    public ResponseEntity<?> startRecovery(String email) {
+        String normalizedEmail = email == null ? "" : email.trim().toLowerCase();
+        String attemptKey = loginAttempts.keyFor("recovery:" + normalizedEmail);
+
+        if (loginAttempts.isBlocked(attemptKey)) {
+            return response(HttpStatus.TOO_MANY_REQUESTS,
+                    "La recuperación está temporalmente limitada. Intente nuevamente más tarde");
+        }
+
+        Optional<Usuario> usuarioOpt = usuarioRepository.findByEmail(normalizedEmail);
+        if (usuarioOpt.isEmpty()) {
+            // Respuesta uniforme: no revela si el correo está registrado.
+            passwordEncoder.matches("", dummyPasswordHash);
+            return recoveryUnavailableResponse();
+        }
+
+        Usuario usuario = usuarioOpt.get();
+        if (usuario.getRol() == null || Boolean.FALSE.equals(usuario.getRol().getActivo())) {
+            return recoveryUnavailableResponse();
+        }
+
+        MfaService.StartResult challenge = mfaService.startRecovery(usuario);
         if (challenge.rateLimited()) {
             return response(HttpStatus.TOO_MANY_REQUESTS,
-                    "Autenticación temporalmente bloqueada. Intente nuevamente más tarde");
+                    "La recuperación está temporalmente bloqueada. Intente nuevamente más tarde");
+        }
+        if (!Boolean.TRUE.equals(challenge.body().get("mfaRequired"))) {
+            return recoveryUnavailableResponse();
         }
         return response(HttpStatus.OK, challenge.body());
     }
 
+    public ResponseEntity<?> verifyRecovery(String challengeToken, String code) {
+        return verifyMfa(challengeToken, code, true);
+    }
+
     public ResponseEntity<?> verifyMfa(String challengeToken, String code) {
-        MfaService.VerificationResult result = mfaService.verify(challengeToken, code);
+        return verifyMfa(challengeToken, code, false);
+    }
+
+    private ResponseEntity<?> verifyMfa(String challengeToken, String code, boolean recoveryOnly) {
+        MfaService.VerificationResult result = recoveryOnly
+                ? mfaService.verifyRecovery(challengeToken, code)
+                : mfaService.verify(challengeToken, code);
         if (!result.success()) {
             HttpStatus status = result.rateLimited() ? HttpStatus.TOO_MANY_REQUESTS : HttpStatus.UNAUTHORIZED;
             return response(status, "El código MFA no es válido o el reto expiró");
@@ -117,6 +156,13 @@ public class AuthService {
         return authenticatedResponse(usuario, result.recoveryCodes());
     }
 
+    private ResponseEntity<?> recoveryUnavailableResponse() {
+        return response(HttpStatus.OK, Map.of(
+                "mfaRequired", false,
+                "recoveryAvailable", false,
+                "message", "Si la cuenta existe y tiene MFA configurado, podrá continuar con la recuperación"));
+    }
+
     @Transactional
     public ResponseEntity<?> resetMfaByAdministrator(Long userId) {
         Optional<Usuario> usuario = usuarioRepository.findById(userId);
@@ -127,7 +173,7 @@ public class AuthService {
         logAuditoriaService.registrarLog("MFA_RESET", "SEGURIDAD",
                 "Se restableció el segundo factor del usuario id=" + userId);
         return response(HttpStatus.OK,
-                Map.of("message", "MFA restablecido; el usuario deberá configurarlo al iniciar sesión"));
+                Map.of("message", "MFA restablecido; la cuenta podrá iniciar sesión con contraseña y el administrador podrá coordinar una nueva activación"));
     }
 
     private ResponseEntity<?> authenticatedResponse(Usuario usuario, List<String> recoveryCodes) {
@@ -142,7 +188,7 @@ public class AuthService {
         response.put("rolId", usuario.getRol().getId());
         response.put("rolActivo", usuario.getRol().getActivo());
         response.put("permisos", usuario.getRol().getPermisos());
-        response.put("mfaConfigured", true);
+        response.put("mfaConfigured", mfaService.isConfigured(usuario.getId()));
         if (!recoveryCodes.isEmpty()) response.put("recoveryCodes", recoveryCodes);
         if (usuario.getEmpresa() != null) {
             response.put("empresaId", usuario.getEmpresa().getId());
