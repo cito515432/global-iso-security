@@ -44,15 +44,21 @@ function bindEvents() {
 async function loadAll() {
   if (!serviceId) return;
   try {
-    [dashboard, courses, rpmAnalyses, certificates] = await Promise.all([
+    const results = await Promise.allSettled([
       App.api(`/formacion/servicio/${serviceId}/dashboard`),
       App.api(`/formacion/servicio/${serviceId}`),
       App.api(`/rpm/servicio/${serviceId}`),
       App.api(`/constancias-capacitacion/servicio/${serviceId}`)
     ]);
+    dashboard = results[0].status==='fulfilled' ? results[0].value : {totalCursos:0,cursosActivos:0,totalParticipantes:0,completaciones:0};
+    courses = results[1].status==='fulfilled' && Array.isArray(results[1].value) ? results[1].value : [];
+    rpmAnalyses = results[2].status==='fulfilled' && Array.isArray(results[2].value) ? results[2].value : [];
+    certificates = results[3].status==='fulfilled' && Array.isArray(results[3].value) ? results[3].value : [];
+    const failed=results.filter(r=>r.status==='rejected').length;
+    if(failed) App.toast(`Se muestran los datos disponibles; ${failed} módulo(s) no respondieron.`,'error');
     if (!selectedCourseId || !courses.some(c => Number(c.id) === Number(selectedCourseId))) selectedCourseId = courses[0]?.id || null;
     renderAll();
-    await loadQuestions();
+    try { await loadQuestions(); } catch(e) { App.toast('No se pudieron cargar las preguntas todavía.','error'); }
   } catch (e) {
     App.toast(e.message, "error");
   }
