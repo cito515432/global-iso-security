@@ -20,6 +20,8 @@
         <flyway.version>11.9.0</flyway.version>
         <flyway.tidb.version>10.26.0</flyway.tidb.version>
         <jackson-2-bom.version>2.21.7</jackson-2-bom.version>
+        <jackson-bom.version>3.1.7</jackson-bom.version>
+        <tomcat.version>11.0.25</tomcat.version>
         <log4j2.version>2.25.5</log4j2.version>
         <start-class>com.globalisosecurity.backend.BackendApplication</start-class>
     </properties>
