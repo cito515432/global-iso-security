@@ -74,6 +74,22 @@ class MfaServiceIntegrationTest {
     }
 
     @Test
+    void recoveryChallengeIsSeparateFromNormalLoginChallenges() {
+        MfaService.StartResult setup = mfaService.start(user);
+        String secret = String.valueOf(setup.body().get("setupSecret"));
+        String setupToken = String.valueOf(setup.body().get("challengeToken"));
+        assertTrue(mfaService.verify(
+                setupToken, Totp.codeFor(secret, System.currentTimeMillis())).success());
+
+        MfaService.StartResult recovery = mfaService.startRecovery(user);
+        assertFalse(recovery.rateLimited());
+        assertTrue(Boolean.TRUE.equals(recovery.body().get("mfaRequired")));
+        String recoveryToken = String.valueOf(recovery.body().get("challengeToken"));
+        assertTrue(mfaService.verifyRecovery(
+                recoveryToken, Totp.codeFor(secret, System.currentTimeMillis() + 30_000L)).success());
+    }
+
+    @Test
     void challengeIsOneUseAndMfaFailureLocksTheAccount() {
         MfaService.StartResult setup = mfaService.start(user);
         String secret = String.valueOf(setup.body().get("setupSecret"));
