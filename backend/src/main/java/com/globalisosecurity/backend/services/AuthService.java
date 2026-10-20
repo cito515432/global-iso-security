@@ -173,7 +173,7 @@ public class AuthService {
         logAuditoriaService.registrarLog("MFA_RESET", "SEGURIDAD",
                 "Se restableció el segundo factor del usuario id=" + userId);
         return response(HttpStatus.OK,
-                Map.of("message", "MFA restablecido; el usuario deberá configurarlo al iniciar sesión"));
+                Map.of("message", "MFA restablecido; la cuenta podrá iniciar sesión con contraseña y el administrador podrá coordinar una nueva activación"));
     }
 
     private ResponseEntity<?> authenticatedResponse(Usuario usuario, List<String> recoveryCodes) {
