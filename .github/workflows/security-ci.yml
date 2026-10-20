@@ -236,8 +236,11 @@ jobs:
         working-directory: backend
         env:
           NVD_API_KEY: ${{ secrets.NVD_API_KEY }}
-        run: >-
-          mvn -B org.owasp:dependency-check-maven:13.0.0:check
-          -DfailBuildOnCVSS=7.0
-          -DfailOnError=true
-          -DnvdApiKey="$NVD_API_KEY"
+        shell: bash
+        run: |
+          set -euo pipefail
+          args=(-B org.owasp:dependency-check-maven:13.0.0:check -DfailBuildOnCVSS=7.0 -DfailOnError=true)
+          if [[ -n "${NVD_API_KEY:-}" ]]; then
+            args+=("-DnvdApiKey=${NVD_API_KEY}")
+          fi
+          mvn "${args[@]}"
