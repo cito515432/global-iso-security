@@ -16,9 +16,9 @@ function bindAuditorForms(){
   ["auditRpmSearch","auditRpmPriority"].forEach(id=>document.getElementById(id).addEventListener("input",renderAuditRpm));
 }
 async function refreshAuditor(){
-  try{[auditorPortal,auditorSoa,auditorRisks,auditorEvidences,auditorFindings,auditorRpm,auditorSignatures,auditorReport]=await Promise.all([
+  try{const results=await Promise.allSettled([
     App.api(`/portal-empresa/empresa/${auditorCompanyId}`),App.api(`/soa/servicio/${auditorServiceId}`),App.api(`/riesgos/servicio/${auditorServiceId}`),App.api(`/evidencias/servicio/${auditorServiceId}`),App.api(`/hallazgos/servicio/${auditorServiceId}`),App.api(`/rpm/servicio/${auditorServiceId}`),App.api(`/firmas/servicio/${auditorServiceId}`),App.api(`/reportes/empresa/${auditorCompanyId}`)
-  ]);populateAuditSelects();renderAuditorDashboard();renderAuditSoa();renderAuditEvidences();renderFindings();renderAuditRpm();renderSignatures();renderAuditReport();}catch(e){App.toast(e.message,"error");}
+  ]);const value=(i,f)=>results[i].status==='fulfilled'?results[i].value:f;auditorPortal=value(0,{evidencias:{pendientes:0,rechazadas:0},hallazgos:{abiertos:0,recurrentes:0,criticos:0},rpm:{pendientesValidacion:0},etapas:{auditoria:0},prioridades:[]});auditorSoa=value(1,[]);auditorRisks=value(2,[]);auditorEvidences=value(3,[]);auditorFindings=value(4,[]);auditorRpm=value(5,[]);auditorSignatures=value(6,[]);auditorReport=value(7,{porcentajeImplementacion:0,evidenciasValidadas:0,evidenciasRechazadas:0,alertasRpm:0});const failed=results.filter(r=>r.status==='rejected').length;if(failed)App.toast(`Se muestran los datos disponibles; ${failed} módulo(s) no respondieron.`,'error');populateAuditSelects();renderAuditorDashboard();renderAuditSoa();renderAuditEvidences();renderFindings();renderAuditRpm();renderSignatures();renderAuditReport();}catch(e){App.toast(e.message,"error");}
 }
 function auditMetric(label,value,icon,hint=""){return `<div class="card-app metric"><i class="bi ${icon} icon"></i><div class="label">${App.esc(label)}</div><div class="value">${App.esc(value)}</div><div class="hint">${App.esc(hint)}</div></div>`;}
 function renderAuditorDashboard(){
