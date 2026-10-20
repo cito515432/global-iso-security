@@ -50,10 +50,22 @@ public class MfaService {
 
     @Transactional
     public StartResult start(Usuario user) {
+        return start(user, null);
+    }
+
+    @Transactional
+    public StartResult startRecovery(Usuario user) {
+        return start(user, "RECOVERY");
+    }
+
+    private StartResult start(Usuario user, String requestedType) {
         long userId = user.getId();
         lockUser(userId);
         Map<String, Object> credential = getCredentialForUpdate(userId);
         if (credential == null) {
+            if ("RECOVERY".equals(requestedType)) {
+                return recoveryUnavailable();
+            }
             jdbc.update("INSERT INTO usuario_mfa (usuario_id, enabled) VALUES (?, 0)", userId);
             credential = getCredentialForUpdate(userId);
         }
@@ -78,8 +90,14 @@ public class MfaService {
                 userId, timestamp(now.minus(Duration.ofDays(1))));
 
         boolean enabled = numberValue(credential.get("enabled")) != 0;
+        if ("RECOVERY".equals(requestedType) && !enabled) {
+            return recoveryUnavailable();
+        }
+
         String setupSecret = null;
-        String challengeType = enabled ? "LOGIN" : "SETUP";
+        String challengeType = requestedType == null
+                ? (enabled ? "LOGIN" : "SETUP")
+                : requestedType;
         if (!enabled) {
             setupSecret = Totp.generateSecret();
             jdbc.update("UPDATE usuario_mfa SET pending_secret_ciphertext = ?, updated_at = ? WHERE usuario_id = ?",
@@ -109,6 +127,16 @@ public class MfaService {
 
     @Transactional
     public VerificationResult verify(String rawChallengeToken, String rawCode) {
+        return verifyInternal(rawChallengeToken, rawCode, null);
+    }
+
+    @Transactional
+    public VerificationResult verifyRecovery(String rawChallengeToken, String rawCode) {
+        return verifyInternal(rawChallengeToken, rawCode, "RECOVERY");
+    }
+
+    private VerificationResult verifyInternal(
+            String rawChallengeToken, String rawCode, String expectedType) {
         if (rawChallengeToken == null || !rawChallengeToken.matches("[A-Za-z0-9_-]{40,80}")
                 || rawCode == null || rawCode.length() > 32) {
             return VerificationResult.failed(false);
@@ -140,7 +168,12 @@ public class MfaService {
         }
 
         String type = String.valueOf(challenge.get("challenge_type"));
-        if (!"LOGIN".equals(type) && !"SETUP".equals(type)) {
+        if (!"LOGIN".equals(type) && !"SETUP".equals(type) && !"RECOVERY".equals(type)) {
+            jdbc.update("UPDATE mfa_login_challenges SET consumed_at = ? WHERE id = ?",
+                    timestamp(now), challengeId);
+            return VerificationResult.failed(false);
+        }
+        if (expectedType != null && !expectedType.equals(type)) {
             jdbc.update("UPDATE mfa_login_challenges SET consumed_at = ? WHERE id = ?",
                     timestamp(now), challengeId);
             return VerificationResult.failed(false);
@@ -157,7 +190,7 @@ public class MfaService {
             OptionalLong match = Totp.matchingStep(
                     crypto.decrypt(secretCiphertext), code, now.toEpochMilli(), lastUsed);
             if (match.isPresent()) acceptedStep = match.getAsLong();
-        } else if ("LOGIN".equals(type)) {
+        } else if ("LOGIN".equals(type) || "RECOVERY".equals(type)) {
             String normalizedRecovery = code.toUpperCase(Locale.ROOT).replaceAll("[\\s-]", "");
             if (normalizedRecovery.matches("[A-Z2-7]{16}")) {
                 List<Map<String, Object>> matches = jdbc.queryForList(
@@ -259,11 +292,24 @@ public class MfaService {
         return List.copyOf(codes);
     }
 
+    private StartResult recoveryUnavailable() {
+        Map<String, Object> response = new LinkedHashMap<>();
+        response.put("mfaRequired", false);
+        response.put("recoveryAvailable", false);
+        return new StartResult(false, response);
+    }
+
     private Map<String, Object> getCredentialForUpdate(long userId) {
         List<Map<String, Object>> rows = jdbc.queryForList(
                 "SELECT enabled, secret_ciphertext, pending_secret_ciphertext, last_used_step, "
                         + "failed_attempts, locked_until FROM usuario_mfa WHERE usuario_id = ? FOR UPDATE", userId);
         return rows.isEmpty() ? null : rows.get(0);
+    }
+
+    public boolean isConfigured(long userId) {
+        List<Map<String, Object>> rows = jdbc.queryForList(
+                "SELECT enabled FROM usuario_mfa WHERE usuario_id = ?", userId);
+        return !rows.isEmpty() && numberValue(rows.get(0).get("enabled")) != 0;
     }
 
     public long sessionVersionForUserId(long userId) {
