@@ -84,6 +84,7 @@ class MfaServiceIntegrationTest {
         MfaService.StartResult recovery = mfaService.startRecovery(user);
         assertFalse(recovery.rateLimited());
         assertTrue(Boolean.TRUE.equals(recovery.body().get("mfaRequired")));
+        assertTrue(Boolean.TRUE.equals(recovery.body().get("recoveryAvailable")));
         String recoveryToken = String.valueOf(recovery.body().get("challengeToken"));
         assertTrue(mfaService.verifyRecovery(
                 recoveryToken, Totp.codeFor(secret, System.currentTimeMillis() + 30_000L)).success());
