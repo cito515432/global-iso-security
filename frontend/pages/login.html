@@ -56,6 +56,18 @@
         </section>
         <div id="mensajeError" class="login-error" role="alert"></div>
         <button id="loginButton" class="login-button" type="submit"><span>Ingresar</span><i class="bi bi-arrow-right"></i></button>
+        <button id="recoveryLink" class="recovery-link" type="button">¿Necesita recuperar la cuenta? Usar MFA</button>
+        <section id="accountRecoveryPanel" class="mfa-panel" hidden>
+          <strong>Recuperar acceso</strong>
+          <p id="recoveryStatus" class="verify-help">La verificación MFA se solicita únicamente en este flujo de recuperación.</p>
+          <label for="recoveryEmail">Correo de la cuenta</label>
+          <input id="recoveryEmail" type="email" autocomplete="username" maxlength="254" placeholder="correo@empresa.com">
+          <button id="startRecoveryButton" class="login-button" type="button">Solicitar reto MFA</button>
+          <label for="recoveryCode">Código TOTP o de recuperación</label>
+          <input id="recoveryCode" type="text" autocomplete="one-time-code" inputmode="text" maxlength="19" placeholder="Código de 6 dígitos" autocapitalize="characters" disabled>
+          <button id="verifyRecoveryButton" class="login-button" type="button" disabled>Validar y recuperar</button>
+          <button id="cancelRecoveryButton" class="mfa-restart" type="button">Volver al inicio de sesión</button>
+        </section>
         <p class="verify-help mt-3">Las cuentas de demostración, cuando existan, se administran mediante variables de entorno y no se publican en el código fuente.</p>
         <details class="demo-access certificate-check">
           <summary>Verificar una constancia</summary>
