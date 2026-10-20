@@ -2,6 +2,8 @@
 
 Este módulo reutiliza las migraciones Flyway del backend desde `backend/src/main/resources/db/migration`; no mantiene otra copia SQL. Está destinado a una ejecución puntual desde un entorno controlado con acceso a TiDB. No se conecta desde Android y no forma parte del proceso normal de arranque de Render.
 
+Las dependencias Java usan Flyway Core/MySQL `11.9.0` y el complemento comunitario TiDB `10.26.0`; el complemento tiene versionado independiente y declara esa compatibilidad.
+
 ## Modos
 
 - `info` (predeterminado): conexión de solo lectura; muestra historial y migraciones pendientes.

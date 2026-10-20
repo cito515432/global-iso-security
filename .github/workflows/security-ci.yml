@@ -174,6 +174,9 @@ jobs:
 
   ml-validation:
     runs-on: ubuntu-latest
+    env:
+      ML_API_KEY: ci-only-ml-api-key-not-for-production-2026-very-long
+      ML_SMOKE_PORT: "18082"
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -185,20 +188,56 @@ jobs:
         run: python -m pip install -r ml-service/requirements.txt
       - name: Compile Python sources
         run: python -m compileall -q ml-service/app
+      - name: Smoke test ML health and API-key protection
+        working-directory: ml-service
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m uvicorn app.main:app --host 127.0.0.1 --port "$ML_SMOKE_PORT" >"$RUNNER_TEMP/ml-smoke.log" 2>&1 &
+          SERVER_PID=$!
+          cleanup() {
+            kill "$SERVER_PID" 2>/dev/null || true
+            wait "$SERVER_PID" 2>/dev/null || true
+          }
+          trap cleanup EXIT
+          HEALTH_STATUS=""
+          for attempt in $(seq 1 45); do
+            if ! kill -0 "$SERVER_PID" 2>/dev/null; then
+              cat "$RUNNER_TEMP/ml-smoke.log"
+              exit 1
+            fi
+            HEALTH_STATUS=$(curl -sS -o /dev/null -w '%{http_code}' "http://127.0.0.1:${ML_SMOKE_PORT}/health" || true)
+            if [ "$HEALTH_STATUS" = "200" ]; then break; fi
+            sleep 1
+          done
+          test "$HEALTH_STATUS" = "200"
+          UNAUTH_STATUS=$(curl -sS -o /dev/null -w '%{http_code}' "http://127.0.0.1:${ML_SMOKE_PORT}/metadata")
+          test "$UNAUTH_STATUS" = "401"
+          AUTH_STATUS=$(curl -sS -o /dev/null -w '%{http_code}' -H "x-ml-api-key: ${ML_API_KEY}" "http://127.0.0.1:${ML_SMOKE_PORT}/metadata")
+          test "$AUTH_STATUS" = "200"
+          DOCS_STATUS=$(curl -sS -o /dev/null -w '%{http_code}' "http://127.0.0.1:${ML_SMOKE_PORT}/openapi.json")
+          test "$DOCS_STATUS" = "404"
       - name: Audit Python dependencies
         run: |
           python -m pip install pip-audit
           python -m pip_audit -r ml-service/requirements.txt
 
-  dependency-review:
+  dependency-sca:
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      pull-requests: read
     steps:
       - uses: actions/checkout@v4
-      - name: Review dependency changes
-        uses: actions/dependency-review-action@v4
+      - uses: actions/setup-java@v5
         with:
-          fail-on-severity: high
+          distribution: temurin
+          java-version: "21"
+          cache: maven
+      - name: Scan Java dependencies with OWASP Dependency-Check
+        working-directory: backend
+        env:
+          NVD_API_KEY: ${{ secrets.NVD_API_KEY }}
+        run: >-
+          mvn -B org.owasp:dependency-check-maven:13.0.0:check
+          -DfailBuildOnCVSS=7.0
+          -DfailOnError=true
+          -DnvdApiKey="$NVD_API_KEY"

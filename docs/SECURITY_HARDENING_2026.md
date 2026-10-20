@@ -36,11 +36,11 @@ Because the JWT expiration default is reduced to one hour, existing browser sess
 
 ## State and verification of this patch — 2026-10-20
 
-- Changes are local on `security/mobile-mfa-hardening-2026`; they have not been pushed or merged.
+- Changes are in draft PR #43 on `security/mobile-mfa-hardening-2026`; they have not been merged.
 - Render already has the backend service, but its live deploy remains on commit `4cf9580e792bb2750ff2788d154b184e3910fd2a`; automatic deploy is disabled. TiDB production has not been changed.
 - The MFA schema migration only creates `usuario_mfa`, `mfa_login_challenges` and `mfa_recovery_codes`. It is disabled by default. `database/tidb-migrator` is a separate one-shot Flyway runner that packages the backend's exact migration resource, defaults to read-only `info`, requires verified-backup and target confirmations for writes, enforces TiDB Cloud hostname/TLS checks, and stops on pre-existing/partial MFA tables. It must run only after a verified, restorable TiDB backup.
 - The updated web login must deploy with the backend because both use the same login API contract. The mobile app fails closed against the current backend until the MFA backend is deployed.
-- Local checks passed: JavaScript syntax, YAML parsing and `git diff --check`. Maven tests could not resolve the Spring Boot parent because Maven Central DNS/network access failed; Android Gradle tests were not run because this workspace has no Gradle executable or wrapper. No production penetration test or DAST was performed.
+- Local static checks passed: JavaScript syntax, YAML/POM parsing and `git diff --check`. The first GitHub CI run identified an unavailable Flyway version pairing, the GitHub dependency-review action requiring the repository dependency graph, and vulnerable Starlette 0.50.0 transitive through FastAPI. The PR now pins Flyway core/MySQL to the TiDB plugin's declared compatible version, uses OWASP Dependency-Check for Java, upgrades FastAPI to a release compatible with current Starlette, and smoke-tests ML health, API-key authorization and disabled docs; Python dependencies continue through `pip-audit`. The corrected CI run is pending. Android Gradle tests were not run because this workspace has no Gradle executable or wrapper. No production penetration test or DAST was performed.
 - The separate migrator has not been built or run against TiDB; no production connection, schema change, Render environment change, or deployment has occurred.
 
 ## Remaining priorities
