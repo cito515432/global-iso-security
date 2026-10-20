@@ -11,7 +11,8 @@ document.addEventListener("DOMContentLoaded", async()=>{
   if(!App.requireAuth(["ADMIN"])) return;
   App.bindNavigation();
   bindSectionTitles(); bindForms(); renderContextChecks();
-  await App.user();
+  try { await App.user(); }
+  catch (error) { App.toast("No se pudo actualizar el perfil; se cargarán los datos disponibles.", "error"); }
   await refreshAll();
 });
 
