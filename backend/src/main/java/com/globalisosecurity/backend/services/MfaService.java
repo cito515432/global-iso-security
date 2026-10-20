@@ -115,6 +115,9 @@ public class MfaService {
 
         Map<String, Object> response = new LinkedHashMap<>();
         response.put("mfaRequired", true);
+        if ("RECOVERY".equals(requestedType)) {
+            response.put("recoveryAvailable", true);
+        }
         response.put("mfaSetupRequired", !enabled);
         response.put("challengeToken", challengeToken);
         response.put("expiresInSeconds", CHALLENGE_DURATION.toSeconds());
