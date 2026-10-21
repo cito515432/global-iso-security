@@ -69,3 +69,49 @@ The regular login endpoint issues a JWT after valid credentials and does not sta
 ## Additional controls under review — 2026-10-21
 
 The changes in the current branch are code and configuration changes only. They do not apply database migrations, modify Render's live environment, or deploy the application. Migration V2 is additive and creates only the rate-limit and password-reset tables. The normal password login contract and role-based dashboard routing remain intact; custom roles use their assigned fixed profile for server-side authorization. Local development keeps the scanner optional by default so existing upload demos can run, while the public Render Blueprint requires scanning and blocks uploads until the private scanner is reachable. Production activation still requires the migration and service configuration above.
+
+## Consolidated implementation and release status — 2026-10-21 (current)
+
+This section supersedes earlier draft/branch status statements in this document. The implementation is proposed in draft PR [#47](https://github.com/cito515432/global-iso-security/pull/47), branch `codex/security-controls-2026-10`, head `1bd75905c64b5a0e006cd393862add3dcad00eee`. It preserves the existing RPM deterministic calculation, ML second-estimate contract, user/role dashboard routes, and ordinary email-and-password sign-in. The security changes are additive or narrowly scoped; they do not claim complete protection against every attack.
+
+### Implemented and tested in the branch
+
+- Persistent, shared login throttling: five failed attempts within a 15-minute window produce a 15-minute block. It adds no per-request delay. Its table must exist before the new backend is deployed.
+- Password policy for new or changed passwords: at least eight characters with uppercase, lowercase, digit, and special character; the configured maximum is 128 characters. New hashes use SHA-256 pre-hashing followed by BCrypt cost 12; historical hashes are not mass-rewritten.
+- Account recovery: a separate, generic-response email reset flow uses a random single-use token stored as a hash, expires after 15 minutes, validates the password policy, and invalidates prior JWT sessions. The feature remains disabled until SMTP is configured and `PASSWORD_RESET_ENABLED=true` is deliberately set.
+- MFA behavior: the regular login path does not require MFA. The existing dedicated account-recovery challenge remains a separate flow; this is not equivalent to mandatory MFA on every session.
+- Role creation: custom roles receive one of the fixed, least-privilege operational profiles; they cannot be assigned the administrator profile by this feature. Authorization remains enforced on the backend.
+- Evidence uploads: existing extension, MIME/signature, Office-container, size, and storage checks are retained, with a ClamAV `INSTREAM` scan before saving the evidence record. With `AV_REQUIRED=true`, an absent/unreachable scanner rejects uploads (fail closed); it does not prove detection of all malicious content.
+- Authorization and tenant boundaries: checks were added/strengthened for company-scoped and role-scoped operations. Audit events cover selected authentication, account, and role changes; the log is not represented as exhaustive or tamper-proof.
+- Browser and link safety: session tokens use session-scoped storage with legacy cleanup; training links are limited to HTTPS or safe same-app paths and rendered without unsafe protocols.
+- Production configuration: Hibernate schema mutation and SQL echo remain off, seeds remain off, and the TiDB migrator is separate from normal backend startup. The ML API key and JWT secret have no insecure production fallback.
+
+### Verification evidence
+
+GitHub Actions run [39643412884](https://github.com/cito515432/global-iso-security/actions/runs/39643412884), run number 71, completed successfully for commit `1bd75905c64b5a0e006cd393862add3dcad00eee`. All six jobs passed:
+
+| CI job | Scope verified |
+|---|---|
+| `backend-build` | Backend compilation and automated tests |
+| `backend-packaged-smoke` | Packaged JAR startup and liveness/readiness endpoints |
+| `backend-mysql-integration` | Service creation and SoA creation/repair against isolated MySQL 8 |
+| `tidb-migrator-build` | Packaging of the guarded TiDB migrator |
+| `ml-validation` | Python compilation, health/API-key smoke tests, and `pip-audit` |
+| `dependency-sca / osv-scan` | Dependency scan for the configured repository manifests |
+
+CI is evidence for the tested code paths, not a production penetration test, DAST assessment, or guarantee that no vulnerabilities exist. The integration database is isolated MySQL 8; CI does not connect to production TiDB.
+
+### Production status and mandatory rollout gates
+
+As of this record, PR #47 is still a draft and has not been merged. The production TiDB schema, Render environment variables, and running services have not been changed by this work. No production login, upload, email, or tenant-isolation test has been claimed. The following sequence is required before deployment:
+
+1. Confirm the intended Render workspace and identify the exact backend, frontend, and ML services; verify their current live commits and controlled/manual deployment settings.
+2. Confirm a TiDB backup exists and is restorable. Run the migrator's read-only `info` and `validate` modes, review the target database and migration history, then authorize and run V2 with the explicit confirmation variables described in `database/tidb-migrator/README.md`. Do not deploy the new backend first: login throttling and password reset depend on the V2 tables. Do not run the migration concurrently with backend startup or another migrator.
+3. Verify required secrets/configuration in the service's secret manager without printing their values: strong `JWT_SECRET`; matching, sufficiently strong `ML_API_KEY` and `RPM_ML_API_KEY`; and a valid `MFA_ENCRYPTION_KEY`. Keep `SEED_ENABLED=false`, `SEED_DEMO_DATA=false`, `SPRING_JPA_HIBERNATE_DDL_AUTO=none`, `SPRING_JPA_SHOW_SQL=false`, and `DB_MIGRATIONS_ENABLED=false` in the normal backend service.
+4. Configure and test the SMTP sender and HTTPS reset-page URL before enabling `PASSWORD_RESET_ENABLED=true`. Until then, the recovery-by-email feature is intentionally inactive; do not advertise it as operational.
+5. Provide a private, reachable, adequately provisioned ClamAV endpoint at `AV_CLAMD_HOST`/`AV_CLAMD_PORT` in the same permitted network. Keep `AV_REQUIRED=true`; never expose the ClamAV TCP port publicly. Until this is available, uploads are intentionally rejected and the complete upload demonstration is not ready.
+6. Make the PR ready for review and merge only after its required checks remain green and the release gates above are satisfied. Deploy the intended commit to the identified services in a controlled order, respecting the existing manual-deploy policy.
+7. Monitor each deployment to a terminal `live` state. Check `/health` and `/readiness`, then perform authorized smoke tests for ordinary sign-in, role-based pages, same-tenant versus cross-tenant access, login lockout, reset email/token lifecycle, custom-role restrictions, audit events, clean-file upload, and scanner-unavailable fail-closed behavior. Check logs for new exceptions without recording passwords, tokens, reset URLs, or uploaded content.
+8. Record deployed commit/deploy IDs, migration outcome, checks, and any rollback decision here after the work is actually completed. A code rollback does not reverse an applied database migration; verify backward compatibility before rolling back application code.
+
+The exact Render workspace is not yet confirmed for this rollout. Therefore no Render service has been inspected or mutated as part of this deployment authorization, and no deploy should be described as complete until the workspace and release gates above are confirmed.
