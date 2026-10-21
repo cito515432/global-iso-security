@@ -1,5 +1,7 @@
 # Informe de seguridad y estado de liberación
 
+> **Vigencia del documento:** esta es la evaluación predespliegue original del PR #47, conservada como evidencia histórica. El PR fue fusionado el 21 de octubre de 2026 y el commit 50d604fe6ab27675c3ecefe08b8cf1e9e686e608 se desplegó en backend y frontend. Para el estado operativo posterior y las comprobaciones realizadas ese día, consulte [la auditoría operacional](AUDITORIA_OPERACIONAL_2026-10-21.md). Las referencias de este informe a un PR abierto, un despliegue pendiente o una migración no ejecutada describen el corte original; no deben interpretarse como una inspección actual de la base TiDB.
+
 **Sistema:** Global ISO Security  
 **Fecha de revisión:** 21 de octubre de 2026  
 **Repositorio:** [cito515432/global-iso-security](https://github.com/cito515432/global-iso-security)  
