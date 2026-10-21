@@ -94,6 +94,21 @@ const App = (() => {
   }
 
   function esc(v) { return String(v ?? "").replace(/[&<>'"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;","'":"&#39;",'"':"&quot;"}[c])); }
+  function safeUrl(value) {
+    const raw = String(value ?? "").trim();
+    if (!raw || raw.length > 2048 || /[\\\\\u0000-\u001f\u007f]/.test(raw)) return "";
+    if (raw.startsWith("/")) {
+      if (raw.startsWith("//")) return "";
+      try {
+        const url = new URL(raw, window.location.origin);
+        return url.origin === window.location.origin ? `${url.pathname}${url.search}${url.hash}` : "";
+      } catch { return ""; }
+    }
+    try {
+      const url = new URL(raw);
+      return url.protocol === "https:" && url.hostname && !url.username && !url.password ? url.href : "";
+    } catch { return ""; }
+  }
   function pretty(v) { return String(v ?? "").replaceAll("_", " ").toLowerCase().replace(/\b\w/g, x => x.toUpperCase()); }
   function badge(v) {
     const x = String(v ?? "").toUpperCase(); let c = "b-info";
@@ -122,5 +137,5 @@ const App = (() => {
     return `<div class="ml-insight ${cls}"><div class="ml-head"><div><strong><i class="bi bi-stars"></i> Estimación ML</strong><span class="ml-kicker">Experimental · ${esc(ml.versionModelo || "modelo")}</span></div><div>${badge(ml.prioridad)} <strong>${conf}%</strong></div></div><p>${esc(note)}</p>${probHtml}</div>`;
   }
 
-  return {api,requireAuth,routeByRole,logout,user,bindNavigation,toast,esc,pretty,badge,progress,fmtDate,modal,downloadBlob,mlPanel,role};
+  return {api,requireAuth,routeByRole,logout,user,bindNavigation,toast,esc,safeUrl,pretty,badge,progress,fmtDate,modal,downloadBlob,mlPanel,role};
 })();
