@@ -87,9 +87,13 @@ Open http://localhost:8080/pages/login.html. Demo seed data is controlled by env
 
 Useful documentation: [README_DOCKER.md](README_DOCKER.md), [README_RENDER.md](README_RENDER.md), [docs/ARQUITECTURA_RPM.md](docs/ARQUITECTURA_RPM.md), [docs/GUIA_PRUEBAS.md](docs/GUIA_PRUEBAS.md), [ENTREGA_RPM.md](ENTREGA_RPM.md), [IMPLEMENTACION_RPM_INTEGRAL.md](IMPLEMENTACION_RPM_INTEGRAL.md).
 
+## Operational security record
+
+The [operational audit for 21 October 2026](docs/AUDITORIA_OPERACIONAL_2026-10-21.md) records the deployed release and the evidence checked that day. The [release security report](docs/INFORME_SEGURIDAD_RELEASE_2026.md) is retained as the original pre-deployment assessment.
+
 ## Limitations
 
-This is an academic and demonstration system. Production use would require threat modeling, deployment hardening, managed secrets, security testing, backup/recovery and formal compliance review.
+This is an academic and demonstration system with a public Render deployment. The operational audit records the checks performed and their scope. Use in an operational organization still requires a formal threat model, managed secret lifecycle, comprehensive security testing, monitoring, verified backup recovery and compliance review.
 
 ## Academic reference
 
