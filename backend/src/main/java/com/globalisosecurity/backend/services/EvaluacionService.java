@@ -26,15 +26,18 @@ public class EvaluacionService {
     private final ItemChecklistRepository itemRepository;
     private final UsuarioRepository usuarioRepository;
     private final AccesoEmpresaService acceso;
+    private final LogAuditoriaService logs;
 
     public EvaluacionService(EvaluacionRepository repository,
             ItemChecklistRepository itemRepository,
             UsuarioRepository usuarioRepository,
-            AccesoEmpresaService acceso) {
+            AccesoEmpresaService acceso,
+            LogAuditoriaService logs) {
         this.repository = repository;
         this.itemRepository = itemRepository;
         this.usuarioRepository = usuarioRepository;
         this.acceso = acceso;
+        this.logs = logs;
     }
 
     public List<Evaluacion> obtenerTodas() { return repository.findAll(); }
@@ -59,6 +62,7 @@ public class EvaluacionService {
         return repository.findByServicioEmpresaId(empresaId);
     }
 
+    @org.springframework.transaction.annotation.Transactional
     public Evaluacion crearEvaluacion(Evaluacion input) {
         validarEvaluacion(input);
         Usuario usuario = usuarioRepository.findByEmail(SecurityUtils.getUsuarioActual())
@@ -78,9 +82,13 @@ public class EvaluacionService {
         entity.setEstado(estado);
         entity.setObservacion(trim(input.getObservacion()));
         entity.setFechaEvaluacion(LocalDateTime.now());
-        return repository.save(entity);
+        Evaluacion saved = repository.save(entity);
+        logs.registrarLog("REGISTRAR", "EVALUACIONES", "Se registró evaluación del ítem " + item.getId()
+                + " para el servicio " + servicio.getId());
+        return saved;
     }
 
+    @org.springframework.transaction.annotation.Transactional
     public Evaluacion actualizarEvaluacion(Long id, Evaluacion input) {
         Evaluacion current = repository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Evaluación no encontrada"));
@@ -97,14 +105,18 @@ public class EvaluacionService {
         current.setEstado(estado);
         current.setObservacion(trim(input.getObservacion()));
         current.setFechaEvaluacion(LocalDateTime.now());
-        return repository.save(current);
+        Evaluacion saved = repository.save(current);
+        logs.registrarLog("ACTUALIZAR", "EVALUACIONES", "Se actualizó la evaluación " + id);
+        return saved;
     }
 
+    @org.springframework.transaction.annotation.Transactional
     public void eliminarEvaluacion(Long id) {
         Evaluacion current = repository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Evaluación no encontrada"));
         validarAcceso(current);
         repository.delete(current);
+        logs.registrarLog("ELIMINAR", "EVALUACIONES", "Se eliminó la evaluación " + id);
     }
 
     private void validarAcceso(Evaluacion evaluation) {

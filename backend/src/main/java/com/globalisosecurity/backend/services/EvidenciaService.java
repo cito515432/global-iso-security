@@ -190,6 +190,7 @@ public class EvidenciaService {
         if (!Files.exists(p) || !Files.isRegularFile(p)) {
             throw new ResourceNotFoundException("El archivo físico no está disponible");
         }
+        logs.registrarLog("DESCARGAR", "EVIDENCIAS", "Se descargó evidencia " + id);
         return new Descarga(e, new FileSystemResource(p));
     }
 
@@ -199,6 +200,7 @@ public class EvidenciaService {
                 .orElseThrow(() -> new ResourceNotFoundException("Evidencia no encontrada"));
         acceso.servicioAutorizado(e.getServicio().getId());
         repository.delete(e);
+        logs.registrarLog("ELIMINAR", "EVIDENCIAS", "Se eliminó evidencia " + id);
         try {
             Path p = Paths.get(e.getRutaArchivo()).toAbsolutePath().normalize();
             if (p.startsWith(storage)) Files.deleteIfExists(p);

@@ -11,6 +11,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class ItemChecklistService {
@@ -20,13 +21,16 @@ public class ItemChecklistService {
     private final ItemChecklistRepository itemRepository;
     private final ChecklistRepository checklistRepository;
     private final AccesoEmpresaService acceso;
+    private final LogAuditoriaService logs;
 
     public ItemChecklistService(ItemChecklistRepository itemRepository,
             ChecklistRepository checklistRepository,
-            AccesoEmpresaService acceso) {
+            AccesoEmpresaService acceso,
+            LogAuditoriaService logs) {
         this.itemRepository = itemRepository;
         this.checklistRepository = checklistRepository;
         this.acceso = acceso;
+        this.logs = logs;
     }
 
     public List<ItemChecklist> obtenerTodos() { return itemRepository.findAll(); }
@@ -46,6 +50,7 @@ public class ItemChecklistService {
         return itemRepository.findByChecklistId(checklistId);
     }
 
+    @Transactional
     public ItemChecklist evaluarItem(Long itemId, EvaluarItemRequest request) {
         ItemChecklist item = obtenerItemAutorizado(itemId);
         if (request == null) throw new BadRequestException("El body de la evaluación es obligatorio");
@@ -62,9 +67,12 @@ public class ItemChecklistService {
         if ("CUMPLE".equals(estado) || "PENDIENTE".equals(estado)) observacion = null;
         item.setEstado(estado);
         item.setObservacion(observacion);
-        return itemRepository.save(item);
+        ItemChecklist saved = itemRepository.save(item);
+        logs.registrarLog("EVALUAR", "ITEMS_CHECKLIST", "Se evaluó el ítem " + itemId + " como " + estado);
+        return saved;
     }
 
+    @Transactional
     public ItemChecklist crearItem(ItemChecklist item) {
         validarItem(item);
         Checklist checklist = validarChecklistAutorizado(item.getChecklist().getId());
@@ -76,9 +84,12 @@ public class ItemChecklistService {
         item.setObservacion(trim(item.getObservacion()));
         item.setEstado(estado);
         item.setChecklist(checklist);
-        return itemRepository.save(item);
+        ItemChecklist saved = itemRepository.save(item);
+        logs.registrarLog("CREAR", "ITEMS_CHECKLIST", "Se creó un ítem para el checklist " + checklist.getId());
+        return saved;
     }
 
+    @Transactional
     public ItemChecklist actualizarItem(Long id, ItemChecklist input) {
         ItemChecklist current = obtenerItemAutorizado(id);
         validarItem(input);
@@ -93,12 +104,16 @@ public class ItemChecklistService {
         current.setObservacion(trim(input.getObservacion()));
         current.setEstado(estado);
         current.setChecklist(checklist);
-        return itemRepository.save(current);
+        ItemChecklist saved = itemRepository.save(current);
+        logs.registrarLog("ACTUALIZAR", "ITEMS_CHECKLIST", "Se actualizó el ítem " + id);
+        return saved;
     }
 
+    @Transactional
     public void eliminarItem(Long id) {
         ItemChecklist item = obtenerItemAutorizado(id);
         itemRepository.delete(item);
+        logs.registrarLog("ELIMINAR", "ITEMS_CHECKLIST", "Se eliminó el ítem " + id);
     }
 
     private ItemChecklist obtenerItemAutorizado(Long id) {
