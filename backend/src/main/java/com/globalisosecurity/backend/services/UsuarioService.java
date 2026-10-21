@@ -12,6 +12,7 @@ import com.globalisosecurity.backend.repositories.RolRepository;
 import com.globalisosecurity.backend.repositories.UsuarioRepository;
 import com.globalisosecurity.backend.utils.SecurityUtils;
 import java.util.List;
+import java.util.Locale;
 import java.util.Optional;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -49,7 +50,7 @@ public class UsuarioService {
         validarRequest(request, true);
         passwordPolicy.validate(request.getRawPassword());
 
-        String emailNormalizado = request.getEmail().trim().toLowerCase();
+        String emailNormalizado = request.getEmail().trim().toLowerCase(Locale.ROOT);
         if (usuarioRepository.findByEmail(emailNormalizado).isPresent()) {
             throw new BadRequestException("Ya existe un usuario con ese email");
         }
@@ -77,7 +78,7 @@ public class UsuarioService {
 
     public Usuario actualizarUsuario(Long id, UsuarioCreateRequest request) {
         validarRequest(request, false);
-        String emailNormalizado = request.getEmail().trim().toLowerCase();
+        String emailNormalizado = request.getEmail().trim().toLowerCase(Locale.ROOT);
 
         Usuario usuario = usuarioRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Usuario no encontrado"));
@@ -129,6 +130,7 @@ public class UsuarioService {
         response.setEmail(usuario.getEmail());
         if (usuario.getRol() != null) {
             response.setRol(usuario.getRol().getNombre());
+            response.setPerfilBase(RolPerfilUtil.effectiveProfile(usuario.getRol()));
             response.setPermisos(usuario.getRol().getPermisos());
         }
 

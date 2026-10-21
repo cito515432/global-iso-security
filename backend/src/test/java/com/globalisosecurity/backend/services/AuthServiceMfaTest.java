@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -16,8 +17,11 @@ import com.globalisosecurity.backend.utils.JwtUtil;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.ResponseEntity;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.datasource.DriverManagerDataSource;
 
 class AuthServiceMfaTest {
 
@@ -28,7 +32,7 @@ class AuthServiceMfaTest {
         MfaService mfa = mock(MfaService.class);
         LogAuditoriaService logs = mock(LogAuditoriaService.class);
         BcryptSha256PasswordEncoder encoder = new BcryptSha256PasswordEncoder();
-        LoginAttemptService attempts = new LoginAttemptService(5, 15, 15, 100);
+        LoginAttemptService attempts = loginAttempts();
 
         Rol role = new Rol();
         role.setId(4L);
@@ -66,7 +70,7 @@ class AuthServiceMfaTest {
         MfaService mfa = mock(MfaService.class);
         LogAuditoriaService logs = mock(LogAuditoriaService.class);
         BcryptSha256PasswordEncoder encoder = new BcryptSha256PasswordEncoder();
-        LoginAttemptService attempts = new LoginAttemptService(5, 15, 15, 100);
+        LoginAttemptService attempts = loginAttempts();
 
         Rol role = new Rol();
         role.setId(4L);
@@ -93,13 +97,38 @@ class AuthServiceMfaTest {
     }
 
     @Test
+    void accountRecoveryRequestsAreRateLimited() {
+        UsuarioRepository users = mock(UsuarioRepository.class);
+        MfaService mfa = mock(MfaService.class);
+        BcryptSha256PasswordEncoder encoder = new BcryptSha256PasswordEncoder();
+        LoginAttemptService attempts = loginAttempts();
+        Rol role = new Rol();
+        role.setNombre("USUARIO_EMPRESA");
+        role.setActivo(true);
+        Usuario user = new Usuario();
+        user.setEmail("empresa@example.test");
+        user.setRol(role);
+        when(users.findByEmail(user.getEmail())).thenReturn(Optional.of(user));
+        when(mfa.startRecovery(user)).thenReturn(new MfaService.StartResult(false,
+                Map.of("mfaRequired", true, "recoveryAvailable", true, "challengeToken", "opaque-challenge")));
+
+        AuthService auth = new AuthService(users, mock(JwtUtil.class), encoder, attempts,
+                mfa, mock(LogAuditoriaService.class));
+        for (int i = 0; i < 5; i++) {
+            assertEquals(200, auth.startRecovery(user.getEmail()).getStatusCode().value());
+        }
+        assertEquals(429, auth.startRecovery(user.getEmail()).getStatusCode().value());
+        verify(mfa, times(5)).startRecovery(user);
+    }
+
+    @Test
     void recoveryVerificationIssuesJwtAfterMfa() {
         UsuarioRepository users = mock(UsuarioRepository.class);
         JwtUtil jwt = mock(JwtUtil.class);
         MfaService mfa = mock(MfaService.class);
         LogAuditoriaService logs = mock(LogAuditoriaService.class);
         BcryptSha256PasswordEncoder encoder = new BcryptSha256PasswordEncoder();
-        LoginAttemptService attempts = new LoginAttemptService(5, 15, 15, 100);
+        LoginAttemptService attempts = loginAttempts();
 
         Rol role = new Rol();
         role.setId(4L);
@@ -126,5 +155,15 @@ class AuthServiceMfaTest {
         Map<?, ?> body = (Map<?, ?>) response.getBody();
         assertEquals("signed-jwt", body.get("token"));
         verify(mfa).verifyRecovery("opaque-challenge", "123456");
+    }
+
+    private static LoginAttemptService loginAttempts() {
+        DriverManagerDataSource dataSource = new DriverManagerDataSource(
+                "jdbc:h2:mem:auth_attempts_" + UUID.randomUUID() + ";MODE=MySQL;DB_CLOSE_DELAY=-1", "sa", "");
+        JdbcTemplate jdbc = new JdbcTemplate(dataSource);
+        jdbc.execute("CREATE TABLE login_attempt_buckets (bucket_key CHAR(64) PRIMARY KEY, "
+                + "failures INT NOT NULL DEFAULT 0, window_started_at TIMESTAMP NOT NULL, "
+                + "blocked_until TIMESTAMP NULL, updated_at TIMESTAMP NOT NULL)");
+        return new LoginAttemptService(jdbc, 5, 15, 15);
     }
 }

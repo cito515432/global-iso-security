@@ -12,6 +12,7 @@ import java.util.List;
 
 @Repository
 public interface LogAuditoriaRepository extends JpaRepository<LogAuditoria, Long> {
+    List<LogAuditoria> findTop200ByOrderByFechaDesc();
     List<LogAuditoria> findByModulo(String modulo);
     List<LogAuditoria> findByUsuario(String usuario);
     List<LogAuditoria> findByAccion(String accion);

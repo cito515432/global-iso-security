@@ -13,7 +13,7 @@ import org.springframework.stereotype.Component;
 @Component
 public class PasswordPolicy {
 
-    private static final int MINIMUM_LENGTH = 15;
+    private static final int MINIMUM_LENGTH = 8;
     private static final int MAXIMUM_LENGTH = 128;
     private static final List<String> COMMON_FRAGMENTS = List.of(
             "password", "qwerty", "letmein", "welcome", "admin");
@@ -40,11 +40,25 @@ public class PasswordPolicy {
         if (password.isBlank()) {
             throw new BadRequestException("La contraseña no puede contener solo espacios");
         }
+        int[] categories = password.codePoints().toArray();
+        boolean upper = false;
+        boolean lower = false;
+        boolean digit = false;
+        boolean special = false;
+        for (int codePoint : categories) {
+            upper |= Character.isUpperCase(codePoint);
+            lower |= Character.isLowerCase(codePoint);
+            digit |= Character.isDigit(codePoint);
+            special |= !Character.isLetterOrDigit(codePoint) && !Character.isWhitespace(codePoint);
+        }
+        if (!(upper && lower && digit && special)) {
+            throw new BadRequestException("La contraseña debe incluir mayúscula, minúscula, número y carácter especial");
+        }
         String normalized = password.toLowerCase(Locale.ROOT);
         if (COMMON_FRAGMENTS.stream().anyMatch(normalized::contains)) {
             throw new BadRequestException("Evite palabras de contraseña comunes; use una frase única");
         }
-        int[] codePoints = password.codePoints().toArray();
+        int[] codePoints = categories;
         for (int period = 1; period <= 4; period++) {
             if (codePoints.length <= period || codePoints.length % period != 0) continue;
             boolean repeated = true;

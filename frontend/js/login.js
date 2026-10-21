@@ -1,5 +1,5 @@
 const API_BASE_URL = "/api";
-const SESSION_KEYS = ["token", "nombre", "email", "rol", "rolId", "permisosRol", "empresaId", "empresaNombre"];
+const SESSION_KEYS = ["token", "nombre", "email", "rol", "perfilBase", "rolId", "permisosRol", "empresaId", "empresaNombre"];
 
 function clearSession() {
   SESSION_KEYS.forEach(key => {
@@ -31,24 +31,31 @@ document.addEventListener("DOMContentLoaded", async () => {
   const mfaCode = document.getElementById("mfaCode");
   const recoveryPanel = document.getElementById("recoveryPanel");
   const accountRecoveryPanel = document.getElementById("accountRecoveryPanel");
+  const resetPasswordPanel = document.getElementById("resetPasswordPanel");
   const recoveryEmail = document.getElementById("recoveryEmail");
   const recoveryCode = document.getElementById("recoveryCode");
   const recoveryLink = document.getElementById("recoveryLink");
   const cancelRecoveryButton = document.getElementById("cancelRecoveryButton");
   const startRecoveryButton = document.getElementById("startRecoveryButton");
   const verifyRecoveryButton = document.getElementById("verifyRecoveryButton");
+  const startPasswordResetButton = document.getElementById("startPasswordResetButton");
+  const completePasswordResetButton = document.getElementById("completePasswordResetButton");
   const recoveryStatus = document.getElementById("recoveryStatus");
+  const resetUrl = new URL(window.location.href);
+  const passwordResetToken = new URLSearchParams(resetUrl.hash.replace(/^#/, "")).get("resetToken")
+    || resetUrl.searchParams.get("resetToken");
+  if (passwordResetToken) history.replaceState(null, "", resetUrl.pathname);
   let challengeToken = null;
   let pendingEmail = "";
   let pendingAuthentication = null;
 
-  if (sessionStorage.getItem("token")) {
+  if (sessionStorage.getItem("token") && !passwordResetToken) {
     try {
       const response = await fetch(`${API_BASE_URL}/usuarios/me`, {
         headers: {"Authorization": `Bearer ${sessionStorage.getItem("token")}`},
         cache: "no-store"
       });
-      if (response.ok) return routeByRole(sessionStorage.getItem("rol"));
+      if (response.ok) return routeByRole(sessionStorage.getItem("perfilBase") || sessionStorage.getItem("rol"));
     } catch { /* Mantener la pantalla de acceso si no hay red. */ }
     clearSession();
   }
@@ -67,10 +74,11 @@ document.addEventListener("DOMContentLoaded", async () => {
     credentialsPanel.hidden = true;
     mfaPanel.hidden = true;
     recoveryPanel.hidden = true;
+    resetPasswordPanel.hidden = true;
     button.hidden = true;
     recoveryEmail.value = document.getElementById("email").value.trim();
     recoveryCode.value = "";
-    recoveryStatus.textContent = "Ingrese el correo de la cuenta y solicite un reto MFA.";
+    recoveryStatus.textContent = "Si la cuenta existe, recibirá un enlace de restablecimiento en su correo.";
     showError("");
     recoveryEmail.focus();
   });
@@ -78,6 +86,18 @@ document.addEventListener("DOMContentLoaded", async () => {
   cancelRecoveryButton.addEventListener("click", resetRecovery);
   startRecoveryButton.addEventListener("click", startAccountRecovery);
   verifyRecoveryButton.addEventListener("click", verifyAccountRecovery);
+  startPasswordResetButton.addEventListener("click", sendPasswordResetLink);
+  completePasswordResetButton.addEventListener("click", completePasswordReset);
+
+  if (passwordResetToken) {
+    credentialsPanel.hidden = true;
+    mfaPanel.hidden = true;
+    recoveryPanel.hidden = true;
+    accountRecoveryPanel.hidden = true;
+    recoveryLink.hidden = true;
+    button.hidden = true;
+    resetPasswordPanel.hidden = false;
+  }
 
   document.getElementById("restartMfaButton").addEventListener("click", () => {
     challengeToken = null;
@@ -161,6 +181,63 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
   }
 
+  async function sendPasswordResetLink() {
+    const email = recoveryEmail.value.trim();
+    if (!email) {
+      showError("Ingrese el correo de la cuenta que desea recuperar.");
+      return;
+    }
+    startPasswordResetButton.disabled = true;
+    showError("");
+    recoveryStatus.textContent = "Procesando la solicitud…";
+    try {
+      const data = await requestJson(`${API_BASE_URL}/auth/password-reset/start`, {
+        method: "POST",
+        headers: {"Content-Type": "application/json", "Accept": "application/json"},
+        cache: "no-store",
+        body: JSON.stringify({email})
+      });
+      recoveryStatus.textContent = data.message || "Si la cuenta existe, recibirá instrucciones en su correo.";
+    } catch (error) {
+      recoveryStatus.textContent = "";
+      showError(error.message || "No fue posible procesar la solicitud.");
+    } finally {
+      startPasswordResetButton.disabled = false;
+    }
+  }
+
+  async function completePasswordReset() {
+    const newPassword = document.getElementById("newPassword").value;
+    const confirmation = document.getElementById("confirmNewPassword").value;
+    if (!newPassword || !confirmation) {
+      showError("Ingrese y confirme la nueva contraseña.");
+      return;
+    }
+    completePasswordResetButton.disabled = true;
+    showError("");
+    try {
+      const data = await requestJson(`${API_BASE_URL}/auth/password-reset/complete`, {
+        method: "POST",
+        headers: {"Content-Type": "application/json", "Accept": "application/json"},
+        cache: "no-store",
+        body: JSON.stringify({token: passwordResetToken, password: newPassword, confirmation})
+      });
+      resetPasswordPanel.hidden = true;
+      credentialsPanel.hidden = false;
+      accountRecoveryPanel.hidden = false;
+      recoveryLink.hidden = false;
+      button.hidden = false;
+      recoveryStatus.textContent = data.message || "Contraseña actualizada. Inicie sesión nuevamente.";
+      document.getElementById("newPassword").value = "";
+      document.getElementById("confirmNewPassword").value = "";
+      document.getElementById("email").value = recoveryEmail.value.trim();
+    } catch (error) {
+      showError(error.message || "No fue posible actualizar la contraseña.");
+    } finally {
+      completePasswordResetButton.disabled = false;
+    }
+  }
+
   async function verifyAccountRecovery() {
     const code = recoveryCode.value.trim();
     if (!challengeToken) {
@@ -198,6 +275,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     startRecoveryButton.disabled = false;
     verifyRecoveryButton.disabled = true;
     accountRecoveryPanel.hidden = true;
+    resetPasswordPanel.hidden = true;
     credentialsPanel.hidden = false;
     button.hidden = false;
     button.innerHTML = '<span>Ingresar</span><i class="bi bi-arrow-right"></i>';
@@ -223,11 +301,12 @@ document.addEventListener("DOMContentLoaded", async () => {
     sessionStorage.setItem("nombre", data.nombre || "");
     sessionStorage.setItem("email", data.email || email);
     sessionStorage.setItem("rol", data.rol || "");
+    sessionStorage.setItem("perfilBase", data.perfilBase || data.rol || "");
     sessionStorage.setItem("rolId", String(data.rolId || ""));
     sessionStorage.setItem("permisosRol", data.permisos || "{}");
     if (data.empresaId != null) sessionStorage.setItem("empresaId", String(data.empresaId));
     if (data.empresaNombre) sessionStorage.setItem("empresaNombre", data.empresaNombre);
-    routeByRole(data.rol);
+    routeByRole(data.perfilBase || data.rol);
   }
 
   function showError(message) {

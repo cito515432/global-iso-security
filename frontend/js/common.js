@@ -1,6 +1,6 @@
 const API_BASE = "/api";
 const App = (() => {
-  const sessionKeys = ["token", "nombre", "email", "rol", "rolId", "permisosRol", "empresaId", "empresaNombre"];
+  const sessionKeys = ["token", "nombre", "email", "rol", "perfilBase", "rolId", "permisosRol", "empresaId", "empresaNombre"];
 
   function migrateLegacyStorage() {
     if (!sessionStorage.getItem("token") && localStorage.getItem("token")) {
@@ -14,7 +14,7 @@ const App = (() => {
 
   migrateLegacyStorage();
   const token = () => sessionStorage.getItem("token");
-  const role = () => (sessionStorage.getItem("rol") || "").toUpperCase();
+  const role = () => (sessionStorage.getItem("perfilBase") || sessionStorage.getItem("rol") || "").toUpperCase();
 
   async function api(path, options = {}) {
     const headers = new Headers(options.headers || {});
@@ -63,6 +63,7 @@ const App = (() => {
     sessionStorage.setItem("nombre", u.nombre || "");
     sessionStorage.setItem("email", u.email || "");
     sessionStorage.setItem("rol", u.rol || role());
+    if (u.perfilBase) sessionStorage.setItem("perfilBase", u.perfilBase);
     if (u.empresa) {
       sessionStorage.setItem("empresaId", u.empresa.id);
       sessionStorage.setItem("empresaNombre", u.empresa.nombre);

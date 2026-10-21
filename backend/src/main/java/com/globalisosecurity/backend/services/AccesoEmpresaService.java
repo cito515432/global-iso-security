@@ -26,11 +26,11 @@ public class AccesoEmpresaService {
 
     public String rolActual() {
         Usuario u = usuarioActual();
-        return u.getRol() == null || u.getRol().getNombre() == null ? "" : u.getRol().getNombre().trim().toUpperCase();
+        return RolPerfilUtil.effectiveProfile(u.getRol());
     }
 
     public boolean esAdministrador() {
-        return rolActual().contains("ADMIN");
+        return "ADMINISTRADOR".equals(rolActual());
     }
 
     /**

@@ -12,7 +12,17 @@ class PasswordPolicyTest {
 
     @Test
     void acceptsStrongPassword() {
-        assertDoesNotThrow(() -> policy.validate("Luna azul sobre montañas, viento y café"));
+        assertDoesNotThrow(() -> policy.validate("Luna azul 2026 sobre montañas, viento y café!"));
+    }
+
+    @Test
+    void acceptsEightCharactersWhenAllRequiredCharacterClassesArePresent() {
+        assertDoesNotThrow(() -> new PasswordPolicy(8).validate("Clave8!A"));
+    }
+
+    @Test
+    void rejectsPasswordMissingARequiredCharacterClass() {
+        assertThrows(BadRequestException.class, () -> new PasswordPolicy(8).validate("clave2026"));
     }
 
     @Test

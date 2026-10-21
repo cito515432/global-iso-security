@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="referrer" content="no-referrer">
   <title>Global ISO Security · Acceso</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
   <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
@@ -56,17 +57,30 @@
         </section>
         <div id="mensajeError" class="login-error" role="alert"></div>
         <button id="loginButton" class="login-button" type="submit"><span>Ingresar</span><i class="bi bi-arrow-right"></i></button>
-        <button id="recoveryLink" class="recovery-link" type="button">¿Necesita recuperar la cuenta? Usar MFA</button>
+        <button id="recoveryLink" class="recovery-link" type="button">¿Olvidó su contraseña?</button>
         <section id="accountRecoveryPanel" class="mfa-panel" hidden>
-          <strong>Recuperar acceso</strong>
-          <p id="recoveryStatus" class="verify-help">La verificación MFA se solicita únicamente en este flujo de recuperación.</p>
+          <strong>Restablecer contraseña</strong>
+          <p id="recoveryStatus" class="verify-help">Si la cuenta existe, enviaremos un enlace seguro a su correo. El enlace vence en 15 minutos y solo se puede usar una vez.</p>
           <label for="recoveryEmail">Correo de la cuenta</label>
           <input id="recoveryEmail" type="email" autocomplete="username" maxlength="254" placeholder="correo@empresa.com">
-          <button id="startRecoveryButton" class="login-button" type="button">Solicitar reto MFA</button>
-          <label for="recoveryCode">Código TOTP o de recuperación</label>
-          <input id="recoveryCode" type="text" autocomplete="one-time-code" inputmode="text" maxlength="19" placeholder="Código de 6 dígitos" autocapitalize="characters" disabled>
-          <button id="verifyRecoveryButton" class="login-button" type="button" disabled>Validar y recuperar</button>
+          <button id="startPasswordResetButton" class="login-button" type="button">Enviar enlace de restablecimiento</button>
+          <details class="mt-3"><summary class="verify-help">¿Tiene MFA y desea recuperar el acceso?</summary>
+            <p class="verify-help">Este flujo valida el segundo factor y permite recuperar una sesión; no cambia la contraseña.</p>
+            <button id="startRecoveryButton" class="login-button" type="button">Solicitar reto MFA</button>
+            <label for="recoveryCode">Código TOTP o de recuperación</label>
+            <input id="recoveryCode" type="text" autocomplete="one-time-code" inputmode="text" maxlength="19" placeholder="Código de 6 dígitos" autocapitalize="characters" disabled>
+            <button id="verifyRecoveryButton" class="login-button" type="button" disabled>Validar y recuperar acceso</button>
+          </details>
           <button id="cancelRecoveryButton" class="mfa-restart" type="button">Volver al inicio de sesión</button>
+        </section>
+        <section id="resetPasswordPanel" class="mfa-panel" hidden>
+          <strong>Elija una contraseña nueva</strong>
+          <p class="verify-help">Debe tener al menos 8 caracteres e incluir mayúscula, minúscula, número y carácter especial.</p>
+          <label for="newPassword">Nueva contraseña</label>
+          <input id="newPassword" type="password" autocomplete="new-password" minlength="8" maxlength="128">
+          <label for="confirmNewPassword">Confirme la contraseña</label>
+          <input id="confirmNewPassword" type="password" autocomplete="new-password" minlength="8" maxlength="128">
+          <button id="completePasswordResetButton" class="login-button" type="button">Actualizar contraseña</button>
         </section>
         <p class="verify-help mt-3">Las cuentas de demostración, cuando existan, se administran mediante variables de entorno y no se publican en el código fuente.</p>
         <details class="demo-access certificate-check">

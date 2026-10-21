@@ -26,7 +26,7 @@ public class LogAuditoriaService {
     }
 
     public List<LogAuditoria> obtenerTodos() {
-        return logAuditoriaRepository.findAll();
+        return logAuditoriaRepository.findTop200ByOrderByFechaDesc();
     }
 
     public Optional<LogAuditoria> obtenerPorId(Long id) {
@@ -81,14 +81,26 @@ public class LogAuditoriaService {
     }
 
     public void registrarLog(String accion, String modulo, String descripcion) {
+        registrarEvento(SecurityUtils.getUsuarioActual(), accion, modulo, descripcion);
+    }
+
+    /** Records security events whose actor is not present in the authenticated request context. */
+    public void registrarEvento(String usuario, String accion, String modulo, String descripcion) {
         LogAuditoria log = new LogAuditoria();
-        log.setUsuario(SecurityUtils.getUsuarioActual());
+        log.setUsuario(clean(usuario, 255, "SISTEMA"));
         log.setAccion(accion);
         log.setModulo(modulo);
-        log.setDescripcion(descripcion);
+        log.setDescripcion(clean(descripcion, 1000, "Evento de seguridad"));
         log.setFecha(LocalDateTime.now());
-        log.setIp(RequestUtils.getClientIp());
+        // Security-event IPs must not trust client-supplied X-Forwarded-For values.
+        log.setIp(RequestUtils.getConnectionAddress());
 
         logAuditoriaRepository.save(log);
+    }
+
+    private static String clean(String value, int limit, String fallback) {
+        if (value == null || value.isBlank()) return fallback;
+        String normalized = value.trim().replaceAll("[\\p{Cntrl}]", " ");
+        return normalized.length() <= limit ? normalized : normalized.substring(0, limit);
     }
 }

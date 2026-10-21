@@ -31,6 +31,7 @@ import org.springframework.core.io.Resource;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.server.ResponseStatusException;
 
 @Service
 public class EvidenciaService {
@@ -55,17 +56,19 @@ public class EvidenciaService {
     private final SoaControlRepository soaRepository;
     private final AccesoEmpresaService acceso;
     private final LogAuditoriaService logs;
+    private final ClamAvScanner malwareScanner;
     private final Path storage;
 
     public record Descarga(Evidencia evidencia, Resource recurso) {}
 
     public EvidenciaService(EvidenciaRepository repository, SoaControlRepository soaRepository,
-            AccesoEmpresaService acceso, LogAuditoriaService logs,
+            AccesoEmpresaService acceso, LogAuditoriaService logs, ClamAvScanner malwareScanner,
             @Value("${app.storage.evidencias:./storage/evidencias}") String storageDir) {
         this.repository = repository;
         this.soaRepository = soaRepository;
         this.acceso = acceso;
         this.logs = logs;
+        this.malwareScanner = malwareScanner;
         this.storage = Paths.get(storageDir).toAbsolutePath().normalize();
         try {
             Files.createDirectories(this.storage);
@@ -125,6 +128,7 @@ public class EvidenciaService {
                 Files.copy(digestInput, target);
             }
             validateOfficeContainer(extension, target);
+            malwareScanner.scan(target);
 
             Evidencia e = new Evidencia();
             e.setServicio(s.getServicio());
@@ -143,6 +147,9 @@ public class EvidenciaService {
             logs.registrarLog("CARGAR", "EVIDENCIAS", "Se cargó evidencia para " + s.getControl().getCodigo());
             return guardada;
         } catch (BadRequestException ex) {
+            deleteQuietly(target);
+            throw ex;
+        } catch (ResponseStatusException ex) {
             deleteQuietly(target);
             throw ex;
         } catch (Exception ex) {
