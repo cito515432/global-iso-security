@@ -48,6 +48,7 @@ function metric(label,value,icon,hint=""){
 function bindSectionTitles(){
   document.querySelectorAll("[data-section]").forEach(btn=>btn.addEventListener("click",()=>{
     document.getElementById("pageTitle").textContent=btn.textContent.trim();
+    if(btn.dataset.section==="auditoria") loadAuditLogs();
   }));
   document.querySelectorAll("[data-section-jump]").forEach(btn=>btn.addEventListener("click",()=>{
     document.querySelector(`[data-section="${btn.dataset.sectionJump}"]`)?.click();
@@ -57,6 +58,7 @@ function bindForms(){
   document.getElementById("companyForm").addEventListener("submit",saveCompany);
   document.getElementById("serviceForm").addEventListener("submit",saveService);
   document.getElementById("userForm").addEventListener("submit",saveUser);
+  document.getElementById("roleForm").addEventListener("submit",saveRole);
   document.getElementById("contextForm").addEventListener("submit",saveContext);
   ["organizationSearch","organizationStatus"].forEach(id=>document.getElementById(id).addEventListener("input",renderOrganizations));
   ["userSearch","userRoleFilter"].forEach(id=>document.getElementById(id).addEventListener("input",renderUsers));
@@ -113,7 +115,25 @@ function renderUsers(){
   document.getElementById("usersTable").innerHTML=data.map(u=>`<tr><td><strong>${App.esc(u.nombre)}</strong></td><td>${App.esc(u.email)}</td><td>${App.badge(u.rol?.nombre||'SIN_ROL')}</td><td>${App.esc(u.empresa?.nombre||'Rol global')}</td><td><button class="btn-app" onclick="openUserModal(${u.id})"><i class="bi bi-pencil"></i></button> <button class="btn-app btn-danger-app" onclick="deleteUser(${u.id})"><i class="bi bi-trash"></i></button></td></tr>`).join("")||'<tr><td colspan="5" class="empty">No hay usuarios.</td></tr>';
 }
 function renderRoles(){
-  document.getElementById("rolesGrid").innerHTML=roles.map(r=>`<div class="card-app"><div class="d-flex justify-content-between"><h3>${App.esc(App.pretty(r.nombre))}</h3>${App.badge(r.activo===false?'INACTIVO':'ACTIVO')}</div><p class="small-app text-muted-app">${App.esc(r.descripcion||'Sin descripción')}</p><details><summary class="small-app link-app">Permisos técnicos</summary><pre class="small-app mt-2" style="white-space:pre-wrap">${App.esc(formatPermissions(r.permisos))}</pre></details><button class="btn-app mt-2" onclick="toggleRole(${r.id},${r.activo===false})">${r.activo===false?'Activar':'Desactivar'}</button></div>`).join("");
+  const systemRoles=new Set(["ADMINISTRADOR","IMPLEMENTADOR","AUDITOR","CAPACITADOR","USUARIO_EMPRESA"]);
+  document.getElementById("rolesGrid").innerHTML=roles.map(r=>{let base=r.nombre;try{base=JSON.parse(r.permisos||"{}").perfilBase||r.nombre;}catch{}const edit=systemRoles.has(String(r.nombre).toUpperCase())?"":`<button class="btn-app" onclick="openRoleModal(${r.id})"><i class="bi bi-pencil"></i> Editar perfil</button>`;return `<div class="card-app"><div class="d-flex justify-content-between"><h3>${App.esc(App.pretty(r.nombre))}</h3>${App.badge(r.activo===false?'INACTIVO':'ACTIVO')}</div><p class="small-app text-muted-app">${App.esc(r.descripcion||'Sin descripción')}</p><p class="small-app"><strong>Perfil efectivo:</strong> ${App.esc(App.pretty(base))}</p><details><summary class="small-app link-app">Permisos técnicos</summary><pre class="small-app mt-2" style="white-space:pre-wrap">${App.esc(formatPermissions(r.permisos))}</pre></details><div class="d-flex gap-2 mt-2">${edit}<button class="btn-app" onclick="toggleRole(${r.id},${r.activo===false})">${r.activo===false?'Activar':'Desactivar'}</button></div></div>`}).join("");
+}
+function openRoleModal(id){const role=roles.find(r=>r.id===id);document.getElementById("roleForm").reset();document.getElementById("roleId").value=role?.id||"";document.getElementById("roleModalTitle").textContent=role?"Editar rol personalizado":"Crear rol personalizado";if(role){document.getElementById("roleName").value=role.nombre||"";document.getElementById("roleDescription").value=role.descripcion||"";try{document.getElementById("roleBaseProfile").value=JSON.parse(role.permisos||"{}").perfilBase||"USUARIO_EMPRESA";}catch{document.getElementById("roleBaseProfile").value="USUARIO_EMPRESA";}}App.modal("roleModal").show();}
+async function saveRole(event){
+  event.preventDefault();
+  const id=document.getElementById("roleId").value;
+  const body={nombre:document.getElementById("roleName").value.trim(),descripcion:document.getElementById("roleDescription").value.trim(),perfilBase:document.getElementById("roleBaseProfile").value,activo:true};
+  try{await App.api(`/roles${id?`/${id}`:""}`,{method:id?"PUT":"POST",body:JSON.stringify(body)});App.modal("roleModal").hide();roles=await App.api("/roles");populateSelects();renderRoles();App.toast(id?"Perfil del rol actualizado.":"Rol creado con perfil operativo restringido. Ya puede asignarse a un usuario.");}
+  catch(error){App.toast(error.message,"error");}
+}
+async function loadAuditLogs(){
+  const table=document.getElementById("auditLogsTable");
+  if(!table)return;
+  table.innerHTML='<tr><td colspan="6" class="empty">Consultando eventos…</td></tr>';
+  try{
+    const logs=await App.api("/logs-auditoria");
+    table.innerHTML=logs.map(log=>`<tr><td>${App.esc(App.fmtDate(log.fecha))}</td><td>${App.esc(log.usuario)}</td><td>${App.esc(log.accion)}</td><td>${App.esc(log.modulo)}</td><td>${App.esc(log.descripcion)}</td><td>${App.esc(log.ip)}</td></tr>`).join("")||'<tr><td colspan="6" class="empty">Aún no hay eventos registrados.</td></tr>';
+  }catch(error){table.innerHTML=`<tr><td colspan="6" class="empty">${App.esc(error.message||"No fue posible cargar la auditoría.")}</td></tr>`;}
 }
 function formatPermissions(p){try{return JSON.stringify(typeof p==='string'?JSON.parse(p):p,null,2);}catch{return p||'{}';}}
 function renderControls(){
@@ -124,7 +144,7 @@ function renderControls(){
 function renderContextChecks(){document.getElementById("contextChecks").innerHTML=contextFlags.map(([id,label])=>`<label class="form-check-app"><input type="checkbox" id="ctx_${id}"> ${label}</label>`).join("");}
 async function saveCompany(e){e.preventDefault();try{const c=await App.api("/empresas",{method:"POST",body:JSON.stringify({nombre:document.getElementById("companyName").value})});App.modal("companyModal").hide();e.target.reset();App.toast("Organización creada. Ahora puede crear su servicio SGSI.");await refreshAll();document.getElementById("serviceCompany").value=c.id;App.modal("serviceModal").show();}catch(err){App.toast(err.message,"error");}}
 async function saveService(e){e.preventDefault();try{await App.api("/servicios",{method:"POST",body:JSON.stringify({empresa:{id:+document.getElementById("serviceCompany").value},sector:{id:+document.getElementById("serviceSector").value},estado:document.getElementById("serviceStatus").value})});App.modal("serviceModal").hide();App.toast("Servicio creado con SoA de 93 controles.");await refreshAll();}catch(err){App.toast(err.message,"error");}}
-function openUserModal(id){const u=users.find(x=>x.id===id);document.getElementById("userId").value=u?.id||"";document.getElementById("userName").value=u?.nombre||"";document.getElementById("userEmail").value=u?.email||"";document.getElementById("userPassword").value="";document.getElementById("userRole").value=u?.rol?.id||roles[0]?.id||"";document.getElementById("userCompany").value=u?.empresa?.id||"";document.getElementById("userModalTitle").textContent=u?'Editar usuario':'Crear usuario';App.modal("userModal").show();}
+function openUserModal(id){const u=users.find(x=>x.id===id);document.getElementById("userId").value=u?.id||"";document.getElementById("userName").value=u?.nombre||"";document.getElementById("userEmail").value=u?.email||"";document.getElementById("userPassword").value="";document.getElementById("userPassword").required=!id;document.getElementById("userRole").value=u?.rol?.id||roles[0]?.id||"";document.getElementById("userCompany").value=u?.empresa?.id||"";document.getElementById("userModalTitle").textContent=u?'Editar usuario':'Crear usuario';App.modal("userModal").show();}
 async function saveUser(e){e.preventDefault();const id=document.getElementById("userId").value;const body={nombre:document.getElementById("userName").value,email:document.getElementById("userEmail").value,rawPassword:document.getElementById("userPassword").value||null,rolId:+document.getElementById("userRole").value,empresaId:document.getElementById("userCompany").value?+document.getElementById("userCompany").value:null};try{await App.api(`/usuarios${id?'/'+id:''}`,{method:id?'PUT':'POST',body:JSON.stringify(body)});App.modal("userModal").hide();App.toast("Usuario guardado.");await refreshAll();}catch(err){App.toast(err.message,"error");}}
 async function deleteUser(id){if(!confirm("¿Eliminar este usuario?"))return;try{await App.api(`/usuarios/${id}`,{method:"DELETE"});App.toast("Usuario eliminado.");await refreshAll();}catch(e){App.toast(e.message,"error");}}
 async function toggleRole(id,activate){try{await App.api(`/roles/${id}/estado`,{method:"PATCH",body:JSON.stringify({activo:activate})});App.toast("Estado del rol actualizado.");roles=await App.api("/roles");renderRoles();}catch(e){App.toast(e.message,"error");}}

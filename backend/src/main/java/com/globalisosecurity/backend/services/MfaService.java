@@ -259,6 +259,22 @@ public class MfaService {
                 timestamp(now), userId);
     }
 
+    /** Invalidates issued JWTs without disabling or rotating the user's MFA factor. */
+    @Transactional
+    public void revokeSessions(long userId) {
+        Instant now = Instant.now();
+        lockUser(userId);
+        List<Map<String, Object>> credential = jdbc.queryForList(
+                "SELECT usuario_id FROM usuario_mfa WHERE usuario_id = ? FOR UPDATE", userId);
+        if (credential.isEmpty()) {
+            jdbc.update("INSERT INTO usuario_mfa (usuario_id, enabled, session_epoch, updated_at) "
+                    + "VALUES (?, 0, 1, ?)", userId, timestamp(now));
+        } else {
+            jdbc.update("UPDATE usuario_mfa SET session_epoch = session_epoch + 1, updated_at = ? "
+                    + "WHERE usuario_id = ?", timestamp(now), userId);
+        }
+    }
+
     private VerificationResult recordFailure(
             long challengeId, long userId, long challengeFailures, long userFailures, Instant now) {
         int nextChallengeFailures = (int) challengeFailures + 1;

@@ -4,6 +4,7 @@ import com.globalisosecurity.backend.exceptions.BadRequestException;
 import com.globalisosecurity.backend.exceptions.ResourceNotFoundException;
 import com.globalisosecurity.backend.models.*;
 import com.globalisosecurity.backend.repositories.*;
+import com.globalisosecurity.backend.utils.SafeLink;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -124,8 +125,8 @@ public class CapacitacionService {
     private void aplicar(Capacitacion destino, Capacitacion fuente, Servicio servicio, String estado, boolean nueva) {
         destino.setTitulo(fuente.getTitulo().trim());
         destino.setDescripcion(trim(fuente.getDescripcion()));
-        destino.setMaterialUrl(trim(fuente.getMaterialUrl()));
-        destino.setVideoUrl(trim(fuente.getVideoUrl()));
+        destino.setMaterialUrl(SafeLink.validate(fuente.getMaterialUrl(), "El enlace del material"));
+        destino.setVideoUrl(SafeLink.validate(fuente.getVideoUrl(), "El enlace del video"));
         destino.setObjetivo(trim(fuente.getObjetivo()));
         destino.setPublicoObjetivo(trim(fuente.getPublicoObjetivo()));
         destino.setPuntajeMinimo(fuente.getPuntajeMinimo() == null ? (nueva ? 80 : destino.getPuntajeMinimo())

@@ -12,9 +12,11 @@ import com.globalisosecurity.backend.repositories.RolRepository;
 import com.globalisosecurity.backend.repositories.UsuarioRepository;
 import com.globalisosecurity.backend.utils.SecurityUtils;
 import java.util.List;
+import java.util.Locale;
 import java.util.Optional;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class UsuarioService {
@@ -24,17 +26,20 @@ public class UsuarioService {
     private final EmpresaRepository empresaRepository;
     private final PasswordEncoder passwordEncoder;
     private final PasswordPolicy passwordPolicy;
+    private final LogAuditoriaService logs;
 
     public UsuarioService(UsuarioRepository usuarioRepository,
             RolRepository rolRepository,
             EmpresaRepository empresaRepository,
             PasswordEncoder passwordEncoder,
-            PasswordPolicy passwordPolicy) {
+            PasswordPolicy passwordPolicy,
+            LogAuditoriaService logs) {
         this.usuarioRepository = usuarioRepository;
         this.rolRepository = rolRepository;
         this.empresaRepository = empresaRepository;
         this.passwordEncoder = passwordEncoder;
         this.passwordPolicy = passwordPolicy;
+        this.logs = logs;
     }
 
     public List<Usuario> obtenerTodos() {
@@ -45,11 +50,12 @@ public class UsuarioService {
         return usuarioRepository.findById(id);
     }
 
+    @Transactional
     public Usuario crearUsuario(UsuarioCreateRequest request) {
         validarRequest(request, true);
         passwordPolicy.validate(request.getRawPassword());
 
-        String emailNormalizado = request.getEmail().trim().toLowerCase();
+        String emailNormalizado = request.getEmail().trim().toLowerCase(Locale.ROOT);
         if (usuarioRepository.findByEmail(emailNormalizado).isPresent()) {
             throw new BadRequestException("Ya existe un usuario con ese email");
         }
@@ -72,12 +78,16 @@ public class UsuarioService {
         usuario.setPassword(passwordEncoder.encode(request.getRawPassword()));
         usuario.setRol(rol);
         usuario.setEmpresa(empresa);
-        return usuarioRepository.save(usuario);
+        Usuario saved = usuarioRepository.save(usuario);
+        logs.registrarLog("CREAR_USUARIO", "USUARIOS", "Se creó el usuario " + emailNormalizado
+                + " con rol " + rol.getNombre());
+        return saved;
     }
 
+    @Transactional
     public Usuario actualizarUsuario(Long id, UsuarioCreateRequest request) {
         validarRequest(request, false);
-        String emailNormalizado = request.getEmail().trim().toLowerCase();
+        String emailNormalizado = request.getEmail().trim().toLowerCase(Locale.ROOT);
 
         Usuario usuario = usuarioRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Usuario no encontrado"));
@@ -109,13 +119,18 @@ public class UsuarioService {
             usuario.setPassword(passwordEncoder.encode(request.getRawPassword()));
         }
 
-        return usuarioRepository.save(usuario);
+        Usuario saved = usuarioRepository.save(usuario);
+        logs.registrarLog("ACTUALIZAR_USUARIO", "USUARIOS", "Se actualizó el usuario " + emailNormalizado
+                + " y su asignación de rol/empresa");
+        return saved;
     }
 
+    @Transactional
     public void eliminarUsuario(Long id) {
         Usuario usuario = usuarioRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Usuario no encontrado"));
         usuarioRepository.delete(usuario);
+        logs.registrarLog("ELIMINAR_USUARIO", "USUARIOS", "Se eliminó el usuario " + usuario.getEmail());
     }
 
     public UsuarioMeResponse obtenerUsuarioAutenticado() {
@@ -129,6 +144,7 @@ public class UsuarioService {
         response.setEmail(usuario.getEmail());
         if (usuario.getRol() != null) {
             response.setRol(usuario.getRol().getNombre());
+            response.setPerfilBase(RolPerfilUtil.effectiveProfile(usuario.getRol()));
             response.setPermisos(usuario.getRol().getPermisos());
         }
 

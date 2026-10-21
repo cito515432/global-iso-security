@@ -5,6 +5,7 @@ public class RolRequest {
     private String descripcion;
     private Boolean activo;
     private String permisos;
+    private String perfilBase;
 
     public String getNombre() {
         return nombre;
@@ -37,4 +38,8 @@ public class RolRequest {
     public void setPermisos(String permisos) {
         this.permisos = permisos;
     }
+
+    public String getPerfilBase() { return perfilBase; }
+
+    public void setPerfilBase(String perfilBase) { this.perfilBase = perfilBase; }
 }

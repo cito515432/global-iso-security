@@ -53,7 +53,27 @@ services:
       - key: LOGIN_BLOCK_MINUTES
         value: 15
       - key: PASSWORD_MIN_LENGTH
-        value: 15
+        value: 8
+      - key: PASSWORD_RESET_ENABLED
+        value: "false"
+      - key: PASSWORD_RESET_FRONTEND_URL
+        value: https://globaliso-frontend-cito515432.onrender.com/pages/login.html
+      - key: PASSWORD_RESET_FROM
+        sync: false
+      - key: SMTP_HOST
+        sync: false
+      - key: SMTP_PORT
+        value: 587
+      - key: SMTP_USERNAME
+        sync: false
+      - key: SMTP_PASSWORD
+        sync: false
+      - key: AV_REQUIRED
+        value: "true"
+      - key: AV_CLAMD_HOST
+        sync: false
+      - key: AV_CLAMD_PORT
+        value: 3310
       - key: MFA_ENCRYPTION_KEY
         sync: false
       - key: DB_MIGRATIONS_ENABLED

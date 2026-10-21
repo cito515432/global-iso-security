@@ -13,7 +13,6 @@ import java.sql.Statement;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
-import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -23,9 +22,13 @@ import java.util.stream.Collectors;
  */
 public final class TidbMigrationRunner {
     private static final String EXPECTED_DATABASE = "globalisosecurity";
-    private static final String MIGRATION_VERSION = "1";
+    private static final String TARGET_VERSION = "2";
+    private static final String MFA_VERSION = "1";
+    private static final String SECURITY_VERSION = "2";
     private static final Set<String> MFA_TABLES = Set.of(
             "usuario_mfa", "mfa_login_challenges", "mfa_recovery_codes");
+    private static final Set<String> SECURITY_TABLES = Set.of(
+            "login_attempt_buckets", "password_reset_tokens");
 
     private TidbMigrationRunner() {}
 
@@ -52,7 +55,6 @@ public final class TidbMigrationRunner {
 
         try (Connection connection = DriverManager.getConnection(url, username, password)) {
             verifyDatabase(connection);
-            verifyMigrationState(connection, "info");
         }
 
         Flyway flyway = Flyway.configure()
@@ -61,12 +63,18 @@ public final class TidbMigrationRunner {
                 .baselineOnMigrate(true)
                 .baselineVersion(MigrationVersion.fromVersion("0"))
                 .cleanDisabled(true)
-                .target(MigrationVersion.fromVersion(MIGRATION_VERSION))
+                .target(MigrationVersion.fromVersion(TARGET_VERSION))
                 .load();
 
         MigrationInfoService info = flyway.info();
         verifyKnownHistory(info);
         List<MigrationInfo> pending = Arrays.stream(info.pending()).toList();
+        Set<String> pendingVersions = pending.stream().filter(m -> m.getVersion() != null)
+                .map(m -> m.getVersion().getVersion()).collect(Collectors.toSet());
+        try (Connection connection = DriverManager.getConnection(url, username, password)) {
+            verifyDatabase(connection);
+            verifyMigrationState(connection, mode, pendingVersions);
+        }
         System.out.printf("TiDB migration mode=%s; applied=%d; pending=%d.%n",
                 mode, info.applied().length, pending.size());
         for (MigrationInfo migration : pending) {
@@ -87,19 +95,19 @@ public final class TidbMigrationRunner {
             return;
         }
 
-        if (pending.stream().noneMatch(m -> MIGRATION_VERSION.equals(m.getVersion().getVersion()))) {
-            System.out.println("No pending version-1 migration; no database changes made.");
+        if (pending.isEmpty()) {
+            System.out.println("No pending migrations; no database changes made.");
             return;
         }
 
-        requireApplyGate();
+        requireApplyGate(pendingVersions);
         try (Connection connection = DriverManager.getConnection(url, username, password)) {
             verifyDatabase(connection);
-            verifyMigrationState(connection, "migrate");
+            verifyMigrationState(connection, "migrate", pendingVersions);
         }
         var result = flyway.migrate();
         System.out.printf("Migration finished: applied=%d, target=%s.%n",
-                result.migrationsExecuted, MIGRATION_VERSION);
+                result.migrationsExecuted, TARGET_VERSION);
     }
 
     private static void verifyDatabase(Connection connection) throws Exception {
@@ -116,34 +124,33 @@ public final class TidbMigrationRunner {
                 return false;
             }
             return migration.getVersion() == null ||
-                    !MIGRATION_VERSION.equals(migration.getVersion().getVersion());
+                    !Set.of(MFA_VERSION, SECURITY_VERSION).contains(migration.getVersion().getVersion());
         });
         if (unexpected) {
             throw new IllegalStateException("Unexpected Flyway history detected; inspect the database migration history manually.");
         }
     }
 
-    private static void verifyMigrationState(Connection connection, String mode) throws Exception {
-        Map<String, Boolean> present = MFA_TABLES.stream()
-                .collect(Collectors.toMap(name -> name, name -> false));
-        String sql = "SELECT table_name FROM information_schema.tables " +
-                "WHERE table_schema = DATABASE() AND table_name IN " +
-                "('usuario_mfa','mfa_login_challenges','mfa_recovery_codes')";
-        try (Statement statement = connection.createStatement(); ResultSet rows = statement.executeQuery(sql)) {
-            while (rows.next()) {
-                String table = rows.getString(1).toLowerCase(Locale.ROOT);
-                if (present.containsKey(table)) {
-                    present.put(table, true);
-                }
-            }
+    private static void verifyMigrationState(Connection connection, String mode, Set<String> pendingVersions) throws Exception {
+        Set<String> existingTables = new java.util.HashSet<>();
+        try (Statement statement = connection.createStatement();
+                ResultSet rows = statement.executeQuery("SELECT table_name FROM information_schema.tables "
+                        + "WHERE table_schema = DATABASE()")) {
+            while (rows.next()) existingTables.add(rows.getString(1).toLowerCase(Locale.ROOT));
         }
+        verifyTableGroup(existingTables, MFA_TABLES, MFA_VERSION, mode, pendingVersions, "MFA");
+        verifyTableGroup(existingTables, SECURITY_TABLES, SECURITY_VERSION, mode, pendingVersions, "security controls");
+    }
 
-        long existing = present.values().stream().filter(Boolean::booleanValue).count();
-        if ("migrate".equals(mode) && existing != 0) {
-            throw new IllegalStateException("MFA tables already exist or are partial; inspect schema history manually before retrying.");
+    private static void verifyTableGroup(Set<String> existing, Set<String> expected, String version,
+            String mode, Set<String> pendingVersions, String label) {
+        long count = expected.stream().filter(existing::contains).count();
+        if (count > 0 && count < expected.size()) {
+            throw new IllegalStateException("Partial " + label + " schema detected; inspect it manually before retrying.");
         }
-        if (existing > 0 && existing < MFA_TABLES.size()) {
-            throw new IllegalStateException("Partial MFA schema detected; no automatic repair was attempted.");
+        if ("migrate".equals(mode) && pendingVersions.contains(version) && count > 0) {
+            throw new IllegalStateException(label + " tables already exist while migration " + version
+                    + " is pending; inspect Flyway history and schema manually before retrying.");
         }
     }
 
@@ -175,9 +182,14 @@ public final class TidbMigrationRunner {
         return java.net.URLDecoder.decode(pair, java.nio.charset.StandardCharsets.UTF_8);
     }
 
-    private static void requireApplyGate() {
-        if (!"APPLY_MFA_V1".equals(System.getenv("TIDB_MIGRATION_CONFIRM"))) {
-            throw new IllegalStateException("Set TIDB_MIGRATION_CONFIRM=APPLY_MFA_V1 to authorize schema writes.");
+    private static void requireApplyGate(Set<String> pendingVersions) {
+        if (pendingVersions.contains(MFA_VERSION)
+                && !"APPLY_MFA_V1".equals(System.getenv("TIDB_MIGRATION_CONFIRM"))) {
+            throw new IllegalStateException("Set TIDB_MIGRATION_CONFIRM=APPLY_MFA_V1 to authorize the MFA migration.");
+        }
+        if (pendingVersions.contains(SECURITY_VERSION)
+                && !"APPLY_SECURITY_V2".equals(System.getenv("TIDB_SECURITY_MIGRATION_CONFIRM"))) {
+            throw new IllegalStateException("Set TIDB_SECURITY_MIGRATION_CONFIRM=APPLY_SECURITY_V2 to authorize security migration V2.");
         }
         if (!"true".equalsIgnoreCase(System.getenv("TIDB_BACKUP_VERIFIED")) ||
                 blank(System.getenv("TIDB_BACKUP_REFERENCE"))) {

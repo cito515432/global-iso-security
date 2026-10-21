@@ -10,6 +10,7 @@ public class UsuarioMeResponse {
     private String nombre;
     private String email;
     private String rol;
+    private String perfilBase;
     private String permisos;
     private EmpresaResumen empresa;
 
@@ -72,6 +73,10 @@ public class UsuarioMeResponse {
     public String getRol() { return rol; }
 
     public void setRol(String rol) { this.rol = rol; }
+
+    public String getPerfilBase() { return perfilBase; }
+
+    public void setPerfilBase(String perfilBase) { this.perfilBase = perfilBase; }
 
     public String getPermisos() { return permisos; }
 

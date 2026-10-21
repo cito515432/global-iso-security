@@ -20,6 +20,9 @@ public class SectorService {
     @Autowired
     private SectorRepository sectorRepository;
 
+    @Autowired
+    private LogAuditoriaService logAuditoriaService;
+
     public List<Sector> obtenerTodos() {
         return sectorRepository.findAll();
     }
@@ -37,7 +40,9 @@ public class SectorService {
         }
 
         sector.setNombre(sector.getNombre().trim());
-        return sectorRepository.save(sector);
+        Sector guardado = sectorRepository.save(sector);
+        logAuditoriaService.registrarLog("CREAR", "SECTORES", "Se creó el sector " + guardado.getNombre());
+        return guardado;
     }
 
     public Sector actualizarSector(Long id, Sector sectorActualizado) {
@@ -57,7 +62,9 @@ public class SectorService {
         Sector sector = sectorOpt.get();
         sector.setNombre(sectorActualizado.getNombre().trim());
 
-        return sectorRepository.save(sector);
+        Sector guardado = sectorRepository.save(sector);
+        logAuditoriaService.registrarLog("ACTUALIZAR", "SECTORES", "Se actualizó el sector " + id);
+        return guardado;
     }
 
     public void eliminarSector(Long id) {
@@ -65,7 +72,10 @@ public class SectorService {
             throw new ResourceNotFoundException("Sector no encontrado");
         }
 
-        sectorRepository.deleteById(id);
+        Sector eliminado = sectorRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Sector no encontrado"));
+        sectorRepository.delete(eliminado);
+        logAuditoriaService.registrarLog("ELIMINAR", "SECTORES", "Se eliminó el sector " + id);
     }
 
     private void validarNombreSector(String nombre) {

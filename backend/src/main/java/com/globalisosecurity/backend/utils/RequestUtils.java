@@ -35,4 +35,12 @@ public class RequestUtils {
 
         return request.getRemoteAddr();
     }
+
+    /** Direct peer address for security throttles; forwarded headers are client-controlled unless a trusted proxy is verified. */
+    public static String getConnectionAddress() {
+        RequestAttributes attrs = RequestContextHolder.getRequestAttributes();
+        if (!(attrs instanceof ServletRequestAttributes servletAttrs)) return "IP_NO_DISPONIBLE";
+        String address = servletAttrs.getRequest().getRemoteAddr();
+        return address == null || address.isBlank() ? "IP_NO_DISPONIBLE" : address.trim();
+    }
 }

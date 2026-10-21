@@ -179,7 +179,9 @@ public class ConstanciaCapacitacionService {
         actual.setCodigoInterno(trim(entrada.getCodigoInterno()));
         actual.setPuntaje(entrada.getPuntaje());
         actual.setEstado(entrada.getEstado() == null || entrada.getEstado().isBlank() ? actual.getEstado() : entrada.getEstado().trim().toUpperCase());
-        return constanciaRepository.save(actual);
+        ConstanciaCapacitacion guardada = constanciaRepository.save(actual);
+        logs.registrarLog("ACTUALIZAR", "CONSTANCIAS", "Se actualizó la constancia " + id);
+        return guardada;
     }
 
     @Transactional

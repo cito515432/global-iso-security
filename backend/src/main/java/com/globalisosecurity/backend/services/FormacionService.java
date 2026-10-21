@@ -7,6 +7,7 @@ import com.globalisosecurity.backend.exceptions.BadRequestException;
 import com.globalisosecurity.backend.exceptions.ResourceNotFoundException;
 import com.globalisosecurity.backend.models.*;
 import com.globalisosecurity.backend.repositories.*;
+import com.globalisosecurity.backend.utils.SafeLink;
 import java.time.LocalDateTime;
 import java.util.*;
 import org.springframework.stereotype.Service;
@@ -86,7 +87,9 @@ public class FormacionService {
                 .orElseThrow(() -> new ResourceNotFoundException("Módulo no encontrado"));
         if (moduloId != null && !m.getCapacitacion().getId().equals(capacitacionId)) throw new BadRequestException("El módulo no pertenece a la capacitación");
         m.setCapacitacion(c); m.setTitulo(q.titulo().trim()); m.setDescripcion(trim(q.descripcion()));
-        m.setContenido(q.contenido()); m.setMaterialUrl(trim(q.materialUrl())); m.setVideoUrl(trim(q.videoUrl()));
+        m.setContenido(q.contenido());
+        m.setMaterialUrl(SafeLink.validate(q.materialUrl(), "El enlace del material"));
+        m.setVideoUrl(SafeLink.validate(q.videoUrl(), "El enlace del video"));
         m.setOrden(q.orden() == null ? 1 : Math.max(1, q.orden()));
         m.setDuracionMinutos(q.duracionMinutos() == null ? 15 : Math.max(1, q.duracionMinutos()));
         m.setObligatorio(q.obligatorio() == null || q.obligatorio());

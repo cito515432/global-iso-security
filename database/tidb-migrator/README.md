@@ -8,9 +8,9 @@ Las dependencias Java usan Flyway Core/MySQL `11.9.0` y el complemento comunitar
 
 - `info` (predeterminado): conexión de solo lectura; muestra historial y migraciones pendientes.
 - `validate`: valida checksums de migraciones aplicadas.
-- `migrate`: aplica hasta la versión 1 y exige confirmaciones explícitas, TLS con verificación de identidad y esquema esperado.
+- `migrate`: aplica hasta la versión 2 y exige confirmaciones explícitas, TLS con verificación de identidad y esquema esperado.
 
-La ejecución aborta si encuentra una o más tablas MFA existentes; así no intenta “reparar” un estado parcial a ciegas. No ejecuta `clean`, no cambia tablas de negocio, servicios, controles, ni relaciones SoA.
+La ejecución aborta si detecta esquemas parciales o tablas que ya existen mientras su migración correspondiente aparece pendiente. La versión 1 agrega MFA; la versión 2 agrega limitación persistente de intentos y tokens de restablecimiento de contraseña. No ejecuta `clean` ni modifica tablas de negocio, servicios, controles o relaciones SoA.
 
 ## Configuración segura
 
@@ -19,7 +19,9 @@ Proporciona las variables desde el gestor de secretos del entorno, nunca desde u
 - `TIDB_JDBC_URL`: URL JDBC del clúster TiDB Cloud con `sslMode=VERIFY_IDENTITY`.
 - `TIDB_USERNAME` y `TIDB_PASSWORD`.
 - `TIDB_ALLOWED_HOST_SUFFIX`: opcional; predeterminado `tidbcloud.com`, úsalo solo si tu endpoint TiDB válido tiene otro sufijo.
-- Para `migrate`, además: `TIDB_MIGRATION_CONFIRM=APPLY_MFA_V1`, `TIDB_BACKUP_VERIFIED=true`, `TIDB_BACKUP_REFERENCE=<identificador>` y `TIDB_EXPECTED_DATABASE=globalisosecurity`.
+- Para `migrate` con V1 pendiente: `TIDB_MIGRATION_CONFIRM=APPLY_MFA_V1`.
+- Para `migrate` con V2 pendiente: `TIDB_SECURITY_MIGRATION_CONFIRM=APPLY_SECURITY_V2`.
+- Para cualquier escritura: `TIDB_BACKUP_VERIFIED=true`, `TIDB_BACKUP_REFERENCE=<identificador>` y `TIDB_EXPECTED_DATABASE=globalisosecurity`.
 
 `TIDB_BACKUP_VERIFIED` es una barrera de confirmación operativa, no una verificación automática del proveedor. Antes de habilitarla, valida en TiDB Cloud que el backup existe y que es restaurable.
 

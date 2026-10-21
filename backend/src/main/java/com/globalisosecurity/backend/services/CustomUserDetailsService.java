@@ -3,6 +3,7 @@ package com.globalisosecurity.backend.services;
 import com.globalisosecurity.backend.models.Usuario;
 import com.globalisosecurity.backend.repositories.UsuarioRepository;
 import java.util.List;
+import java.util.Locale;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -21,7 +22,7 @@ public class CustomUserDetailsService implements UserDetailsService {
 
     @Override
     public UserDetails loadUserByUsername(String email) throws UsernameNotFoundException {
-        String normalized = email == null ? "" : email.trim().toLowerCase();
+        String normalized = email == null ? "" : email.trim().toLowerCase(Locale.ROOT);
         Usuario usuario = usuarioRepository.findByEmail(normalized)
                 .orElseThrow(() -> new UsernameNotFoundException("Usuario no encontrado"));
 
@@ -37,6 +38,6 @@ public class CustomUserDetailsService implements UserDetailsService {
                 true,
                 true,
                 true,
-                List.of(new SimpleGrantedAuthority("ROLE_" + usuario.getRol().getNombre().trim().toUpperCase())));
+                List.of(new SimpleGrantedAuthority("ROLE_" + RolPerfilUtil.effectiveProfile(usuario.getRol()))));
     }
 }

@@ -8,6 +8,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.Locale;
 import org.springframework.http.CacheControl;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -43,8 +44,10 @@ public class AuthService {
     }
 
     public ResponseEntity<?> login(String email, String password) {
-        String normalizedEmail = email == null ? "" : email.trim().toLowerCase();
-        String safePassword = password == null ? "" : password;
+        String rawEmail = email == null ? "" : email.trim();
+        String normalizedEmail = rawEmail.length() > 254 ? "" : rawEmail.toLowerCase(Locale.ROOT);
+        String rawPassword = password == null ? "" : password;
+        String safePassword = rawPassword.length() > 128 ? "input-too-long" : rawPassword;
         String attemptKey = loginAttempts.keyFor(normalizedEmail);
 
         if (loginAttempts.isBlocked(attemptKey)) {
@@ -52,10 +55,10 @@ public class AuthService {
                     "Demasiados intentos fallidos. Intente nuevamente más tarde");
         }
 
-        if (normalizedEmail.isBlank() || normalizedEmail.length() > 254
-                || safePassword.isEmpty() || safePassword.length() > 128) {
+        if (normalizedEmail.isBlank() || safePassword.isEmpty() || rawPassword.length() > 128) {
             boolean tracked = loginAttempts.recordFailure(attemptKey);
             passwordEncoder.matches(safePassword, dummyPasswordHash);
+            auditLogin(normalizedEmail, false);
             if (!tracked) return response(HttpStatus.TOO_MANY_REQUESTS, "Autenticación temporalmente limitada");
             return response(HttpStatus.UNAUTHORIZED, "Credenciales incorrectas");
         }
@@ -63,7 +66,9 @@ public class AuthService {
         Optional<Usuario> usuarioOpt = usuarioRepository.findByEmail(normalizedEmail);
         if (usuarioOpt.isEmpty()) {
             passwordEncoder.matches(safePassword, dummyPasswordHash);
-            if (!loginAttempts.recordFailure(attemptKey)) {
+            boolean tracked = loginAttempts.recordFailure(attemptKey);
+            auditLogin(normalizedEmail, false);
+            if (!tracked) {
                 return response(HttpStatus.TOO_MANY_REQUESTS, "Autenticación temporalmente limitada");
             }
             return response(HttpStatus.UNAUTHORIZED, "Credenciales incorrectas");
@@ -71,33 +76,41 @@ public class AuthService {
 
         Usuario usuario = usuarioOpt.get();
         if (!passwordEncoder.matches(safePassword, usuario.getPassword())) {
-            if (!loginAttempts.recordFailure(attemptKey)) {
+            boolean tracked = loginAttempts.recordFailure(attemptKey);
+            auditLogin(normalizedEmail, false);
+            if (!tracked) {
                 return response(HttpStatus.TOO_MANY_REQUESTS, "Autenticación temporalmente limitada");
             }
             return response(HttpStatus.UNAUTHORIZED, "Credenciales incorrectas");
         }
 
         if (usuario.getRol() == null) {
-            if (!loginAttempts.recordFailure(attemptKey)) {
+            boolean tracked = loginAttempts.recordFailure(attemptKey);
+            auditLogin(normalizedEmail, false);
+            if (!tracked) {
                 return response(HttpStatus.TOO_MANY_REQUESTS, "Autenticación temporalmente limitada");
             }
             return response(HttpStatus.UNAUTHORIZED, "Credenciales incorrectas");
         }
         if (Boolean.FALSE.equals(usuario.getRol().getActivo())) {
-            if (!loginAttempts.recordFailure(attemptKey)) {
+            boolean tracked = loginAttempts.recordFailure(attemptKey);
+            auditLogin(normalizedEmail, false);
+            if (!tracked) {
                 return response(HttpStatus.TOO_MANY_REQUESTS, "Autenticación temporalmente limitada");
             }
             return response(HttpStatus.UNAUTHORIZED, "Credenciales incorrectas");
         }
 
         loginAttempts.recordSuccess(attemptKey);
+        auditLogin(normalizedEmail, true);
         // El acceso cotidiano usa el primer factor (correo + contraseña).
         // MFA se reserva para el flujo explícito de recuperación de cuenta.
         return authenticatedResponse(usuario, List.of());
     }
 
     public ResponseEntity<?> startRecovery(String email) {
-        String normalizedEmail = email == null ? "" : email.trim().toLowerCase();
+        String rawEmail = email == null ? "" : email.trim();
+        String normalizedEmail = rawEmail.length() > 254 ? "" : rawEmail.toLowerCase(Locale.ROOT);
         String attemptKey = loginAttempts.keyFor("recovery:" + normalizedEmail);
 
         if (loginAttempts.isBlocked(attemptKey)) {
@@ -105,7 +118,14 @@ public class AuthService {
                     "La recuperación está temporalmente limitada. Intente nuevamente más tarde");
         }
 
-        Optional<Usuario> usuarioOpt = usuarioRepository.findByEmail(normalizedEmail);
+        if (!loginAttempts.recordFailure(attemptKey)) {
+            return response(HttpStatus.TOO_MANY_REQUESTS,
+                    "La recuperación está temporalmente limitada. Intente nuevamente más tarde");
+        }
+
+        Optional<Usuario> usuarioOpt = normalizedEmail.isBlank()
+                ? Optional.empty()
+                : usuarioRepository.findByEmail(normalizedEmail);
         if (usuarioOpt.isEmpty()) {
             // Respuesta uniforme: no revela si el correo está registrado.
             passwordEncoder.matches("", dummyPasswordHash);
@@ -185,6 +205,7 @@ public class AuthService {
         response.put("email", usuario.getEmail());
         response.put("nombre", usuario.getNombre());
         response.put("rol", usuario.getRol().getNombre());
+        response.put("perfilBase", RolPerfilUtil.effectiveProfile(usuario.getRol()));
         response.put("rolId", usuario.getRol().getId());
         response.put("rolActivo", usuario.getRol().getActivo());
         response.put("permisos", usuario.getRol().getPermisos());
@@ -204,5 +225,15 @@ public class AuthService {
         return ResponseEntity.status(status)
                 .cacheControl(CacheControl.noStore())
                 .body(body);
+    }
+
+    private void auditLogin(String email, boolean success) {
+        try {
+            String actor = email == null || email.length() > 254 ? "IDENTIFICADOR_INVALIDO" : email;
+            logAuditoriaService.registrarEvento(actor, success ? "LOGIN_SUCCESS" : "LOGIN_FAILURE",
+                    "AUTENTICACION", success ? "Inicio de sesión completado" : "Intento de inicio de sesión fallido");
+        } catch (Exception ignored) {
+            // Audit storage must not change the authentication result.
+        }
     }
 }
