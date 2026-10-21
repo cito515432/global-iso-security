@@ -1,6 +1,6 @@
 # Global ISO Security
 
-Role-based web application for ISO/IEC 27001 Statement of Applicability (SoA), risks, evidence, audits, training and an explainable RPM decision model.
+Plataforma web para apoyar la gestión de seguridad de la información basada en ISO/IEC 27001: catálogo de controles, Statement of Applicability (SoA), riesgos, evidencias, auditoría, formación y un módulo RPM híbrido determinista + Machine Learning.
 
 [![Java](https://img.shields.io/badge/Java-20-ED8B00?logo=openjdk&logoColor=white)](https://www.java.com/) [![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.2-6DB33F?logo=springboot&logoColor=white)](https://spring.io/projects/spring-boot) [![MySQL](https://img.shields.io/badge/MySQL-8-4479A1?logo=mysql&logoColor=white)](https://www.mysql.com/) [![Docker](https://img.shields.io/badge/Docker-Compose-2496ED?logo=docker&logoColor=white)](https://www.docker.com/)
 
@@ -26,6 +26,8 @@ These screenshots are extracted directly from the project thesis and show the de
 - Training, assessments, verifiable certificates and executive reporting.
 - JWT authentication, BCrypt hashing, role authorization and company isolation.
 
+También incluye readiness/liveness separados y portales diferenciados por rol.
+
 ## Architecture
 
 ~~~mermaid
@@ -37,6 +39,17 @@ flowchart TB
  C --> F[Deterministic RPM and human validation]
  F --> G[RPM memory]
 ~~~
+
+La solución desplegada se compone de:
+
+- **Frontend:** aplicación web servida mediante Nginx.
+- **Backend:** API Spring Boot con Spring Security, JPA/Hibernate y conexión MySQL-compatible.
+- **Base de datos:** TiDB Cloud mediante el protocolo MySQL.
+- **ML Service:** microservicio FastAPI/Python con Random Forest.
+- **Render:** hosting del backend, frontend y ML service.
+- **GitHub:** código fuente, revisiones y Security CI.
+
+Referencias visuales: [arquitectura](docs/images/global-iso-architecture.png), [RPM + ML](docs/images/global-iso-rpm-ml-preview.png) y [SoA](docs/images/global-iso-soa-preview.png).
 
 ## Roles
 
@@ -63,6 +76,10 @@ See the complete [permission matrix](docs/MATRIZ_ROLES_PERMISOS.md).
 
 The deployed experimental model is RPM-ML-RF-HUMANO-V1. The deterministic RPM is not trained: it uses explicit signals, weights and thresholds. The ML component is trained on pre-decision variables and estimates LOW, MEDIUM, HIGH or CRITICAL priority. Human validation remains mandatory when RPM and ML disagree.
 
+RPM está deliberadamente acotado: no es una IA general de ciberseguridad ni intenta aprender automáticamente en producción. Apoya decisiones sobre priorización de controles, señales de contexto, características organizacionales, riesgos e implementación ISO/IEC 27001. Las reglas deterministas y la validación humana siguen siendo parte del proceso.
+
+El servicio ML es independiente, se entrena con escenarios controlados y complementa el RPM determinista. No reemplaza las reglas, los controles ni la revisión humana.
+
 ## Stack and evidence map
 
 Java 20 · Spring Boot 3.2 · Spring Security · JWT · JPA/Hibernate · MySQL · HTML5 · CSS3 · JavaScript · Docker Compose · Nginx.
@@ -86,6 +103,23 @@ docker compose up --build
 Open http://localhost:8080/pages/login.html. Demo seed data is controlled by environment variables; never publish passwords in documentation or commit .env.
 
 Useful documentation: [README_DOCKER.md](README_DOCKER.md), [README_RENDER.md](README_RENDER.md), [docs/ARQUITECTURA_RPM.md](docs/ARQUITECTURA_RPM.md), [docs/GUIA_PRUEBAS.md](docs/GUIA_PRUEBAS.md), [ENTREGA_RPM.md](ENTREGA_RPM.md), [IMPLEMENTACION_RPM_INTEGRAL.md](IMPLEMENTACION_RPM_INTEGRAL.md).
+
+## Estado validado de producción
+
+Durante la estabilización se auditó la base productiva con 5 roles requeridos, 7 sectores, 93 controles activos, 93 códigos únicos, 35 servicios y 3.255 relaciones SoA (93 por servicio), sin combinaciones faltantes ni duplicados servicio/control. La restricción `UNIQUE(servicio_id, control_id)` protege la unicidad. Estos valores son una fotografía de la auditoría y pueden cambiar con el uso futuro.
+
+En producción se mantiene `SEED_ENABLED=false` y `SEED_DEMO_DATA=false`. `DataInitializer` continúa disponible para bootstrap controlado, desarrollo, CI y recuperación, pero no participa en cada startup productivo. Un servicio nuevo inicializa su SoA mediante `ServicioService.crearServicio()` → `SoaService.inicializar()`; `SoaService.listar()` también puede completar controles faltantes.
+
+`/health` y `/api/health` representan liveness. `/readiness` y `/api/readiness` representan readiness: la aplicación debe haber completado su ciclo de arranque antes de aceptar tráfico.
+
+## Cuentas de demostración
+
+- `implementador@demo.com` → IMPLEMENTADOR
+- `auditor@demo.com` → AUDITOR
+- `capacitador@demo.com` → CAPACITADOR
+- `empresa@demo.com` → USUARIO_EMPRESA
+
+La contraseña de demostración se gestiona fuera del repositorio. No se publican contraseñas, hashes ni secretos.
 
 ## Limitations
 

@@ -43,6 +43,14 @@ Before deploying a commit outside a local lab:
 - No access JWT is issued until password + TOTP/recovery verification succeeds; challenges expire and are single-use, TOTP replay is rejected, recovery codes are single-use hashes, and TOTP seeds are AES-256-GCM encrypted.
 - MFA reset restricted to ADMINISTRADOR, invalidates existing sessions and records an audit event.
 
+## Operational configuration
+
+Production keeps `SEED_ENABLED=false`, `SEED_DEMO_DATA=false`, `SPRING_JPA_HIBERNATE_DDL_AUTO=none` and `SPRING_JPA_SHOW_SQL=false`. `DataInitializer` remains available only for controlled bootstrap, development, CI or recovery; it is not the normal production startup path.
+
+The application exposes separate liveness (`/health`, `/api/health`) and readiness (`/readiness`, `/api/readiness`) checks. Readiness represents completion of the Spring application lifecycle, while liveness only indicates that the web process is responding.
+
+Demo account identifiers and roles may be documented, but their password is managed out of band and must never be committed, logged or included in screenshots.
+
 ## Known limitations
 
 This hardening does not make the prototype equivalent to a professionally certified product and cannot guarantee prevention of every attack. TOTP is not phishing-resistant. Password-attempt throttling is bounded but process-local and resets on restart. The database migration and Render deployment have not been applied until a production backup is verified. Remaining work includes centralized/distributed rate limiting, antivirus/content-disarm scanning for evidence files, immutable external audit storage, formal backup/restore testing, independent penetration testing, SAST/DAST gates and key-rotation procedures.
