@@ -83,4 +83,15 @@ class RolPerfilUtilTest {
         assertTrue(authorities.contains("PERM_EMPRESAS"));
         assertFalse(authorities.contains("PERM_DASHBOARD"));
     }
+
+    @Test
+    void legacyCompanyPortalAndRpmFlagsDoNotGrantWriteAccess() {
+        Rol role = new Rol();
+        role.setNombre("USUARIO_EMPRESA");
+        role.setPermisos("{\"portalEmpresa\":true,\"rpm\":true,\"reportes\":true}");
+
+        var authorities = RolPerfilUtil.permissionAuthorities(role);
+        assertTrue(authorities.contains("PERM_EMPRESAS"));
+        assertFalse(authorities.contains("PERM_CREAR_EDITAR"));
+    }
 }
