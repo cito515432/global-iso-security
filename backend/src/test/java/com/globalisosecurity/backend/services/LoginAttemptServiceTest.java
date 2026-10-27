@@ -24,6 +24,21 @@ class LoginAttemptServiceTest {
     }
 
     @Test
+    void blocksOnTheFifthConsecutiveFailure() {
+        LoginAttemptService service = new LoginAttemptService(
+                new JdbcTemplate(dataSource()), 5, 15, 15);
+
+        for (int attempt = 1; attempt < 5; attempt++) {
+            assertTrue(service.recordFailure("five-attempt-account"));
+            assertFalse(service.isBlocked("five-attempt-account"));
+        }
+
+        assertTrue(service.recordFailure("five-attempt-account"));
+        assertTrue(service.isBlocked("five-attempt-account"));
+        assertFalse(service.recordFailure("five-attempt-account"));
+    }
+
+    @Test
     void sharesLockoutStateAcrossServiceInstances() {
         JdbcTemplate jdbc = new JdbcTemplate(dataSource());
         LoginAttemptService first = service(jdbc);

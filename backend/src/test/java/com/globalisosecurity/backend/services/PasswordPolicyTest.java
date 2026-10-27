@@ -31,6 +31,18 @@ class PasswordPolicyTest {
     }
 
     @Test
+    void enforcesTheFifteenCharacterProductionDefault() {
+        PasswordPolicy productionDefault = new PasswordPolicy(15);
+        assertThrows(BadRequestException.class, () -> productionDefault.validate("GlobalIso2026!"));
+        assertDoesNotThrow(() -> productionDefault.validate("GlobalIso2026!!"));
+    }
+
+    @Test
+    void rejectsNumericSequenceAsANewPassword() {
+        assertThrows(BadRequestException.class, () -> policy.validate("123456789101112131415"));
+    }
+
+    @Test
     void rejectsCommonPasswordFragment() {
         assertThrows(BadRequestException.class, () -> policy.validate("passwordpassword"));
     }

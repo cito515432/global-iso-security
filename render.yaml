@@ -55,7 +55,7 @@ services:
       - key: LOGIN_BLOCK_MINUTES
         value: 15
       - key: PASSWORD_MIN_LENGTH
-        value: 8
+        value: 15
       - key: PASSWORD_RESET_ENABLED
         value: "false"
       - key: PASSWORD_RESET_FRONTEND_URL
