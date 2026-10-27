@@ -22,13 +22,17 @@ import java.util.stream.Collectors;
  */
 public final class TidbMigrationRunner {
     private static final String EXPECTED_DATABASE = "globalisosecurity";
-    private static final String TARGET_VERSION = "2";
+    private static final String TARGET_VERSION = "4";
     private static final String MFA_VERSION = "1";
     private static final String SECURITY_VERSION = "2";
+    private static final String SESSION_VERSION = "3";
+    private static final String MULTI_ROLE_VERSION = "4";
     private static final Set<String> MFA_TABLES = Set.of(
             "usuario_mfa", "mfa_login_challenges", "mfa_recovery_codes");
     private static final Set<String> SECURITY_TABLES = Set.of(
             "login_attempt_buckets", "password_reset_tokens");
+    private static final Set<String> SESSION_TABLES = Set.of("auth_sessions");
+    private static final Set<String> MULTI_ROLE_TABLES = Set.of("usuario_roles");
 
     private TidbMigrationRunner() {}
 
@@ -124,7 +128,8 @@ public final class TidbMigrationRunner {
                 return false;
             }
             return migration.getVersion() == null ||
-                    !Set.of(MFA_VERSION, SECURITY_VERSION).contains(migration.getVersion().getVersion());
+                    !Set.of(MFA_VERSION, SECURITY_VERSION, SESSION_VERSION, MULTI_ROLE_VERSION)
+                            .contains(migration.getVersion().getVersion());
         });
         if (unexpected) {
             throw new IllegalStateException("Unexpected Flyway history detected; inspect the database migration history manually.");
@@ -140,6 +145,8 @@ public final class TidbMigrationRunner {
         }
         verifyTableGroup(existingTables, MFA_TABLES, MFA_VERSION, mode, pendingVersions, "MFA");
         verifyTableGroup(existingTables, SECURITY_TABLES, SECURITY_VERSION, mode, pendingVersions, "security controls");
+        verifyTableGroup(existingTables, SESSION_TABLES, SESSION_VERSION, mode, pendingVersions, "idle session");
+        verifyTableGroup(existingTables, MULTI_ROLE_TABLES, MULTI_ROLE_VERSION, mode, pendingVersions, "multi-role");
     }
 
     private static void verifyTableGroup(Set<String> existing, Set<String> expected, String version,
@@ -190,6 +197,14 @@ public final class TidbMigrationRunner {
         if (pendingVersions.contains(SECURITY_VERSION)
                 && !"APPLY_SECURITY_V2".equals(System.getenv("TIDB_SECURITY_MIGRATION_CONFIRM"))) {
             throw new IllegalStateException("Set TIDB_SECURITY_MIGRATION_CONFIRM=APPLY_SECURITY_V2 to authorize security migration V2.");
+        }
+        if (pendingVersions.contains(SESSION_VERSION)
+                && !"APPLY_AUTH_SESSION_V3".equals(System.getenv("TIDB_SESSION_MIGRATION_CONFIRM"))) {
+            throw new IllegalStateException("Set TIDB_SESSION_MIGRATION_CONFIRM=APPLY_AUTH_SESSION_V3 to authorize migration V3.");
+        }
+        if (pendingVersions.contains(MULTI_ROLE_VERSION)
+                && !"APPLY_MULTI_ROLE_V4".equals(System.getenv("TIDB_MULTI_ROLE_MIGRATION_CONFIRM"))) {
+            throw new IllegalStateException("Set TIDB_MULTI_ROLE_MIGRATION_CONFIRM=APPLY_MULTI_ROLE_V4 to authorize migration V4.");
         }
         if (!"true".equalsIgnoreCase(System.getenv("TIDB_BACKUP_VERIFIED")) ||
                 blank(System.getenv("TIDB_BACKUP_REFERENCE"))) {

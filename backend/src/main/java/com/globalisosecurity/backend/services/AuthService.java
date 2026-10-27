@@ -9,6 +9,8 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.Locale;
+import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import org.springframework.http.CacheControl;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -84,7 +86,7 @@ public class AuthService {
             return response(HttpStatus.UNAUTHORIZED, "Credenciales incorrectas");
         }
 
-        if (usuario.getRol() == null) {
+        if (RolPerfilUtil.activeRoles(usuario).isEmpty()) {
             boolean tracked = loginAttempts.recordFailure(attemptKey);
             auditLogin(normalizedEmail, false);
             if (!tracked) {
@@ -92,15 +94,6 @@ public class AuthService {
             }
             return response(HttpStatus.UNAUTHORIZED, "Credenciales incorrectas");
         }
-        if (Boolean.FALSE.equals(usuario.getRol().getActivo())) {
-            boolean tracked = loginAttempts.recordFailure(attemptKey);
-            auditLogin(normalizedEmail, false);
-            if (!tracked) {
-                return response(HttpStatus.TOO_MANY_REQUESTS, "Autenticación temporalmente limitada");
-            }
-            return response(HttpStatus.UNAUTHORIZED, "Credenciales incorrectas");
-        }
-
         loginAttempts.recordSuccess(attemptKey);
         auditLogin(normalizedEmail, true);
         // El acceso cotidiano usa el primer factor (correo + contraseña).
@@ -133,7 +126,7 @@ public class AuthService {
         }
 
         Usuario usuario = usuarioOpt.get();
-        if (usuario.getRol() == null || Boolean.FALSE.equals(usuario.getRol().getActivo())) {
+        if (RolPerfilUtil.activeRoles(usuario).isEmpty()) {
             return recoveryUnavailableResponse();
         }
 
@@ -170,7 +163,7 @@ public class AuthService {
             return response(HttpStatus.UNAUTHORIZED, "No fue posible completar la autenticación");
         }
         Usuario usuario = usuarioOpt.get();
-        if (usuario.getRol() == null || Boolean.FALSE.equals(usuario.getRol().getActivo())) {
+        if (RolPerfilUtil.activeRoles(usuario).isEmpty()) {
             return response(HttpStatus.FORBIDDEN, "La cuenta o el rol no están activos");
         }
         return authenticatedResponse(usuario, result.recoveryCodes());
@@ -197,18 +190,29 @@ public class AuthService {
     }
 
     private ResponseEntity<?> authenticatedResponse(Usuario usuario, List<String> recoveryCodes) {
+        List<com.globalisosecurity.backend.models.Rol> activeRoles = RolPerfilUtil.activeRoles(usuario);
+        if (activeRoles.isEmpty()) return response(HttpStatus.FORBIDDEN, "La cuenta no tiene roles activos");
+        var primaryRole = activeRoles.stream().filter(role -> usuario.getRol() != null
+                && role.getId().equals(usuario.getRol().getId())).findFirst().orElse(activeRoles.get(0));
         long sessionVersion = mfaService.sessionVersionForUserId(usuario.getId());
-        String token = jwtUtil.generarToken(usuario.getEmail(), usuario.getRol().getNombre(), sessionVersion);
+        String sessionId = mfaService.createSession(usuario.getId());
+        String token = jwtUtil.generarToken(usuario.getEmail(), primaryRole.getNombre(), sessionVersion, sessionId);
 
         Map<String, Object> response = new HashMap<>();
         response.put("token", token);
         response.put("email", usuario.getEmail());
         response.put("nombre", usuario.getNombre());
-        response.put("rol", usuario.getRol().getNombre());
-        response.put("perfilBase", RolPerfilUtil.effectiveProfile(usuario.getRol()));
-        response.put("rolId", usuario.getRol().getId());
-        response.put("rolActivo", usuario.getRol().getActivo());
-        response.put("permisos", usuario.getRol().getPermisos());
+        response.put("rol", primaryRole.getNombre());
+        response.put("perfilBase", RolPerfilUtil.effectiveProfile(primaryRole));
+        response.put("rolId", primaryRole.getId());
+        response.put("rolActivo", primaryRole.getActivo());
+        response.put("roles", activeRoles.stream().map(role -> Map.of(
+                "id", role.getId(), "nombre", role.getNombre(),
+                "perfilBase", RolPerfilUtil.effectiveProfile(role))).toList());
+        LinkedHashSet<String> effectivePermissions = new LinkedHashSet<>();
+        for (var role : activeRoles) effectivePermissions.addAll(RolPerfilUtil.permissionAuthorities(role));
+        response.put("permisos", primaryRole.getPermisos());
+        response.put("permisosEfectivos", List.copyOf(effectivePermissions));
         response.put("mfaConfigured", mfaService.isConfigured(usuario.getId()));
         if (!recoveryCodes.isEmpty()) response.put("recoveryCodes", recoveryCodes);
         if (usuario.getEmpresa() != null) {
@@ -219,6 +223,18 @@ public class AuthService {
             response.put("empresaNombre", null);
         }
         return response(HttpStatus.OK, response);
+    }
+
+    @Transactional
+    public ResponseEntity<?> logout(String email) {
+        Optional<Usuario> usuario = usuarioRepository.findByEmail(
+                email == null ? "" : email.trim().toLowerCase(Locale.ROOT));
+        if (usuario.isPresent()) {
+            mfaService.revokeSessions(usuario.get().getId());
+            logAuditoriaService.registrarEvento(usuario.get().getEmail(), "LOGOUT", "AUTENTICACION",
+                    "Se revocaron las sesiones activas de la cuenta");
+        }
+        return response(HttpStatus.OK, Map.of("message", "Sesiones cerradas"));
     }
 
     private ResponseEntity<?> response(HttpStatus status, Object body) {

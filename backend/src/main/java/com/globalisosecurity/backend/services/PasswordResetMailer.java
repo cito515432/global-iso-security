@@ -15,15 +15,22 @@ public class PasswordResetMailer {
     private static final Logger log = LoggerFactory.getLogger(PasswordResetMailer.class);
     private final ObjectProvider<JavaMailSender> senderProvider;
     private final String smtpHost;
+    private final String smtpUsername;
+    private final String smtpPassword;
 
     public PasswordResetMailer(ObjectProvider<JavaMailSender> senderProvider,
-            @Value("${spring.mail.host:}") String smtpHost) {
+            @Value("${spring.mail.host:}") String smtpHost,
+            @Value("${spring.mail.username:}") String smtpUsername,
+            @Value("${spring.mail.password:}") String smtpPassword) {
         this.senderProvider = senderProvider;
         this.smtpHost = smtpHost == null ? "" : smtpHost.trim();
+        this.smtpUsername = smtpUsername == null ? "" : smtpUsername.trim();
+        this.smtpPassword = smtpPassword == null ? "" : smtpPassword.trim();
     }
 
     public boolean isConfigured() {
         return !smtpHost.isBlank() && !"localhost".equalsIgnoreCase(smtpHost)
+                && !smtpUsername.isBlank() && !smtpPassword.isBlank()
                 && senderProvider.getIfAvailable() != null;
     }
 

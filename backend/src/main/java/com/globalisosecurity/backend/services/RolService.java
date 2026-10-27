@@ -1,5 +1,9 @@
 package com.globalisosecurity.backend.services;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
+
 import com.globalisosecurity.backend.dto.RolRequest;
 import com.globalisosecurity.backend.exceptions.BadRequestException;
 import com.globalisosecurity.backend.exceptions.ResourceNotFoundException;
@@ -14,11 +18,16 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
 import java.util.Set;
+import java.util.Map;
+import java.util.LinkedHashMap;
 
 @Service
 public class RolService {
 
     private static final Set<String> ROLES_SISTEMA = Set.of("ADMINISTRADOR", "IMPLEMENTADOR", "AUDITOR", "CAPACITADOR", "USUARIO_EMPRESA");
+    private static final Set<String> PERMISSION_KEYS = Set.of(
+            "dashboard", "usuarios", "roles", "empresas", "reportes", "configuracion", "crearEditar");
+    private static final ObjectMapper JSON = new ObjectMapper();
 
     private final RolRepository rolRepository;
     private final LogAuditoriaService audit;
@@ -59,7 +68,7 @@ public class RolService {
         rol.setDescripcion(normalizarTextoOpcional(request.getDescripcion()));
         rol.setActivo(request.getActivo() == null ? true : request.getActivo());
         String perfilBase = validarPerfilBase(request.getPerfilBase());
-        rol.setPermisos(permisosParaPerfil(perfilBase));
+        rol.setPermisos(permisosConfigurados(request.getPermisos(), perfilBase, null));
 
         Rol created = rolRepository.save(rol);
         audit.registrarLog("CREAR_ROL", "ROLES", "Se creó el rol " + nombreNormalizado
@@ -93,7 +102,7 @@ public class RolService {
             String base = request.getPerfilBase() == null || request.getPerfilBase().isBlank()
                     ? RolPerfilUtil.effectiveProfile(rol)
                     : validarPerfilBase(request.getPerfilBase());
-            rol.setPermisos(permisosParaPerfil(base));
+            rol.setPermisos(permisosConfigurados(request.getPermisos(), base, rol.getPermisos()));
         }
 
         Rol updated = rolRepository.save(rol);
@@ -187,5 +196,34 @@ public class RolService {
             default -> "\"dashboard\":true,\"usuarios\":false,\"roles\":false,\"empresas\":false,\"reportes\":false,\"configuracion\":false,\"crearEditar\":false";
         };
         return "{\"perfilBase\":\"" + profile + "\"," + capabilities + "}";
+    }
+
+    private String permisosConfigurados(String requested, String profile, String current) {
+        String fallback = current == null || current.isBlank() ? permisosParaPerfil(profile) : current;
+        try {
+            JsonNode defaults = JSON.readTree(fallback);
+            JsonNode input = requested == null || requested.isBlank() ? defaults : JSON.readTree(requested);
+            if (input == null || !input.isObject()) throw new BadRequestException("Los permisos deben ser un objeto JSON");
+            input.fieldNames().forEachRemaining(key -> {
+                if (!"perfilBase".equals(key) && !PERMISSION_KEYS.contains(key)) {
+                    throw new BadRequestException("Permiso desconocido: " + key);
+                }
+            });
+            if (input.has("perfilBase") && !profile.equalsIgnoreCase(input.path("perfilBase").asText(""))) {
+                throw new BadRequestException("El perfilBase no coincide con el perfil seleccionado");
+            }
+            ObjectNode normalized = JSON.createObjectNode();
+            normalized.put("perfilBase", profile);
+            for (String key : List.of("dashboard", "usuarios", "roles", "empresas", "reportes", "configuracion", "crearEditar")) {
+                JsonNode value = input.get(key);
+                if (value != null && !value.isBoolean()) throw new BadRequestException("El permiso " + key + " debe ser verdadero o falso");
+                normalized.put(key, value == null ? defaults.path(key).asBoolean(false) : value.booleanValue());
+            }
+            return JSON.writeValueAsString(normalized);
+        } catch (BadRequestException exception) {
+            throw exception;
+        } catch (Exception exception) {
+            throw new BadRequestException("Los permisos no tienen un formato válido");
+        }
     }
 }

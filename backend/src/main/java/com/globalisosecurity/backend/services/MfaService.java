@@ -20,6 +20,7 @@ import java.util.OptionalLong;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import java.util.UUID;
 
 /** Database-backed, single-use TOTP challenges and one-time recovery codes. */
 @Service
@@ -344,6 +345,43 @@ public class MfaService {
                 (resultSet, rowNum) -> resultSet.getLong(1),
                 email == null ? "" : email.trim().toLowerCase(Locale.ROOT));
         return !versions.isEmpty() && versions.get(0) == tokenVersion;
+    }
+
+    /** Creates a server-side session record used to enforce idle expiry. */
+    @Transactional
+    public String createSession(long userId) {
+        Instant now = Instant.now();
+        String sessionId = UUID.randomUUID().toString();
+        jdbc.update("DELETE FROM auth_sessions WHERE usuario_id = ? AND last_activity_at < ?",
+                userId, timestamp(now.minus(Duration.ofDays(30))));
+        jdbc.update("INSERT INTO auth_sessions (session_id, usuario_id, last_activity_at, created_at) "
+                        + "VALUES (?, ?, ?, ?)",
+                sessionId, userId, timestamp(now), timestamp(now));
+        return sessionId;
+    }
+
+    /** Returns false and revokes only this browser session when it has been idle too long. */
+    @Transactional
+    public boolean touchSession(String email, String sessionId, int idleTimeoutMinutes) {
+        if (sessionId == null || !sessionId.matches("[0-9a-fA-F-]{36}")) return false;
+        List<Map<String, Object>> rows = jdbc.queryForList(
+                "SELECT s.last_activity_at FROM auth_sessions s "
+                        + "JOIN usuarios u ON u.id = s.usuario_id "
+                        + "WHERE s.session_id = ? AND s.revoked_at IS NULL AND LOWER(u.email) = ? FOR UPDATE",
+                sessionId, email == null ? "" : email.trim().toLowerCase(Locale.ROOT));
+        if (rows.isEmpty()) return false;
+        Map<String, Object> session = rows.get(0);
+        Instant lastActivity = instantValue(session.get("last_activity_at"));
+        Instant now = Instant.now();
+        int safeTimeout = Math.max(1, Math.min(1440, idleTimeoutMinutes));
+        if (lastActivity == null || !lastActivity.plus(Duration.ofMinutes(safeTimeout)).isAfter(now)) {
+            jdbc.update("UPDATE auth_sessions SET revoked_at = ? WHERE session_id = ? AND revoked_at IS NULL",
+                    timestamp(now), sessionId);
+            return false;
+        }
+        jdbc.update("UPDATE auth_sessions SET last_activity_at = ? WHERE session_id = ?",
+                timestamp(now), sessionId);
+        return true;
     }
 
     private void lockUser(long userId) {

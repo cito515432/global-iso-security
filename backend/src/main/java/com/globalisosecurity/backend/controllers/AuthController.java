@@ -8,6 +8,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import com.globalisosecurity.backend.utils.SecurityUtils;
 
 @RestController
 @RequestMapping("/api/auth")
@@ -23,6 +24,11 @@ public class AuthController {
     public ResponseEntity<?> login(@RequestBody LoginRequest request) {
         return authService.login(request == null ? null : request.getEmail(),
                 request == null ? null : request.getPassword());
+    }
+
+    @PostMapping("/logout")
+    public ResponseEntity<?> logout() {
+        return authService.logout(SecurityUtils.getUsuarioActual());
     }
 
     @PostMapping("/recovery/start")

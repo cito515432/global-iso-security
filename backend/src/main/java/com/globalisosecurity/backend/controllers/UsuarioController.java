@@ -13,6 +13,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import com.globalisosecurity.backend.dto.UsuarioMeResponse;
+import com.globalisosecurity.backend.dto.UsuarioProfileUpdateRequest;
 import java.util.List;
 import java.util.Optional;
 
@@ -41,6 +42,11 @@ public class UsuarioController {
 public ResponseEntity<UsuarioMeResponse> obtenerMiUsuario() {
     return ResponseEntity.ok(usuarioService.obtenerUsuarioAutenticado());
 }
+
+    @PutMapping("/me")
+    public ResponseEntity<UsuarioMeResponse> actualizarMiUsuario(@RequestBody UsuarioProfileUpdateRequest request) {
+        return ResponseEntity.ok(usuarioService.actualizarMiPerfil(request));
+    }
 
     @PostMapping
     public ResponseEntity<Usuario> crearUsuario(@RequestBody UsuarioCreateRequest request) {
