@@ -53,8 +53,10 @@ public final class RolPerfilUtil {
         if (role == null) return authorities;
         try {
             JsonNode value = JSON.readTree(role.getPermisos());
-            boolean currentPermissionModel = value != null && (value.has("perfilBase")
-                    || PERMISSION_KEYS.stream().anyMatch(key -> value.path(key).isBoolean()));
+            // `reportes` and other module names existed in the legacy schema too;
+            // `perfilBase` or the new `crearEditar` capability marks the new format.
+            boolean currentPermissionModel = value != null
+                    && (value.has("perfilBase") || value.has("crearEditar"));
             for (String key : PERMISSION_KEYS) {
                 if (value != null && value.path(key).isBoolean() && value.path(key).booleanValue()) {
                     authorities.add("PERM_" + key.replaceAll("([a-z])([A-Z])", "$1_$2").toUpperCase(Locale.ROOT));
