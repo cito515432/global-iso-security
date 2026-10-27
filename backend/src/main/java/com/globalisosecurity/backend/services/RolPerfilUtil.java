@@ -69,7 +69,7 @@ public final class RolPerfilUtil {
                 if (hasAny(value, "auditoria", "evidencias", "soa", "riesgos", "rpm", "capacitaciones", "portalEmpresa")) {
                     authorities.add("PERM_EMPRESAS");
                 }
-                if (hasAny(value, "evidencias", "soa", "riesgos", "rpm", "capacitaciones", "auditoria")) {
+                if (hasAny(value, "evidencias", "soa", "riesgos", "capacitaciones", "auditoria")) {
                     authorities.add("PERM_CREAR_EDITAR");
                 }
                 if (hasAny(value, "rpm", "reportes")) authorities.add("PERM_REPORTES");

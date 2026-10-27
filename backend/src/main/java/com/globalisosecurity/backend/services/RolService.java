@@ -140,7 +140,7 @@ public class RolService {
         crearRolBase("IMPLEMENTADOR", "Gestiona procesos de implementación y empresas asignadas.", "{\"dashboard\":true,\"usuarios\":false,\"roles\":false,\"empresas\":true,\"reportes\":true,\"configuracion\":false,\"crearEditar\":true}");
         crearRolBase("AUDITOR", "Revisa auditorías, evidencias y reportes.", "{\"dashboard\":true,\"usuarios\":false,\"roles\":false,\"empresas\":true,\"reportes\":true,\"configuracion\":false,\"crearEditar\":false}");
         crearRolBase("CAPACITADOR", "Gestiona actividades de capacitación.", "{\"dashboard\":true,\"usuarios\":false,\"roles\":false,\"empresas\":true,\"reportes\":true,\"configuracion\":false,\"crearEditar\":true}");
-        crearRolBase("USUARIO_EMPRESA", "Portal ejecutivo de progreso, decisiones, riesgos y reportes.", "{\"dashboard\":true,\"usuarios\":false,\"roles\":false,\"empresas\":false,\"reportes\":false,\"configuracion\":false,\"crearEditar\":false}");
+        crearRolBase("USUARIO_EMPRESA", "Portal ejecutivo de progreso, decisiones, riesgos y reportes.", "{\"dashboard\":true,\"usuarios\":false,\"roles\":false,\"empresas\":true,\"reportes\":false,\"configuracion\":false,\"crearEditar\":false}");
     }
 
     private void crearRolBase(String nombre, String descripcion, String permisos) {
@@ -193,7 +193,7 @@ public class RolService {
             case "IMPLEMENTADOR" -> "\"dashboard\":true,\"usuarios\":false,\"roles\":false,\"empresas\":true,\"reportes\":true,\"configuracion\":false,\"crearEditar\":true";
             case "AUDITOR" -> "\"dashboard\":true,\"usuarios\":false,\"roles\":false,\"empresas\":true,\"reportes\":true,\"configuracion\":false,\"crearEditar\":false";
             case "CAPACITADOR" -> "\"dashboard\":true,\"usuarios\":false,\"roles\":false,\"empresas\":true,\"reportes\":true,\"configuracion\":false,\"crearEditar\":true";
-            default -> "\"dashboard\":true,\"usuarios\":false,\"roles\":false,\"empresas\":false,\"reportes\":false,\"configuracion\":false,\"crearEditar\":false";
+            default -> "\"dashboard\":true,\"usuarios\":false,\"roles\":false,\"empresas\":true,\"reportes\":false,\"configuracion\":false,\"crearEditar\":false";
         };
         return "{\"perfilBase\":\"" + profile + "\"," + capabilities + "}";
     }
