@@ -49,9 +49,10 @@ class ServicioServiceMySqlIT {
         assertThat(((Map<?, ?>) login.getBody()).get("token")).isNotNull();
         assertThat(((Map<?, ?>) login.getBody()).get("mfaConfigured")).isEqualTo(false);
 
-        for (int attempt = 0; attempt < 5; attempt++) {
+        for (int attempt = 0; attempt < 4; attempt++) {
             assertThat(authService.login("missing-ci@example.test", "wrong").getStatusCode().value()).isEqualTo(401);
         }
+        assertThat(authService.login("missing-ci@example.test", "wrong").getStatusCode().value()).isEqualTo(429);
         assertThat(authService.login("missing-ci@example.test", "wrong").getStatusCode().value()).isEqualTo(429);
 
         Empresa empresa = new Empresa();

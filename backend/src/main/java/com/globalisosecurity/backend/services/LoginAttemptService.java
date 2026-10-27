@@ -44,6 +44,12 @@ public class LoginAttemptService {
         return sha256(normalized + "|" + RequestUtils.getConnectionAddress());
     }
 
+    /** Account-wide digest so changing source addresses cannot bypass the lockout requirement. */
+    public String accountKeyFor(String email) {
+        String normalized = email == null ? "" : email.trim().toLowerCase(Locale.ROOT);
+        return sha256("account|" + normalized);
+    }
+
     public boolean isBlocked(String key) {
         List<Map<String, Object>> rows = jdbc.queryForList(
                 "SELECT blocked_until FROM login_attempt_buckets WHERE bucket_key = ?", key);

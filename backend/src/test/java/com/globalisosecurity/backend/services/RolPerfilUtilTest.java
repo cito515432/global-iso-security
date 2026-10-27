@@ -1,6 +1,7 @@
 package com.globalisosecurity.backend.services;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.globalisosecurity.backend.models.Rol;
@@ -57,5 +58,29 @@ class RolPerfilUtilTest {
         assertEquals(2, activeRoles.size());
         assertTrue(RolPerfilUtil.permissionAuthorities(reportRole).contains("PERM_REPORTES"));
         assertTrue(RolPerfilUtil.permissionAuthorities(editorRole).contains("PERM_CREAR_EDITAR"));
+    }
+
+    @Test
+    void legacyProductionRoleFlagsAreTranslatedToCurrentServerPermissions() {
+        Rol role = new Rol();
+        role.setNombre("IMPLEMENTADOR");
+        role.setPermisos("{\"soa\":true,\"riesgos\":true,\"evidencias\":true,\"rpm\":true}");
+
+        var authorities = RolPerfilUtil.permissionAuthorities(role);
+        assertTrue(authorities.contains("PERM_DASHBOARD"));
+        assertTrue(authorities.contains("PERM_EMPRESAS"));
+        assertTrue(authorities.contains("PERM_CREAR_EDITAR"));
+        assertTrue(authorities.contains("PERM_REPORTES"));
+    }
+
+    @Test
+    void explicitFalseInCurrentPermissionModelDoesNotFallBackToLegacyKeys() {
+        Rol role = new Rol();
+        role.setNombre("EDITOR");
+        role.setPermisos("{\"perfilBase\":\"IMPLEMENTADOR\",\"dashboard\":false,\"empresas\":true}");
+
+        var authorities = RolPerfilUtil.permissionAuthorities(role);
+        assertTrue(authorities.contains("PERM_EMPRESAS"));
+        assertFalse(authorities.contains("PERM_DASHBOARD"));
     }
 }

@@ -51,14 +51,16 @@ public class AuthService {
         String rawPassword = password == null ? "" : password;
         String safePassword = rawPassword.length() > 128 ? "input-too-long" : rawPassword;
         String attemptKey = loginAttempts.keyFor(normalizedEmail);
+        String accountAttemptKey = normalizedEmail.isBlank()
+                ? attemptKey : loginAttempts.accountKeyFor(normalizedEmail);
 
-        if (loginAttempts.isBlocked(attemptKey)) {
+        if (loginAttempts.isBlocked(attemptKey) || loginAttempts.isBlocked(accountAttemptKey)) {
             return response(HttpStatus.TOO_MANY_REQUESTS,
                     "Demasiados intentos fallidos. Intente nuevamente más tarde");
         }
 
         if (normalizedEmail.isBlank() || safePassword.isEmpty() || rawPassword.length() > 128) {
-            boolean tracked = loginAttempts.recordFailure(attemptKey);
+            boolean tracked = recordLoginFailure(attemptKey, accountAttemptKey);
             passwordEncoder.matches(safePassword, dummyPasswordHash);
             auditLogin(normalizedEmail, false);
             if (!tracked) return response(HttpStatus.TOO_MANY_REQUESTS, "Autenticación temporalmente limitada");
@@ -68,7 +70,7 @@ public class AuthService {
         Optional<Usuario> usuarioOpt = usuarioRepository.findByEmail(normalizedEmail);
         if (usuarioOpt.isEmpty()) {
             passwordEncoder.matches(safePassword, dummyPasswordHash);
-            boolean tracked = loginAttempts.recordFailure(attemptKey);
+            boolean tracked = recordLoginFailure(attemptKey, accountAttemptKey);
             auditLogin(normalizedEmail, false);
             if (!tracked) {
                 return response(HttpStatus.TOO_MANY_REQUESTS, "Autenticación temporalmente limitada");
@@ -78,7 +80,7 @@ public class AuthService {
 
         Usuario usuario = usuarioOpt.get();
         if (!passwordEncoder.matches(safePassword, usuario.getPassword())) {
-            boolean tracked = loginAttempts.recordFailure(attemptKey);
+            boolean tracked = recordLoginFailure(attemptKey, accountAttemptKey);
             auditLogin(normalizedEmail, false);
             if (!tracked) {
                 return response(HttpStatus.TOO_MANY_REQUESTS, "Autenticación temporalmente limitada");
@@ -87,7 +89,7 @@ public class AuthService {
         }
 
         if (RolPerfilUtil.activeRoles(usuario).isEmpty()) {
-            boolean tracked = loginAttempts.recordFailure(attemptKey);
+            boolean tracked = recordLoginFailure(attemptKey, accountAttemptKey);
             auditLogin(normalizedEmail, false);
             if (!tracked) {
                 return response(HttpStatus.TOO_MANY_REQUESTS, "Autenticación temporalmente limitada");
@@ -95,6 +97,7 @@ public class AuthService {
             return response(HttpStatus.UNAUTHORIZED, "Credenciales incorrectas");
         }
         loginAttempts.recordSuccess(attemptKey);
+        if (!accountAttemptKey.equals(attemptKey)) loginAttempts.recordSuccess(accountAttemptKey);
         auditLogin(normalizedEmail, true);
         // El acceso cotidiano usa el primer factor (correo + contraseña).
         // MFA se reserva para el flujo explícito de recuperación de cuenta.
@@ -251,5 +254,13 @@ public class AuthService {
         } catch (Exception ignored) {
             // Audit storage must not change the authentication result.
         }
+    }
+
+    private boolean recordLoginFailure(String clientKey, String accountKey) {
+        boolean clientTracked = loginAttempts.recordFailure(clientKey);
+        boolean accountTracked = accountKey.equals(clientKey) || loginAttempts.recordFailure(accountKey);
+        if (!clientTracked || !accountTracked) return false;
+        // Return the blocked state immediately on the fifth failure, not one request later.
+        return !loginAttempts.isBlocked(clientKey) && !loginAttempts.isBlocked(accountKey);
     }
 }

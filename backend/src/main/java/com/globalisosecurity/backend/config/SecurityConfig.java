@@ -29,14 +29,17 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
+    private final RolePermissionAuthorizationFilter rolePermissionAuthorizationFilter;
     private final CustomUserDetailsService customUserDetailsService;
 
     @Value("${app.cors.allowed-origins:http://localhost:8080,http://localhost:5500,http://127.0.0.1:5500}")
     private String allowedOrigins;
 
     public SecurityConfig(JwtAuthenticationFilter jwtAuthenticationFilter,
+            RolePermissionAuthorizationFilter rolePermissionAuthorizationFilter,
             CustomUserDetailsService customUserDetailsService) {
         this.jwtAuthenticationFilter = jwtAuthenticationFilter;
+        this.rolePermissionAuthorizationFilter = rolePermissionAuthorizationFilter;
         this.customUserDetailsService = customUserDetailsService;
     }
 
@@ -77,6 +80,7 @@ public class SecurityConfig {
             .userDetailsService(customUserDetailsService);
 
         http.addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
+        http.addFilterAfter(rolePermissionAuthorizationFilter, JwtAuthenticationFilter.class);
         return http.build();
     }
 

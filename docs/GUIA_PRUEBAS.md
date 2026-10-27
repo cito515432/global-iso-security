@@ -166,7 +166,7 @@ Ejecutar primero en una copia de pruebas o *staging*, con datos y cuentas desech
 | 19 | Inspeccionar en TiDB la columna de contraseña | Debe contener un hash irreversible con BCrypt (prehash SHA-256 + BCrypt), no texto plano ni cifrado recuperable. Para otros datos personales, documentar el cifrado en reposo que provee TiDB/infraestructura; no afirmar que todos los campos estén cifrados por la aplicación. |
 | 20 | Actualizar correo o contraseña desde “Mi perfil” | Se requiere la contraseña actual; el correo duplicado y contraseña débil se rechazan. Al aceptar el cambio se registran los logs y se revocan sesiones. |
 
-La migración de sesiones/roles debe aplicarse en TiDB mediante `database/tidb-migrator`, después de verificar backup restaurable y estado `info`/`validate`. No active el código nuevo contra la base de producción antes de completar la migración. La recuperación Brevo también requiere credenciales SMTP y un remitente verificado; siga `docs/CONFIGURAR_BREVO.md`.
+Estado de base de datos de producción (2026-10-27): las migraciones V3 (sesiones) y V4 (roles múltiples) se aplicaron directamente en TiDB y quedaron registradas como exitosas en el historial de migraciones. También se verificaron las tablas e índices requeridos. No se ejecutó una restauración de backup; la existencia de un backup no demuestra que pueda restaurarse. La migración V2 de controles de seguridad ya estaba aplicada. Brevo queda pendiente hasta cargar las credenciales SMTP protegidas y verificar un remitente; siga `docs/CONFIGURAR_BREVO.md` al final.
 
 ## 16. Alcance de verificación
 
