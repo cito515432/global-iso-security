@@ -87,8 +87,8 @@ public class PasswordResetService {
             return Map.of("message", GENERIC_MESSAGE);
         }
 
-        users.findByEmail(normalized).filter(user -> user.getRol() != null
-                && !Boolean.FALSE.equals(user.getRol().getActivo())).ifPresent(user -> issueToken(user));
+        users.findByEmail(normalized).filter(user -> !RolPerfilUtil.activeRoles(user).isEmpty())
+                .ifPresent(user -> issueToken(user));
         return Map.of("message", GENERIC_MESSAGE);
     }
 
@@ -118,7 +118,7 @@ public class PasswordResetService {
 
         long userId = ((Number) token.get("usuario_id")).longValue();
         Usuario user = users.findById(userId).orElseThrow(PasswordResetService::invalidToken);
-        if (user.getRol() == null || Boolean.FALSE.equals(user.getRol().getActivo())) throw invalidToken();
+        if (RolPerfilUtil.activeRoles(user).isEmpty()) throw invalidToken();
 
         user.setPassword(encoder.encode(newPassword));
         users.save(user);

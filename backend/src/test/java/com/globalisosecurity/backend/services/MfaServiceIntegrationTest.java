@@ -2,10 +2,14 @@ package com.globalisosecurity.backend.services;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import com.globalisosecurity.backend.models.Usuario;
 import com.globalisosecurity.backend.security.Totp;
 import java.util.Map;
+import java.time.Duration;
+import java.time.Instant;
+import java.sql.Timestamp;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -111,6 +115,20 @@ class MfaServiceIntegrationTest {
             if (attempt == 4) assertTrue(failure.rateLimited());
         }
         assertTrue(mfaService.start(user).rateLimited());
+    }
+
+    @Test
+    void idleExpiryRevokesOnlyTheInactiveBrowserSession() {
+        String expiredSession = mfaService.createSession(user.getId());
+        String activeSession = mfaService.createSession(user.getId());
+        jdbc.update("UPDATE auth_sessions SET last_activity_at = ? WHERE session_id = ?",
+                Timestamp.from(Instant.now().minus(Duration.ofMinutes(16))), expiredSession);
+
+        assertFalse(mfaService.touchSession(user.getEmail(), expiredSession, 15));
+        assertTrue(mfaService.touchSession(user.getEmail(), activeSession, 15));
+        assertEquals(1, jdbc.queryForObject(
+                "SELECT COUNT(*) FROM auth_sessions WHERE session_id = ? AND revoked_at IS NOT NULL",
+                Integer.class, expiredSession));
     }
 
     private static String invalidCode(String secret) {

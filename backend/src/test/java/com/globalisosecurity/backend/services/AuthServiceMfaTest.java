@@ -49,8 +49,9 @@ class AuthServiceMfaTest {
 
         when(users.findByEmail("empresa@example.test")).thenReturn(Optional.of(user));
         when(mfa.sessionVersionForUserId(user.getId())).thenReturn(3L);
+        when(mfa.createSession(user.getId())).thenReturn("session-id");
         when(mfa.isConfigured(user.getId())).thenReturn(true);
-        when(jwt.generarToken(user.getEmail(), role.getNombre(), 3L)).thenReturn("signed-jwt");
+        when(jwt.generarToken(user.getEmail(), role.getNombre(), 3L, "session-id")).thenReturn("signed-jwt");
 
         AuthService auth = new AuthService(users, jwt, encoder, attempts, mfa, logs);
         ResponseEntity<?> authenticated = auth.login(
@@ -122,6 +123,23 @@ class AuthServiceMfaTest {
     }
 
     @Test
+    void logoutRevokesAllTokensForTheAccount() {
+        UsuarioRepository users = mock(UsuarioRepository.class);
+        MfaService mfa = mock(MfaService.class);
+        Usuario user = new Usuario();
+        user.setId(77L);
+        user.setEmail("persona@example.test");
+        when(users.findByEmail(user.getEmail())).thenReturn(Optional.of(user));
+        AuthService auth = new AuthService(users, mock(JwtUtil.class),
+                new BcryptSha256PasswordEncoder(), loginAttempts(), mfa, mock(LogAuditoriaService.class));
+
+        ResponseEntity<?> response = auth.logout(user.getEmail());
+
+        assertEquals(200, response.getStatusCode().value());
+        verify(mfa).revokeSessions(user.getId());
+    }
+
+    @Test
     void recoveryVerificationIssuesJwtAfterMfa() {
         UsuarioRepository users = mock(UsuarioRepository.class);
         JwtUtil jwt = mock(JwtUtil.class);
@@ -146,8 +164,9 @@ class AuthServiceMfaTest {
                 .thenReturn(new MfaService.VerificationResult(true, user.getId(), false, List.of()));
         when(users.findById(user.getId())).thenReturn(Optional.of(user));
         when(mfa.sessionVersionForUserId(user.getId())).thenReturn(3L);
+        when(mfa.createSession(user.getId())).thenReturn("session-id");
         when(mfa.isConfigured(user.getId())).thenReturn(true);
-        when(jwt.generarToken(user.getEmail(), role.getNombre(), 3L)).thenReturn("signed-jwt");
+        when(jwt.generarToken(user.getEmail(), role.getNombre(), 3L, "session-id")).thenReturn("signed-jwt");
 
         AuthService auth = new AuthService(users, jwt, encoder, attempts, mfa, logs);
         ResponseEntity<?> response = auth.verifyRecovery("opaque-challenge", "123456");

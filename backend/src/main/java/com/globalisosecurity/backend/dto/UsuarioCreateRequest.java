@@ -4,12 +4,15 @@
  */
 package com.globalisosecurity.backend.dto;
 
+import java.util.List;
+
 public class UsuarioCreateRequest {
 
     private String nombre;
     private String email;
     private String rawPassword;
     private Long rolId;
+    private List<Long> rolIds;
     private Long empresaId;
 
     public String getNombre() {
@@ -43,6 +46,10 @@ public class UsuarioCreateRequest {
     public void setRolId(Long rolId) {
         this.rolId = rolId;
     }
+
+    public List<Long> getRolIds() { return rolIds; }
+
+    public void setRolIds(List<Long> rolIds) { this.rolIds = rolIds; }
 
     public Long getEmpresaId() {
         return empresaId;

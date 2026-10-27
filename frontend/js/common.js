@@ -1,6 +1,6 @@
 const API_BASE = "/api";
 const App = (() => {
-  const sessionKeys = ["token", "nombre", "email", "rol", "perfilBase", "rolId", "permisosRol", "empresaId", "empresaNombre"];
+  const sessionKeys = ["token", "nombre", "email", "rol", "perfilBase", "rolId", "permisosRol", "permisosEfectivos", "empresaId", "empresaNombre"];
 
   function migrateLegacyStorage() {
     if (!sessionStorage.getItem("token") && localStorage.getItem("token")) {
@@ -29,7 +29,10 @@ const App = (() => {
     else body = await res.text();
     if (!res.ok) {
       const message = typeof body === "string" ? body : body?.message || body?.error || `Error ${res.status}`;
-      if (res.status === 401) logout();
+      if (res.status === 401) {
+        clearLocalSession();
+        window.location.href = "login.html";
+      }
       throw new Error(message);
     }
     return body;
@@ -50,11 +53,29 @@ const App = (() => {
     return location.replace("empresa.html");
   }
 
-  function logout() {
+  function clearLocalSession() {
     sessionKeys.forEach(key => {
       sessionStorage.removeItem(key);
       localStorage.removeItem(key);
     });
+  }
+
+  async function logout() {
+    const currentToken = token();
+    if (currentToken) {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 4000);
+      try {
+        await fetch(`${API_BASE}/auth/logout`, {
+          method: "POST",
+          headers: { Authorization: `Bearer ${currentToken}`, Accept: "application/json" },
+          cache: "no-store",
+          signal: controller.signal
+        });
+      } catch (_) { /* Local logout still completes when the network is unavailable. */ }
+      finally { clearTimeout(timeout); }
+    }
+    clearLocalSession();
     window.location.href = "login.html";
   }
 
@@ -85,6 +106,17 @@ const App = (() => {
       window.scrollTo({top:0,behavior:"smooth"});
     }));
     document.querySelectorAll("[data-logout]").forEach(b => b.addEventListener("click", logout));
+    const logoutButton = document.querySelector("[data-logout]");
+    if (logoutButton && !document.querySelector("[data-profile-link]")
+        && !window.location.pathname.endsWith("/perfil.html")) {
+      const profileButton = document.createElement("button");
+      profileButton.className = "nav-link-app";
+      profileButton.type = "button";
+      profileButton.dataset.profileLink = "true";
+      profileButton.innerHTML = '<i class="bi bi-person-gear"></i>Mi perfil';
+      profileButton.addEventListener("click", () => { window.location.href = "perfil.html"; });
+      logoutButton.parentNode.insertBefore(profileButton, logoutButton);
+    }
     document.querySelector("[data-mobile-menu]")?.addEventListener("click",()=>document.querySelector(".sidebar")?.classList.toggle("open"));
   }
 

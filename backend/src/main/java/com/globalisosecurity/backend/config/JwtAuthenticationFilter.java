@@ -13,6 +13,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
 import org.springframework.stereotype.Component;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 @Component
@@ -21,13 +22,16 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private final JwtUtil jwtUtil;
     private final CustomUserDetailsService customUserDetailsService;
     private final MfaService mfaService;
+    private final int idleTimeoutMinutes;
 
     public JwtAuthenticationFilter(JwtUtil jwtUtil,
             CustomUserDetailsService customUserDetailsService,
-            MfaService mfaService) {
+            MfaService mfaService,
+            @Value("${app.security.session-idle-timeout-minutes:15}") int idleTimeoutMinutes) {
         this.jwtUtil = jwtUtil;
         this.customUserDetailsService = customUserDetailsService;
         this.mfaService = mfaService;
+        this.idleTimeoutMinutes = Math.max(1, Math.min(1440, idleTimeoutMinutes));
     }
 
     @Override
@@ -44,8 +48,10 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 if (jwtUtil.validarToken(jwt)) {
                     String email = jwtUtil.obtenerEmail(jwt);
                     Long sessionVersion = jwtUtil.obtenerVersionMfa(jwt);
+                    String sessionId = jwtUtil.obtenerIdSesion(jwt);
                     UserDetails userDetails = customUserDetailsService.loadUserByUsername(email);
                     if (sessionVersion != null && mfaService.isSessionCurrent(email, sessionVersion)
+                            && mfaService.touchSession(email, sessionId, idleTimeoutMinutes)
                             && userDetails.isEnabled() && userDetails.isAccountNonLocked()
                             && userDetails.isAccountNonExpired() && userDetails.isCredentialsNonExpired()) {
                         UsernamePasswordAuthenticationToken authToken =

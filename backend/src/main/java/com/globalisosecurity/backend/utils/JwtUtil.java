@@ -24,10 +24,16 @@ public class JwtUtil {
     }
 
     public String generarToken(String email, String rol, long sessionVersion) {
-        return Jwts.builder()
+        return generarToken(email, rol, sessionVersion, null);
+    }
+
+    public String generarToken(String email, String rol, long sessionVersion, String sessionId) {
+        var builder = Jwts.builder()
                 .setSubject(email)
                 .claim("rol", rol)
-                .claim("mfa_v", sessionVersion)
+                .claim("mfa_v", sessionVersion);
+        if (sessionId != null) builder.claim("sid", sessionId);
+        return builder
                 .setIssuedAt(new Date())
                 .setExpiration(new Date(System.currentTimeMillis() + expiration))
                 .signWith(SignatureAlgorithm.HS256, secret)
@@ -57,6 +63,10 @@ public class JwtUtil {
     public Long obtenerVersionMfa(String token) {
         Object version = obtenerClaims(token).get("mfa_v");
         return version instanceof Number number ? number.longValue() : null;
+    }
+
+    public String obtenerIdSesion(String token) {
+        return obtenerClaims(token).get("sid", String.class);
     }
 
     private Claims obtenerClaims(String token) {

@@ -1,5 +1,5 @@
 const API_BASE_URL = "/api";
-const SESSION_KEYS = ["token", "nombre", "email", "rol", "perfilBase", "rolId", "permisosRol", "empresaId", "empresaNombre"];
+const SESSION_KEYS = ["token", "nombre", "email", "rol", "perfilBase", "rolId", "permisosRol", "permisosEfectivos", "empresaId", "empresaNombre"];
 
 function clearSession() {
   SESSION_KEYS.forEach(key => {
@@ -304,6 +304,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     sessionStorage.setItem("perfilBase", data.perfilBase || data.rol || "");
     sessionStorage.setItem("rolId", String(data.rolId || ""));
     sessionStorage.setItem("permisosRol", data.permisos || "{}");
+    sessionStorage.setItem("permisosEfectivos", JSON.stringify(data.permisosEfectivos || []));
     if (data.empresaId != null) sessionStorage.setItem("empresaId", String(data.empresaId));
     if (data.empresaNombre) sessionStorage.setItem("empresaNombre", data.empresaNombre);
     routeByRole(data.perfilBase || data.rol);
